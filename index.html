@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DISSAN · Margen de ventas reales</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/app.css?v=1">
+</head>
+<body>
+
+<!-- ================== LOGIN ================== -->
+<div id="login-wrap">
+  <div class="login-box">
+    <div class="marca">EMA DATA ANALYTIC</div>
+    <h1 class="login-tit">Ingresar al panel DISSAN</h1>
+
+    <label class="fl">Usuario</label>
+    <input id="l-user" class="fi" autocomplete="username" spellcheck="false">
+
+    <label class="fl">Contraseña</label>
+    <div class="clave">
+      <input id="l-pass" class="fi" type="password" autocomplete="current-password">
+      <button type="button" class="ojo" id="l-ojo" onclick="verClave()"
+              aria-label="Mostrar la contraseña" aria-pressed="false"></button>
+    </div>
+
+    <button id="l-btn" class="btn" onclick="entrar()">Entrar</button>
+    <div id="l-err" class="err"></div>
+    <div class="pie">Mismo usuario y contraseña que el panel de siempre</div>
+  </div>
+</div>
+
+<!-- ================== APP ================== -->
+<div id="app" hidden>
+  <header class="top">
+    <div>
+      <h1>Margen de ventas reales</h1>
+      <div class="sub" id="metodo">—</div>
+    </div>
+    <div class="top-der">
+      <span class="quien" id="quien"></span>
+      <button class="btn-s" onclick="salir()">Salir</button>
+    </div>
+  </header>
+
+  <section class="filtros">
+    <div class="fg">
+      <label class="fl">Desde</label>
+      <input id="f-desde" class="fi" type="date" value="2026-01-01">
+    </div>
+    <div class="fg">
+      <label class="fl">Hasta</label>
+      <input id="f-hasta" class="fi" type="date" value="2026-12-31">
+    </div>
+    <div class="fg fg-chk">
+      <label class="chk"><input type="checkbox" id="f-productos" checked> Sólo productos</label>
+      <label class="chk"><input type="checkbox" id="f-bajo"> Sólo bajo costo</label>
+      <label class="chk"><input type="checkbox" id="f-180"> Incluir costo de más de 180 días</label>
+    </div>
+    <button class="btn" id="b-calc" onclick="calcular()">Calcular</button>
+  </section>
+
+  <div id="reloj" class="reloj" hidden></div>
+  <div id="aviso" class="aviso" hidden></div>
+
+  <section id="tarjetas" class="tarjetas"></section>
+  <section id="actualizado" class="nota"></section>
+  <section id="meses" class="bloque" hidden></section>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="js/core.js?v=1"></script>
+<script src="js/margen.js?v=1"></script>
+</body>
+</html>
