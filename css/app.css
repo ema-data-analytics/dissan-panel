@@ -115,3 +115,55 @@ td.num,th.num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-n
   .filtros .fg{width:100%}
   .filtros .btn{width:100%}
 }
+
+/* ===================== Tablero general =====================
+   Todo con prefijo tb- o clases que index.html no usa: agregar esto NO puede
+   cambiar la pantalla de Margen, que ya está probada. */
+.filtros .btn-s{padding:11px 18px;align-self:flex-end}
+.top-der a.btn-s{text-decoration:none}
+
+.tb-busca{position:relative;min-width:210px}
+.tb-lista{position:absolute;top:60px;left:0;right:0;z-index:20;max-height:240px;overflow:auto;
+  background:#0B2740;border:1px solid var(--borde);border-radius:8px;
+  box-shadow:0 14px 34px rgba(0,0,0,.45)}
+.tb-op{padding:8px 11px;font-size:12.5px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,.05)}
+.tb-op:last-child{border-bottom:none}
+.tb-op:hover{background:rgba(8,165,122,.18);color:var(--texto)}
+.tb-chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px;max-width:320px}
+.tb-chip{display:inline-flex;align-items:center;gap:5px;padding:3px 7px;border-radius:20px;
+  font-size:11.5px;background:rgba(8,165,122,.15);border:1px solid rgba(8,165,122,.4);
+  color:var(--verde2)}
+.tb-chip button{background:none;border:none;color:inherit;cursor:pointer;font-size:14px;
+  line-height:1;padding:0}
+.tb-chip button:hover{color:var(--rojo)}
+
+.tb-sec{margin:26px 0 10px;font-size:14px;font-weight:700;color:var(--verde);
+  padding-bottom:7px;border-bottom:1px solid var(--borde)}
+.tb-sec small{display:block;font-weight:400;color:var(--gris);font-size:11.5px;margin-top:4px}
+
+.tb-caja{overflow-x:auto;border:1px solid var(--borde);border-radius:10px;background:var(--caja)}
+.tb-caja table{font-size:12.5px}
+.tb-caja th{padding:8px 10px;border-bottom:1px solid var(--borde);white-space:nowrap}
+.tb-caja td{padding:7px 10px}
+.tb-caja td.cod{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px;
+  color:var(--verde2);white-space:nowrap}
+.tb-caja td.desc{max-width:230px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tb-caja tr.bien td.num:last-child{color:var(--verde2);font-weight:600}
+.tb-caja tr.mal  td.num:last-child{color:var(--rojo);font-weight:600}
+.tb-caja tr.aparte{opacity:.6}
+
+.tb-barras{display:flex;flex-direction:column;gap:5px;background:var(--caja);
+  border:1px solid var(--borde);border-radius:10px;padding:13px 15px}
+.tb-fila{display:flex;align-items:center;gap:10px;font-size:12px}
+.tb-et{flex:0 0 150px;color:var(--gris);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tb-pista{flex:1;height:13px;background:rgba(255,255,255,.05);border-radius:3px;overflow:hidden}
+.tb-barra{height:100%;border-radius:3px}
+.tb-barra.v{background:linear-gradient(90deg,#08A57A,#0BC492)}
+.tb-barra.r{background:linear-gradient(90deg,#b5484c,#ff8b8f)}
+.tb-val{flex:0 0 125px;text-align:right;font-variant-numeric:tabular-nums;color:var(--texto)}
+
+@media (max-width:640px){
+  .tb-et{flex-basis:92px}
+  .tb-val{flex-basis:88px;font-size:11.5px}
+  .tb-busca{min-width:0;width:100%}
+}
