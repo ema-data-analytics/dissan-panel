@@ -6,6 +6,14 @@
   --rojo:#ff8b8f; --ambar:#E9B949;
 }
 *{box-sizing:border-box}
+
+/* VA PRIMERO Y CON !important, Y NO ES OPCIONAL.
+   #login-wrap es display:flex. Sin esta regla, esconderlo con el atributo
+   hidden NO hace nada: la regla de display le gana al atributo, la caja de
+   login queda tapando la app y parece que el ingreso falló cuando en realidad
+   entró. Es el mismo golpe de .mv-rej del 14/10, y lo volví a cometer el 20/10. */
+[hidden]{display:none !important}
+
 body{
   margin:0; background:var(--fondo); color:var(--texto);
   font:14px/1.6 Inter,-apple-system,"Segoe UI",Arial,sans-serif;
