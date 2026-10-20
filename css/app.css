@@ -119,8 +119,17 @@ td.num,th.num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-n
 /* ===================== Tablero general =====================
    Todo con prefijo tb- o clases que index.html no usa: agregar esto NO puede
    cambiar la pantalla de Margen, que ya está probada. */
-.filtros .btn-s{padding:11px 18px;align-self:flex-end}
 .top-der a.btn-s{text-decoration:none}
+
+/* LOS BOTONES NO SE MUEVEN CUANDO APARECE UN CHIP.
+   Con align-items:flex-end, agregar un chip debajo del buscador de Cliente
+   estira esa columna y empuja el boton 27 px para abajo: se aprieta donde
+   estaba y no pasa nada. Es el mismo golpe que ya estaba anotado del panel
+   viejo ("Calcular con una fila de chips esta en (250,412); sin chips, en
+   (250,397)"). Anclados arriba, la coordenada no cambia nunca.
+   Va con prefijo tb-: la pantalla de Margen no lo usa y no se toca. */
+.filtros .tb-accion{align-self:flex-start;margin-top:25px}
+.filtros .btn-s.tb-accion{padding:11px 18px}
 
 .tb-busca{position:relative;min-width:210px}
 .tb-lista{position:absolute;top:60px;left:0;right:0;z-index:20;max-height:240px;overflow:auto;
