@@ -1,7 +1,7 @@
 /* DISSAN · panel sobre Supabase · EMA Data Analytics
    Mismos colores que el panel de Apps Script, para que no sea otro sistema a la vista. */
 :root{
-  --fondo:#09233A; --caja:#123252; --borde:#1d4568;
+  --fondo:#09233A; --contenido:#0B2740; --caja:#123252; --borde:rgba(255,255,255,.08);
   --texto:#F2F5F3; --gris:#7C93A3; --verde:#08A57A; --verde2:#0BC492;
   --rojo:#ff8b8f; --ambar:#E9B949;
 }
@@ -15,7 +15,7 @@
 [hidden]{display:none !important}
 
 body{
-  margin:0; background:var(--fondo); color:var(--texto);
+  margin:0; background:var(--contenido); color:var(--texto);
   font:14px/1.6 Inter,-apple-system,"Segoe UI",Arial,sans-serif;
 }
 h1{font-size:20px;margin:0}
@@ -260,3 +260,57 @@ td.num,th.num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-n
 .sg-forma .btn-s{align-self:flex-start;margin-top:25px;padding:11px 18px}
 .sg-acc{white-space:nowrap}
 .sg-acc .btn-s{padding:6px 10px;font-size:12px;margin:2px 0}
+
+/* ====================================================================
+   EL ARMAZÓN DEL PANEL DE SIEMPRE — 21/10/2026
+   ====================================================================
+   Copiado de Indice.html del panel de Apps Script, con sus mismas
+   medidas: barra lateral de 232px sobre --navy, el logo de EMA arriba
+   con "Panel DISSAN" abajo, el de MACROmanager en tarjeta blanca, el
+   menú vertical, el usuario al pie, y arriba la barra de 60px con el
+   nombre del módulo y la fecha. El fondo del contenido es --navy-content
+   (#0B2740), que es más claro que el de la barra.
+   ==================================================================== */
+#shell{display:flex;min-height:100vh}
+
+#sidebar{width:232px;flex-shrink:0;background:#09233A;display:flex;
+  flex-direction:column;padding:22px 0;border-right:1px solid var(--borde)}
+.marca{padding:2px 20px 18px}
+.marca-logo{display:block;width:112px;height:auto}
+.marca-pie{margin-top:7px;font-size:10.5px;color:var(--gris);letter-spacing:1px;
+  text-transform:uppercase}
+.marca-socio{width:fit-content;margin:0 0 18px 20px;padding:6px 9px;background:#fff;
+  border-radius:8px;display:flex}
+.marca-socio img{display:block;width:80px;height:auto}
+
+#menuLateral{flex:1;padding:6px 12px}
+#menuLateral a{display:flex;align-items:center;gap:11px;padding:10px 12px;margin-bottom:2px;
+  border-radius:8px;font-size:13.5px;font-weight:500;color:var(--gris);
+  cursor:pointer;user-select:none;text-decoration:none}
+#menuLateral a:hover{background:rgba(255,255,255,.04);color:var(--texto)}
+#menuLateral a.activo{background:rgba(8,165,122,.15);color:var(--verde);font-weight:600}
+#menuLateral .vacio{display:block;padding:10px 12px;font-size:13.5px;color:var(--gris);
+  opacity:.45}
+
+#panelUsuario{margin:10px 12px 0;padding:12px;border-top:1px solid var(--borde);
+  padding-top:16px;display:flex;align-items:center;gap:10px}
+#panelUsuario .avatar{width:32px;height:32px;border-radius:50%;background:var(--verde2);
+  display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;
+  color:#09233A;flex-shrink:0}
+#panelUsuario .datos{flex:1;min-width:0}
+#panelUsuario .nombre{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis}
+#panelUsuario .rol{font-size:11px;color:var(--gris);text-transform:uppercase;
+  letter-spacing:.4px}
+#btnSalir{background:none;border:none;color:var(--gris);cursor:pointer;padding:6px;
+  border-radius:6px;flex-shrink:0}
+#btnSalir:hover{color:#E5484D;background:rgba(229,72,77,.1)}
+#btnSalir svg{width:16px;height:16px;display:block}
+
+#areaContenido{flex:1;display:flex;flex-direction:column;min-width:0}
+#topbar{height:60px;display:flex;align-items:center;justify-content:space-between;
+  gap:16px;padding:0 28px;border-bottom:1px solid var(--borde)}
+#tituloModulo{font-weight:700;font-size:16px;min-width:0;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
+#fechaHoy{font-size:12.5px;color:var(--gris);flex-shrink:0;white-space:nowrap}
+#contenido{flex:1;padding:28px;min-width:0;max-width:100%}

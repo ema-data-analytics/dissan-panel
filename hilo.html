@@ -7,7 +7,7 @@
 <link rel="icon" href="data:,">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=11">
+<link rel="stylesheet" href="css/app.css?v=12">
 </head>
 <body>
 
@@ -35,52 +35,71 @@
 
 <!-- ================== APP ================== -->
 <div id="app" hidden data-modulo="Hilo">
-  <header class="top">
-    <div>
-      <h1>Hilo conductor</h1>
+    <div id="shell">
+    <div id="sidebar">
+      <div class="marca">
+        <img class="marca-logo" src="img/ema.png" alt="EMA Data Analytics">
+        <div class="marca-pie">Panel DISSAN</div>
+      </div>
+      <div class="marca-socio">
+        <img src="img/macromanager.png" alt="MACROmanager Consultora">
+      </div>
+      <nav id="menuLateral"></nav>
+      <div id="panelUsuario">
+        <div class="avatar" id="avatarInicial">?</div>
+        <div class="datos">
+          <div class="nombre" id="nombreUsuario">&mdash;</div>
+          <div class="rol" id="rolUsuario">&mdash;</div>
+        </div>
+        <button id="btnSalir" onclick="salir()" title="Cerrar sesion"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/></svg></button>
+      </div>
+    </div>
+
+    <div id="areaContenido">
+      <div id="topbar">
+        <div id="tituloModulo">Hilo conductor</div>
+        <div id="fechaHoy"></div>
+      </div>
+      <div id="contenido">
       <div class="sub">El mapa <b>medido</b> de la base: con qué se liga cada tabla y cómo se va
         de una a otra. Las relaciones no están supuestas — están contadas fila por fila.</div>
+
+
+    <section id="mapa" class="tarjetas"></section>
+
+    <section class="filtros tb-filtros" style="margin-top:18px">
+      <div class="fg tb-busca">
+        <label class="fl" for="f-t1">Mirar una tabla</label>
+        <input id="f-t1" class="fi" autocomplete="off" placeholder="gva53, facturas, stock…">
+        <div class="tb-lista" id="l-t1" hidden></div>
+      </div>
+      <button class="btn tb-accion" id="b-vec" onclick="verRelaciones()">Ver relaciones</button>
+
+      <div class="hi-sep"></div>
+
+      <div class="fg tb-busca">
+        <label class="fl" for="f-t2">Desde la tabla</label>
+        <input id="f-t2" class="fi" autocomplete="off" placeholder="gva53">
+        <div class="tb-lista" id="l-t2" hidden></div>
+      </div>
+      <div class="fg tb-busca">
+        <label class="fl" for="f-t3">Hasta la tabla</label>
+        <input id="f-t3" class="fi" autocomplete="off" placeholder="cpa46">
+        <div class="tb-lista" id="l-t3" hidden></div>
+      </div>
+      <button class="btn tb-accion" id="b-cam" onclick="buscarCamino()">Buscar el camino</button>
+    </section>
+
+    <div id="reloj" class="reloj" hidden></div>
+    <div id="aviso" class="aviso" hidden></div>
+
+    <div id="cuerpo"></div>
+      </div>
     </div>
-    <div class="top-der">
-      <span id="menu"></span>
-      <span class="quien" id="quien"></span>
-      <button class="btn-s" onclick="salir()">Salir</button>
-    </div>
-  </header>
-
-  <section id="mapa" class="tarjetas"></section>
-
-  <section class="filtros tb-filtros" style="margin-top:18px">
-    <div class="fg tb-busca">
-      <label class="fl" for="f-t1">Mirar una tabla</label>
-      <input id="f-t1" class="fi" autocomplete="off" placeholder="gva53, facturas, stock…">
-      <div class="tb-lista" id="l-t1" hidden></div>
-    </div>
-    <button class="btn tb-accion" id="b-vec" onclick="verRelaciones()">Ver relaciones</button>
-
-    <div class="hi-sep"></div>
-
-    <div class="fg tb-busca">
-      <label class="fl" for="f-t2">Desde la tabla</label>
-      <input id="f-t2" class="fi" autocomplete="off" placeholder="gva53">
-      <div class="tb-lista" id="l-t2" hidden></div>
-    </div>
-    <div class="fg tb-busca">
-      <label class="fl" for="f-t3">Hasta la tabla</label>
-      <input id="f-t3" class="fi" autocomplete="off" placeholder="cpa46">
-      <div class="tb-lista" id="l-t3" hidden></div>
-    </div>
-    <button class="btn tb-accion" id="b-cam" onclick="buscarCamino()">Buscar el camino</button>
-  </section>
-
-  <div id="reloj" class="reloj" hidden></div>
-  <div id="aviso" class="aviso" hidden></div>
-
-  <div id="cuerpo"></div>
-</div>
+  </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="js/core.js?v=5"></script>
+<script src="js/core.js?v=6"></script>
 <script src="js/hilo.js?v=3"></script>
 </body>
 </html>

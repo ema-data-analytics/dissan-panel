@@ -7,7 +7,7 @@
 <link rel="icon" href="data:,">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=11">
+<link rel="stylesheet" href="css/app.css?v=12">
 </head>
 <body>
 
@@ -35,31 +35,50 @@
 
 <!-- ================== APP ================== -->
 <div id="app" hidden data-modulo="Ayuda">
-  <header class="top">
-    <div>
-      <h1>Ayuda inteligente</h1>
+    <div id="shell">
+    <div id="sidebar">
+      <div class="marca">
+        <img class="marca-logo" src="img/ema.png" alt="EMA Data Analytics">
+        <div class="marca-pie">Panel DISSAN</div>
+      </div>
+      <div class="marca-socio">
+        <img src="img/macromanager.png" alt="MACROmanager Consultora">
+      </div>
+      <nav id="menuLateral"></nav>
+      <div id="panelUsuario">
+        <div class="avatar" id="avatarInicial">?</div>
+        <div class="datos">
+          <div class="nombre" id="nombreUsuario">&mdash;</div>
+          <div class="rol" id="rolUsuario">&mdash;</div>
+        </div>
+        <button id="btnSalir" onclick="salir()" title="Cerrar sesion"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/></svg></button>
+      </div>
+    </div>
+
+    <div id="areaContenido">
+      <div id="topbar">
+        <div id="tituloModulo">Ayuda inteligente</div>
+        <div id="fechaHoy"></div>
+      </div>
+      <div id="contenido">
       <div class="sub">Preguntale a la base en castellano. Si la sé contestar con una consulta
         ya probada, sale <b>sin costo</b>; si no, la escribe el modelo.</div>
-    </div>
-    <div class="top-der">
-      <span id="menu"></span>
-      <span class="quien" id="quien"></span>
-      <button class="btn-s" onclick="salir()">Salir</button>
-    </div>
-  </header>
 
-  <section class="ay-caja">
-    <textarea id="q" class="fi ay-q" rows="2" spellcheck="false"
-      placeholder="Por ejemplo: ordenes de compra contra pedido agosto 2026 · qué artículos tienen stock cero · qué partidas se vencen en los próximos 180 días"></textarea>
-    <button class="btn ay-btn" id="b-preg" onclick="preguntar()">Preguntar</button>
-  </section>
-  <div class="ay-tip">Enter pregunta · Shift+Enter hace un renglón nuevo</div>
 
-  <div id="cuerpo"></div>
-</div>
+    <section class="ay-caja">
+      <textarea id="q" class="fi ay-q" rows="2" spellcheck="false"
+        placeholder="Por ejemplo: ordenes de compra contra pedido agosto 2026 · qué artículos tienen stock cero · qué partidas se vencen en los próximos 180 días"></textarea>
+      <button class="btn ay-btn" id="b-preg" onclick="preguntar()">Preguntar</button>
+    </section>
+    <div class="ay-tip">Enter pregunta · Shift+Enter hace un renglón nuevo</div>
+
+    <div id="cuerpo"></div>
+      </div>
+    </div>
+  </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="js/core.js?v=5"></script>
+<script src="js/core.js?v=6"></script>
 <script src="js/ayuda.js?v=6"></script>
 </body>
 </html>

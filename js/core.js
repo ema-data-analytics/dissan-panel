@@ -145,27 +145,46 @@ const PANTALLAS = {
   Cartera:        { archivo: 'cartera.html',   rotulo: 'Cartera' }
 };
 
-let MI_ROL = '';
+let MI_ROL = '', EMAIL_ENTRO = '';
+
+const MESES_LARGOS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio',
+  'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+const DIAS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
 
 async function armarMenu() {
   const mio = $('app').dataset.modulo || '';
-  let lista = [];
+  let lista = [], yo = {};
   try {
     const { data } = await rpc('api_mis_modulos', {});
     lista = data || [];
     const p = await rpc('api_mi_perfil', {});
-    MI_ROL = (p.data && p.data[0] && p.data[0].rol) || '';
+    yo = (p.data && p.data[0]) || {};
+    MI_ROL = yo.rol || '';
   } catch (e) {
-    $('menu').innerHTML = '';
+    $('menuLateral').innerHTML = '';
     tapar('No se pudo comprobar qué módulos tenés habilitados. ' + esc(e.message || e));
     return false;
   }
 
+  /* El pie de la barra: quién sos. Igual que el panel de siempre. */
+  const nombre = yo.nombre || yo.email || '';
+  $('nombreUsuario').textContent = nombre || EMAIL_ENTRO || '—';
+  $('nombreUsuario').title = yo.email || EMAIL_ENTRO || '';
+  $('rolUsuario').textContent = yo.rol || '—';
+  $('avatarInicial').textContent = (nombre || '?').charAt(0).toUpperCase();
+  const h = new Date();
+  $('fechaHoy').textContent = DIAS[h.getDay()] + ' ' + h.getDate() + ' de '
+    + MESES_LARGOS[h.getMonth()] + ' de ' + h.getFullYear();
+
+  /* El menú lateral se arma con los módulos del usuario, en el orden de la tabla.
+     El que estás mirando queda marcado, no escondido: así se ve dónde estás. */
   const claves = lista.map(x => x.clave);
-  $('menu').innerHTML = lista
-    .filter(x => PANTALLAS[x.clave] && x.clave !== mio)
-    .map(x => '<a class="btn-s" href="' + PANTALLAS[x.clave].archivo + '">'
-              + esc(PANTALLAS[x.clave].rotulo) + '</a>').join('');
+  $('menuLateral').innerHTML = lista.filter(x => PANTALLAS[x.clave]).length
+    ? lista.filter(x => PANTALLAS[x.clave]).map(x =>
+        '<a href="' + PANTALLAS[x.clave].archivo + '"'
+        + (x.clave === mio ? ' class="activo"' : '') + '>'
+        + esc(x.nombre || PANTALLAS[x.clave].rotulo) + '</a>').join('')
+    : '<span class="vacio">Sin módulos habilitados</span>';
 
   if (mio && claves.indexOf(mio) === -1) {
     tapar('<b>Este módulo no está habilitado para tu usuario.</b> '
@@ -192,7 +211,9 @@ function tapar(html) {
 
 async function abrirApp() {
   const { data } = await sb.auth.getUser();
-  $('quien').textContent = (data && data.user && data.user.email) || '';
+  /* El email del que entró queda en el cartelito del nombre, al pie de la barra: el
+     nombre y el rol los pone armarMenu() desde el perfil. */
+  EMAIL_ENTRO = (data && data.user && data.user.email) || '';
   $('login-wrap').hidden = true;
   $('app').hidden = false;
   if (!await armarMenu()) return;
