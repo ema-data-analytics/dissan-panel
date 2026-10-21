@@ -144,8 +144,13 @@ td.num,th.num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-n
    quedan desalineados y la fila parece rota. Con flex-start cada campo queda
    donde estaba y los chips crecen hacia abajo sin mover a nadie. */
 .tb-filtros{align-items:flex-start}
-.filtros .tb-accion{align-self:flex-start;margin-top:25px}
-.filtros .btn-s.tb-accion{padding:11px 18px}
+/* MEDIDO el 21/10 con el formato nuevo: el grupo etiqueta+campo mide 52px (etiqueta 16
+   + 6 de separacion + campo 30). El boton mide 30, asi que para que quede a la misma
+   altura que los campos el margen es 52-30 = 22. Con 25 quedaba 3px mas abajo.
+   Va con align-self:flex-start -no flex-end- porque un chip estira la columna y el boton
+   se corre: esa es la trampa del 20/10 que casi me hace reportar un filtro como roto. */
+.filtros .tb-accion{align-self:flex-start;margin-top:22px}
+.filtros .btn-s.tb-accion{padding:7px 16px;font-size:12px;height:30px}
 
 .tb-busca{position:relative;min-width:210px}
 .tb-lista{position:absolute;top:60px;left:0;right:0;z-index:20;max-height:240px;overflow:auto;
@@ -247,7 +252,7 @@ td.num,th.num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-n
 }
 .ay-corte{color:var(--ambar)}
 .tj .n .chico{font-size:15px;color:var(--gris);font-weight:600}
-.filtros .fg-chk.tb-accion{margin-top:25px}
+.filtros .fg-chk.tb-accion{margin-top:22px}
 
 /* ===================== Hilo conductor ===================== */
 .hi-sep{flex-basis:100%;height:1px;background:var(--borde);margin:4px 0}
