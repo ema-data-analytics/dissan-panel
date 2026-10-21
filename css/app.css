@@ -128,6 +128,13 @@ td.num,th.num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-n
    viejo ("Calcular con una fila de chips esta en (250,412); sin chips, en
    (250,397)"). Anclados arriba, la coordenada no cambia nunca.
    Va con prefijo tb-: la pantalla de Margen no lo usa y no se toca. */
+/* Y TODOS LOS CAMPOS ARRANCAN ARRIBA.
+   .filtros es align-items:flex-end (lo usa la pantalla de Margen y ahi esta
+   bien, porque no tiene chips). Aca, al aparecer un chip debajo de Zona esa
+   columna crece y flex-end empuja a Cliente hacia abajo: los dos campos
+   quedan desalineados y la fila parece rota. Con flex-start cada campo queda
+   donde estaba y los chips crecen hacia abajo sin mover a nadie. */
+.tb-filtros{align-items:flex-start}
 .filtros .tb-accion{align-self:flex-start;margin-top:25px}
 .filtros .btn-s.tb-accion{padding:11px 18px}
 
