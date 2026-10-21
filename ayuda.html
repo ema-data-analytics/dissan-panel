@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DISSAN · Ayuda inteligente</title>
+<link rel="icon" href="data:,">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/app.css?v=6">
+</head>
+<body>
+
+<!-- ================== LOGIN ================== -->
+<div id="login-wrap">
+  <div class="login-box">
+    <div class="marca">EMA DATA ANALYTIC</div>
+    <h1 class="login-tit">Ingresar al panel DISSAN</h1>
+
+    <label class="fl">Usuario</label>
+    <input id="l-user" class="fi" autocomplete="username" spellcheck="false">
+
+    <label class="fl">Contraseña</label>
+    <div class="clave">
+      <input id="l-pass" class="fi" type="password" autocomplete="current-password">
+      <button type="button" class="ojo" id="l-ojo" onclick="verClave()"
+              aria-label="Mostrar la contraseña" aria-pressed="false"></button>
+    </div>
+
+    <button id="l-btn" class="btn" onclick="entrar()">Entrar</button>
+    <div id="l-err" class="err"></div>
+    <div class="pie">Mismo usuario y contraseña que el panel de siempre</div>
+  </div>
+</div>
+
+<!-- ================== APP ================== -->
+<div id="app" hidden>
+  <header class="top">
+    <div>
+      <h1>Ayuda inteligente</h1>
+      <div class="sub">Preguntale a la base en castellano. Si la sé contestar con una consulta
+        ya probada, sale <b>sin costo</b>; si no, la escribe el modelo.</div>
+    </div>
+    <div class="top-der">
+      <a class="btn-s" href="index.html">Margen</a>
+      <a class="btn-s" href="tablero.html">Tablero general</a>
+      <span class="quien" id="quien"></span>
+      <button class="btn-s" onclick="salir()">Salir</button>
+    </div>
+  </header>
+
+  <section class="ay-caja">
+    <textarea id="q" class="fi ay-q" rows="2" spellcheck="false"
+      placeholder="Por ejemplo: ordenes de compra contra pedido agosto 2026 · qué artículos tienen stock cero · qué partidas se vencen en los próximos 180 días"></textarea>
+    <button class="btn ay-btn" id="b-preg" onclick="preguntar()">Preguntar</button>
+  </section>
+  <div class="ay-tip">Enter pregunta · Shift+Enter hace un renglón nuevo</div>
+
+  <div id="cuerpo"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="js/core.js?v=4"></script>
+<script src="js/ayuda.js?v=1"></script>
+</body>
+</html>

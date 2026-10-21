@@ -183,3 +183,53 @@ td.num,th.num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-n
   .tb-val{flex-basis:88px;font-size:11.5px}
   .tb-busca{min-width:0;width:100%}
 }
+
+/* ===================== Ayuda inteligente =====================
+   Prefijo ay-: ni index.html ni tablero.html lo usan. */
+.ay-caja{display:flex;gap:12px;align-items:flex-start;margin-top:4px}
+.ay-q{flex:1;resize:vertical;min-height:62px;font-family:inherit;line-height:1.5}
+.ay-btn{width:auto;margin-top:0;padding:13px 30px;align-self:stretch}
+.ay-tip{color:var(--gris);font-size:11.5px;margin-top:6px}
+
+.ay-esperando{color:var(--gris);font-size:13px;margin-top:22px}
+.ay-enc{display:flex;align-items:center;gap:11px;margin-top:24px;flex-wrap:wrap}
+.ay-preg{font-size:15px;font-weight:600}
+.ay-sello{font-size:11px;font-weight:600;padding:3px 10px;border-radius:11px;white-space:nowrap}
+.ay-sello.ok{background:rgba(8,165,122,.18);color:var(--verde2)}
+.ay-sello.cache{background:rgba(57,135,229,.18);color:#7FB4F2}
+.ay-sello.no{background:rgba(233,185,73,.15);color:var(--ambar)}
+.ay-resp{margin-top:7px;font-size:13.5px;color:var(--texto)}
+
+.ay-lectura{margin-top:16px;padding:15px 18px;border-radius:10px;
+  background:var(--caja);border:1px solid rgba(8,165,122,.35)}
+.ay-lectura .enc{font-size:11.5px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;
+  color:var(--verde);margin-bottom:8px}
+.ay-lectura .txt{font-size:13.5px;line-height:1.65}
+.ay-lectura .txt p{margin:0 0 10px}
+.ay-lectura .txt p:last-child{margin-bottom:0}
+.ay-lectura .txt ul{margin:0 0 10px;padding-left:20px}
+.ay-lectura .txt li{margin-bottom:4px}
+.ay-lectura .txt b{color:var(--verde2)}
+.ay-lectura.pensando{border-style:dashed;border-color:var(--borde)}
+.ay-lectura.pensando .txt{color:var(--gris)}
+.ay-lectura.nope{border-color:rgba(233,185,73,.35);background:rgba(233,185,73,.07)}
+.ay-lectura.nope .enc{color:var(--ambar)}
+
+.ay-acciones{display:flex;align-items:center;gap:14px;margin:18px 0 9px;flex-wrap:wrap}
+.ay-cuenta{color:var(--gris);font-size:12px}
+.ay-cuenta b{color:var(--texto)}
+.ay-nil{color:#4a6a82}
+.ay-pie{color:var(--gris);font-size:11.5px;margin-top:9px}
+
+.ay-sug{margin-top:22px}
+.ay-sug-t{font-size:11.5px;font-weight:600;letter-spacing:.4px;text-transform:uppercase;
+  color:var(--gris);margin-bottom:8px}
+.ay-chip{display:inline-block;margin:0 7px 7px 0;padding:7px 12px;border-radius:18px;
+  font-size:12.5px;font-family:inherit;cursor:pointer;text-align:left;
+  background:transparent;border:1px solid var(--borde);color:var(--gris)}
+.ay-chip:hover{color:var(--texto);border-color:var(--verde);background:rgba(8,165,122,.08)}
+
+@media (max-width:640px){
+  .ay-caja{flex-direction:column}
+  .ay-btn{width:100%;padding:12px}
+}
