@@ -126,12 +126,23 @@ function pintar(d, ms) {
   /* proveedores */
   const prov = d.prov || [];
   if (prov.length) {
+    /* EL SIGNO DEL SALDO ES CONVENCIÓN DE TANGO, NO DATO SUCIO.
+       Medido el 21/10 sobre los 20 más grandes: 14 negativos, 0 positivos,
+       6 en cero. En la cuenta corriente del proveedor el saldo va NEGATIVO
+       cuando se le debe. Mostrarlo pelado en una columna que dice «Saldo»
+       se lee al revés —como si ellos nos debieran mil millones—, así que el
+       rótulo lo dice. No se le cambia el signo: se explica. */
+    const negs = prov.filter(x => Number(x.saldo_cc_ficha) < 0).length;
     h.push(sec('Los ' + prov.length + ' proveedores más grandes del período',
-      'Neto y total comprado. «Saldo en la ficha» es el que trae la cuenta corriente del '
-      + 'proveedor en Tango, que no siempre está al día.'));
+      'Neto y total comprado en el período elegido.'));
+    h.push('<div class="aviso" style="margin-top:-2px"><b>El saldo de la ficha va en negativo '
+      + 'cuando se le debe al proveedor</b> — es la convención de la cuenta corriente de Tango, '
+      + 'no un error: de estos ' + num(prov.length) + ', <b>' + num(negs) + '</b> están en '
+      + 'negativo y ninguno en positivo. Y es el saldo <b>de toda la cuenta</b>, no el del '
+      + 'período de arriba. Para lo que está pendiente de pago, mirá el cuadro de más abajo.</div>');
     h.push('<div class="tb-caja"><table><tr><th>Código</th><th>Proveedor</th>'
       + '<th class="num">Comprob.</th><th class="num">Neto</th><th class="num">Total</th>'
-      + '<th class="num">Saldo en la ficha</th></tr>'
+      + '<th class="num">Saldo en la ficha<br>(− = se le debe)</th></tr>'
       + prov.map(x => '<tr><td class="cod">' + esc(x.cod_provee) + '</td>'
         + '<td class="desc" title="' + esc(x.proveedor) + '">' + esc(x.proveedor) + '</td>'
         + '<td class="num">' + num(x.comprobantes) + '</td>'
