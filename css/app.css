@@ -331,3 +331,13 @@ td.num,th.num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-n
   text-overflow:ellipsis;white-space:nowrap}
 #fechaHoy{font-size:12.5px;color:var(--gris);flex-shrink:0;white-space:nowrap}
 #contenido{flex:1;padding:28px;min-width:0;max-width:100%}
+
+/* Los botones de accion de Seguridad, como los del modulo viejo: cuadrados de 30px con
+   icono, no texto. Con texto la columna no entraba y se cortaba a la derecha. */
+.btn-icono{width:30px;height:30px;border-radius:7px;border:none;
+  background:rgba(255,255,255,.04);color:#b6c5cf;cursor:pointer;display:inline-flex;
+  align-items:center;justify-content:center;margin:0 1px;vertical-align:middle}
+.btn-icono svg{width:14.5px;height:14.5px}
+.btn-icono:hover{background:rgba(255,255,255,.09);color:#F2F5F3}
+.btn-icono.peligro:hover{background:rgba(229,72,77,.15);color:#ff8b8f}
+.btn-icono.exito:hover{background:rgba(8,165,122,.15);color:#08A57A}

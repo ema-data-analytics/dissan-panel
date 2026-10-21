@@ -86,6 +86,20 @@ async function calcular() {
   }
 }
 
+/* Los iconos son los del modulo viejo, copiados de Seguridad.html. */
+const ICONO = {
+  perfil: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">'
+        + '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>',
+  email:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">'
+        + '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>',
+  clave:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">'
+        + '<circle cx="8" cy="15" r="4"/><path d="M10.5 12.5L20 3M17 6l3 3M14 9l2.5 2.5"/></svg>',
+  baja:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">'
+        + '<circle cx="12" cy="12" r="9"/><path d="M5.5 5.5l13 13"/></svg>',
+  alta:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">'
+        + '<circle cx="12" cy="12" r="9"/><path d="M8.5 12.5l2.5 2.5 5-5"/></svg>'
+};
+
 const esc2 = s => esc(s).replace(/"/g, '&quot;');
 const fecha = v => {
   const f = String(v || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
@@ -128,15 +142,16 @@ function filtrar() {
           + '<td>' + (u.activo ? 'activo' : 'dado de baja') + '</td>'
           + '<td>' + fecha(u.creado) + '</td>'
           + '<td class="sg-acc">'
-          + '<button class="btn-s" onclick="formaPerfil(\'' + esc2(u.id) + '\')">'
-          + 'Nombre y rol</button> '
-          + '<button class="btn-s" onclick="formaEmail(\'' + esc2(u.id) + '\')">'
-          + 'Email</button> '
-          + '<button class="btn-s" onclick="formaClave(\'' + esc2(u.id) + '\')">'
-          + 'Contraseña</button> '
-          + '<button class="btn-s" onclick="formaEstado(\'' + esc2(u.id) + '\','
-          + (u.activo ? 'false' : 'true') + ')">'
-          + (u.activo ? 'Dar de baja' : 'Reactivar') + '</button>'
+          + '<button class="btn-icono" title="Editar nombre y rol" onclick="formaPerfil(\''
+          + esc2(u.id) + '\')">' + ICONO.perfil + '</button>'
+          + '<button class="btn-icono" title="Cambiar email" onclick="formaEmail(\''
+          + esc2(u.id) + '\')">' + ICONO.email + '</button>'
+          + '<button class="btn-icono" title="Cambiar contraseña" onclick="formaClave(\''
+          + esc2(u.id) + '\')">' + ICONO.clave + '</button>'
+          + '<button class="btn-icono ' + (u.activo ? 'peligro' : 'exito') + '" title="'
+          + (u.activo ? 'Dar de baja' : 'Reactivar') + '" onclick="formaEstado(\''
+          + esc2(u.id) + '\',' + (u.activo ? 'false' : 'true') + ')">'
+          + (u.activo ? ICONO.baja : ICONO.alta) + '</button>'
           + '</td></tr>';
       }).join('')
       : '<tr><td colspan="6">Ningún usuario coincide con «' + esc(q) + '».</td></tr>')
