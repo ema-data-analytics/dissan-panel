@@ -217,18 +217,23 @@ async function pedirLectura(sello) {
 }
 
 /* ---------- EL RECORTE, QUE NO SE PUEDE CALLAR ----------
-   `ayuda.resolver` envuelve TODA consulta en un «limit 2000» escrito a mano
-   (línea 273 de la función) y después informa esa cantidad como si fuera el
-   total. Medido el 20/10: «qué artículos tienen stock cero» decía 2.000 y la
-   base tiene 12.082. Es la lista incompleta con pinta de completa, pero sobre
-   los datos.
+   ARREGLADO EN LA BASE EL 20/10. `ayuda.resolver` envolvía TODA consulta en un
+   «limit 2000» escrito a mano y además ataba el límite de la función interna a
+   p_tope, así que «cuántos artículos tienen stock cero» contestaba 2.000 y son
+   12.082. Una pregunta de CONTAR, contestada con un recorte.
 
-   Hasta que se arregle en la base —hay que hacerlo con el corpus de las 124
-   preguntas reales delante, no a ojo— la pantalla AVISA. Un número que puede
-   estar cortado y no lo dice es peor que no tenerlo. */
-const TOPES_CONOCIDOS = [2000, 5000];
+   Ahora v_lim = 50000 (se TRAE mucho) y p_tope sólo decide cuánto se MUESTRA,
+   así que `total` dice la verdad: «12.082 filas, se muestran 50».
+   Respaldo: `ayuda.resolver_antes_del_20_10_tope2000`.
+   Medido sobre las 124 preguntas reales: 0 cambios de intención, 0 de
+   comprensión, 0 filas perdidas, 2 preguntas recuperadas, 73,1 s → 72,6 s.
+
+   Queda el techo de 50.000. Si una consulta vuelve con exactamente ese número,
+   la pantalla lo dice: un número que puede estar cortado y no lo dice es peor
+   que no tenerlo. */
+const TOPE_DEL_MOTOR = 50000;
 function recortado(n) {
-  return TOPES_CONOCIDOS.includes(n)
+  return n === TOPE_DEL_MOTOR
     ? 'vinieron exactamente ' + num(n) + ': puede haber más' : null;
 }
 function avisarCorte() {
@@ -238,7 +243,7 @@ function avisarCorte() {
   const d = document.createElement('div');
   d.id = 'corte'; d.className = 'aviso'; d.style.marginTop = '14px';
   d.innerHTML = '<b>Ojo con el total.</b> La consulta devolvió exactamente '
-    + num(AY.todo.datos.length) + ' filas, que es un tope del motor de la Ayuda, '
+    + num(TOPE_DEL_MOTOR) + ' filas, que es el techo del motor de la Ayuda, '
     + 'no necesariamente todo lo que hay. Las cifras de abajo están bien <b>sobre esas filas</b>; '
     + 'el total real puede ser mayor.';
   const ref = caja.querySelector('.ay-acciones');
