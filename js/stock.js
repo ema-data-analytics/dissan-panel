@@ -125,8 +125,8 @@ function pintar(d, ms) {
   /* por depósito */
   const dep = d.dep || [];
   if (dep.length) {
-    h.push(sec('Por depósito', dep.length + ' depósitos. La suma tiene que dar el valorizado '
-      + 'de arriba — es el control de que la cifra cierra consigo misma.'));
+    h.push(sec('Por depósito', dep.length + ' depósitos. La suma da el valorizado de arriba — es el control de '
+      + 'que la cifra cierra consigo misma. Puede diferir un centavo: son siete sumas redondeadas.'));
     h.push('<div class="tb-caja"><table><tr><th>Depósito</th><th class="num">Artículos</th>'
       + '<th class="num">Unidades</th><th class="num">Valorizado</th></tr>'
       + dep.map(x => '<tr><td class="cod">' + esc(x.cod_deposi) + '</td>'
@@ -212,20 +212,27 @@ async function verKardex() {
         + 'No hay movimientos de <b>' + esc(a) + '</b> en ese período.</div>';
       return;
     }
-    const ent = f.filter(x => Number(x.cantidad) > 0).reduce((s, x) => s + Number(x.cantidad), 0);
-    const sal = f.filter(x => Number(x.cantidad) < 0).reduce((s, x) => s + Number(x.cantidad), 0);
+    /* EL SIGNO ESTA EN tipo_mov, NO EN cantidad.
+       api_kardex devuelve la cantidad SIEMPRE POSITIVA: E es entrada y S es
+       salida. Sumando por el signo de cantidad, el 21/10 la pantalla decia
+       «entraron 11.250 · salieron 0 · neto 11.250» cuando la base dice
+       9.210 / 2.040 / 7.170, con las salidas a la vista en la tabla de abajo.
+       Tres cifras mal, de un supuesto que nunca medi. */
+    const entrada = x => String(x.tipo_mov || '').trim().toUpperCase() === 'E';
+    const ent = f.filter(entrada).reduce((s, x) => s + Number(x.cantidad || 0), 0);
+    const sal = f.filter(x => !entrada(x)).reduce((s, x) => s + Number(x.cantidad || 0), 0);
     $('kardex').innerHTML = sec('Movimientos de ' + esc(a),
-        num(f.length) + ' movimientos · entraron ' + num(ent) + ' · salieron ' + num(Math.abs(sal))
-        + ' · neto ' + num(ent + sal) + ' · la base tardó ' + (ms / 1000).toFixed(2) + ' s')
+        num(f.length) + ' movimientos · entraron ' + num(ent) + ' · salieron ' + num(sal)
+        + ' · neto ' + num(ent - sal) + ' · la base tardó ' + (ms / 1000).toFixed(2) + ' s')
       + '<div class="tb-caja"><table><tr><th>Fecha</th><th>Comprobante</th><th>Movimiento</th>'
       + '<th>Depósito</th><th class="num">Cantidad</th><th class="num">Precio</th>'
       + '<th>Estado</th></tr>'
-      + f.map(x => '<tr class="' + (Number(x.cantidad) < 0 ? 'mal' : 'bien') + '">'
+      + f.map(x => '<tr class="' + (entrada(x) ? 'bien' : 'mal') + '">'
         + '<td>' + fecha(x.fecha) + '</td>'
         + '<td class="cod">' + esc((x.t_comp || '') + ' ' + (x.n_comp || '')) + '</td>'
-        + '<td class="desc">' + esc(x.tipo_mov || '') + '</td>'
+        + '<td class="desc">' + (entrada(x) ? 'entrada' : 'salida') + '</td>'
         + '<td class="cod">' + esc(x.cod_deposi || '') + '</td>'
-        + '<td class="num">' + num(x.cantidad) + '</td>'
+        + '<td class="num">' + (entrada(x) ? '+' : '−') + num(x.cantidad) + '</td>'
         + celda(x.precio)
         + '<td class="desc">' + esc(x.estado_mov || '') + '</td></tr>').join('')
       + '</table></div>';
