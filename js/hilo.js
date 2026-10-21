@@ -39,6 +39,16 @@ async function cargarMapa() {
   await cargarTablas();
 }
 
+/* ---------- la cobertura NO se redondea para arriba ----------
+   `pct()` usa 1 decimal, asi que 99,99 salia «100,0%»: convierte «casi todas
+   las filas ligan» en «ligan todas», que es justo lo que el Hilo existe para
+   no decir. Medido el 21/10 en sta08: la base dice 99.99 y la pantalla decia
+   100,0%. Dos decimales, y el 100 pelado solo cuando es 100 de verdad. */
+function cobertura(v) {
+  const n = Number(v || 0);
+  return (n >= 100 ? '100' : nf2.format(n)) + '%';
+}
+
 function tarjeta(n, rotulo, detalle, clase) {
   return '<div class="tj"><div class="n ' + (clase || '') + '">' + n + '</div>'
        + '<div class="r">' + esc(rotulo) + '</div>'
@@ -122,7 +132,7 @@ function filaVecino(x, conMultiplica) {
     + '<td class="desc" title="' + esc(x.por) + '">' + esc(x.por) + '</td>'
     + '<td>' + esc(x.cardinalidad || '') + '</td>'
     + '<td class="desc">' + esc(x.nivel || '') + '</td>'
-    + '<td class="num">' + pct(x.cobertura_pct) + '</td>'
+    + '<td class="num">' + cobertura(x.cobertura_pct) + '</td>'
     + '<td class="num">' + num(x.filas) + '</td>'
     + (conMultiplica ? '<td>' + (x.multiplica
         ? '<span class="hi-ojo">multiplica filas</span>' : 'no') + '</td>' : '')
@@ -209,7 +219,7 @@ function pintarCamino(d, ms, a, z) {
     h.push('<div class="aviso" style="margin-top:14px"><b>Ojo.</b> ' + esc(d.aviso) + '</div>');
 
   h.push(sec('Los eslabones, uno por uno',
-    'La confianza del camino es la del eslabón más flojo: ' + pct(d.cobertura_minima) + '.'));
+    'La confianza del camino es la del eslabón más flojo: ' + cobertura(d.cobertura_minima) + '.'));
   h.push('<div class="tb-caja"><table><tr><th class="num">#</th><th>Eslabón</th></tr>'
     + (d.pasos || []).map((p, i) => '<tr><td class="num">' + (i + 1) + '</td>'
       + '<td class="hi-paso">' + esc(p) + '</td></tr>').join('')
