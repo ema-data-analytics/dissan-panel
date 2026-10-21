@@ -89,9 +89,13 @@ const fecha = v => {
   const f = String(v || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
   return f ? f[3] + '/' + f[2] + '/' + f[1] : (v ? esc(v) : '—');
 };
+/* Los meses se escriben en castellano, igual que en el Tablero: una etiqueta como
+   "2026-01" es un código, no un mes. */
+const MESES = ['', 'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio',
+               'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 const mesCorto = v => {
   const f = String(v || '').match(/^(\d{4})-(\d{2})/);
-  return f ? f[1] + '-' + f[2] : esc(v);
+  return f ? MESES[Number(f[2])] + ' ' + f[1] : esc(v);
 };
 
 function pintar(d, ms) {
@@ -132,10 +136,18 @@ function pintar(d, ms) {
   /* mes a mes */
   const mes = (d.mes || []).filter(x => Number(x.comprobantes || 0) > 0);
   if (mes.length) {
+    /* El control lo hace la pantalla, no el que mira: si se deja la suma al lado del neto
+       para que el lector compare dos cadenas de 15 dígitos, el centavo de redondeo parece
+       un descuadre. */
     const suma = mes.reduce((a, x) => a + Number(x.neto || 0), 0);
+    const dm = suma - Number(r.neto_gravado || 0);
     h.push(sec('Compras mes a mes',
-      mes.length + ' meses. La suma del neto da ' + exacto(suma) + ' — tiene que dar el neto '
-      + 'gravado de arriba, y es el control de que la cifra cierra consigo misma.'));
+      mes.length + ' meses. La suma del neto da ' + exacto(suma) + ' contra el neto gravado '
+      + 'de arriba, ' + exacto(r.neto_gravado) + ' — '
+      + (Math.abs(dm) < 0.005 ? 'coinciden al centavo.'
+         : Math.abs(dm) <= 0.02 * mes.length
+           ? 'coinciden; la diferencia de ' + exacto(dm) + ' es de redondear cada mes aparte.'
+           : 'NO coinciden, sobran ' + exacto(dm) + '.')));
     /* la etiqueta se arma ANTES, no se parchea el HTML con una expresión
        regular después: eso se rompe el día que cambie una comilla. */
     const mesEt = mes.map(x => Object.assign({}, x, { etiqueta: mesCorto(x.mes) }));
