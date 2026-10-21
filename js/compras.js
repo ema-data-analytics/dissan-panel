@@ -142,7 +142,8 @@ function pintar(d, ms) {
     const suma = mes.reduce((a, x) => a + Number(x.neto || 0), 0);
     const dm = suma - Number(r.neto_gravado || 0);
     h.push(sec('Compras mes a mes',
-      mes.length + ' meses. La suma del neto da ' + exacto(suma) + ' contra el neto gravado '
+      mes.length + (mes.length === 1 ? ' mes. ' : ' meses. ')
+      + 'La suma del neto da ' + exacto(suma) + ' contra el neto gravado '
       + 'de arriba, ' + exacto(r.neto_gravado) + ' — '
       + (Math.abs(dm) < 0.005 ? 'coinciden al centavo.'
          : Math.abs(dm) <= 0.02 * mes.length
@@ -193,7 +194,8 @@ function pintar(d, ms) {
     h.push('<div class="aviso" style="margin-top:-2px"><b>Qué mide esto, exacto.</b> Reparte los '
       + 'comprobantes por <b>' + esc(base) + '</b>. <b>No es lo que se debe</b>: es cuándo se '
       + 'emitió cada comprobante. Lo que está pendiente de pago va más abajo, y son otras '
-      + 'cifras.</div>');
+      + 'cifras. <b>Y este cuadro no mira las fechas de arriba</b>: va contra toda la base al '
+      + 'día de hoy, así que no hay que leerlo como del período elegido.</div>');
     h.push(barras(ant, 'tramo', 'importe',
       f => pesoM(f.importe) + ' · ' + num(f.comprobantes) + ' comp.', 'r'));
   }
@@ -204,7 +206,8 @@ function pintar(d, ms) {
     const tot = sal.reduce((a, x) => a + Number(x.saldo_pendiente || 0), 0);
     h.push(sec('Saldo pendiente por proveedor',
       num(sal.length) + ' proveedores con saldo, ' + exacto(tot) + ' en total. Esto sí es deuda '
-      + 'viva, y por eso no coincide con el cuadro de arriba.'));
+      + 'viva, y por eso no coincide con el cuadro de arriba. Sale de la ficha del proveedor, '
+      + 'así que es el saldo de hoy y tampoco mira las fechas de arriba.'));
     h.push('<div class="tb-caja"><table><tr><th>Código</th><th>Proveedor</th>'
       + '<th class="num">Saldo</th><th>Última factura</th><th class="num">Días</th>'
       + '<th class="num">Comprob.</th></tr>'
