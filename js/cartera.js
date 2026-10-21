@@ -43,7 +43,7 @@ async function calcular() {
       rpc('api_cartera_control_v2',         { p_corte: corte }),
       rpc('api_riesgo_cartera',             { p_corte: corte }),
       rpc('api_cartera_por_cliente',        { p_corte: corte, p_limite: 40 }),
-      rpc('api_cartera_riesgo_con_ventas',  { p_dias: dias, p_limite: 20 }),
+      rpc('api_cartera_riesgo_con_ventas_v2', { p_dias: dias, p_limite: 20 }),
       rpc('api_cobranzas_por_semana_v2',    { p_semanas: 10, p_corte: corte })
     ]);
     const ms = Math.round(performance.now() - t0);
@@ -217,7 +217,8 @@ function pintar(d, ms, dias) {
   if (d.rie.length) {
     const siguen = d.rie.filter(x => x.sigue_comprando === true);
     h.push(sec('Quién debe más, y si le seguimos vendiendo',
-      'La deuda sale de la <b>ficha del cliente</b>, no de los vencimientos. Las ventas son '
+      /* Nada de etiquetas acá: sec() escapa el subtítulo, así que un <b> se ve literal. */
+      'La deuda sale de la ficha del cliente, no de los vencimientos. Las ventas son '
       + 'de los últimos ' + num(dias) + ' días.'));
     h.push('<div class="tb-caja"><table><tr><th>Código</th><th>Cliente</th>'
       + '<th class="num">Debe (ficha)</th><th class="num">Le vendimos</th>'
