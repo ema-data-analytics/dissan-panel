@@ -165,6 +165,34 @@ function pintar(d, ms) {
   $('cuerpo').innerHTML = h.join('');
 }
 
+
+/* ---------- llamar una Edge Function ----------
+   NO se usa sb.functions.invoke. El 20/10, con las 12.082 filas de «stock
+   cero» (3,2 MB de payload), invoke devolvio «Edge Function returned a non-2xx
+   status code» —un cartel que no dice nada— mientras un fetch directo al mismo
+   endpoint, con el mismo cuerpo, devolvia 200 y el archivo entero.
+   Con fetch se ve el codigo y el cuerpo del error, y se puede reintentar. */
+async function llamarFuncion(nombre, cuerpo, intentos = 2) {
+  let ultimo = '';
+  for (let i = 1; i <= intentos; i++) {
+    try {
+      const s = (await sb.auth.getSession()).data.session;
+      if (!s) throw new Error('La sesion vencio. Volve a entrar.');
+      const r = await fetch(SB_URL + '/functions/v1/' + nombre, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json',
+                   'Authorization': 'Bearer ' + s.access_token, 'apikey': SB_KEY },
+        body: JSON.stringify(cuerpo)
+      });
+      const txt = await r.text();
+      if (!r.ok) { ultimo = 'HTTP ' + r.status + ' · ' + txt.slice(0, 160); continue; }
+      try { return JSON.parse(txt); }
+      catch (e) { ultimo = 'contesto algo que no se pudo leer'; continue; }
+    } catch (e) { ultimo = String(e.message || e); }
+  }
+  throw new Error(ultimo || 'no contesto');
+}
+
 /* ---------- la lectura ---------- */
 async function pedirLectura(sello) {
   let todo;
@@ -192,17 +220,15 @@ async function pedirLectura(sello) {
   const cu = (todo.entendido && todo.entendido.cuando) || {};
   const titulo = [q.titulo, cu.etiqueta].filter(Boolean).join(' · ');
 
-  let data, error;
+  let data;
   try {
-    ({ data, error } = await sb.functions.invoke('leer', {
-      body: { pregunta: AY.pregunta, datos: todo.datos, titulo: titulo, aviso: todo.aviso || '' }
-    }));
+    data = await llamarFuncion('leer',
+      { pregunta: AY.pregunta, datos: todo.datos, titulo: titulo, aviso: todo.aviso || '' });
   } catch (e) { return fallaLectura(sello, String(e.message || e)); }
   if (sello !== AY.sello) return;
 
-  if (error || !data || data.ok !== true || !data.lectura)
-    return fallaLectura(sello, (error && error.message) || (data && data.motivo)
-      || 'La lectura no devolvió texto.');
+  if (!data || data.ok !== true || !data.lectura)
+    return fallaLectura(sello, (data && data.motivo) || 'La lectura no devolvió texto.');
 
   AY.lectura = data.lectura;
   const caja = $('lectura');
@@ -284,13 +310,10 @@ async function bajarExcel() {
 
     const q = (todo.entendido && todo.entendido.que) || {};
     const cu = (todo.entendido && todo.entendido.cuando) || {};
-    const { data, error } = await sb.functions.invoke('excel', {
-      body: {
-        pregunta: AY.pregunta, datos: todo.datos, lectura: AY.lectura || '',
-        titulo: [q.titulo, cu.etiqueta].filter(Boolean).join(' · ')
-      }
+    const data = await llamarFuncion('excel', {
+      pregunta: AY.pregunta, datos: todo.datos, lectura: AY.lectura || '',
+      titulo: [q.titulo, cu.etiqueta].filter(Boolean).join(' · ')
     });
-    if (error) throw new Error(error.message || String(error));
     if (!data || data.ok !== true || !data.base64) throw new Error(data && data.motivo
       || 'El servidor no devolvió el archivo.');
 
