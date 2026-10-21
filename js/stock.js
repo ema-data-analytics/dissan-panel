@@ -127,14 +127,21 @@ function pintar(d, ms) {
   if (dep.length) {
     h.push(sec('Por depósito', dep.length + ' depósitos. La suma da el valorizado de arriba — es el control de '
       + 'que la cifra cierra consigo misma. Puede diferir un centavo: son siete sumas redondeadas.'));
-    h.push('<div class="tb-caja"><table><tr><th>Depósito</th><th class="num">Artículos</th>'
+    h.push('<div class="tb-caja"><table><tr><th>Depósito</th>'
+      + '<th class="num">Artículos acá</th>'
       + '<th class="num">Unidades</th><th class="num">Valorizado</th></tr>'
       + dep.map(x => '<tr><td class="cod">' + esc(x.cod_deposi) + '</td>'
         + '<td class="num">' + num(x.articulos) + '</td>'
         + '<td class="num">' + num(x.unidades) + '</td>'
         + celda(x.valorizado) + '</tr>').join('')
+      /* La columna «Artículos acá» cuenta pares artículo-depósito: un artículo
+         que está en tres depósitos aparece tres veces. Sumarla da 4.867 contra
+         los 2.965 artículos distintos de la tarjeta — dos números de la misma
+         pantalla que no coinciden. No se suma: se escribe por qué. */
       + '<tr class="hi-total"><td><b>Total</b></td>'
-      + '<td class="num"><b>' + num(dep.reduce((a, x) => a + Number(x.articulos || 0), 0)) + '</b></td>'
+      + '<td class="num" title="No se suma: un artículo en varios depósitos se contaría '
+      + 'más de una vez. Los artículos distintos con existencia son ' + num(v.articulos_con_stock)
+      + '.">—</td>'
       + '<td class="num"><b>' + num(dep.reduce((a, x) => a + Number(x.unidades || 0), 0)) + '</b></td>'
       + celda(dep.reduce((a, x) => a + Number(x.valorizado || 0), 0)) + '</tr>'
       + '</table></div>');
@@ -154,12 +161,20 @@ function pintar(d, ms) {
       + '</section>');
 
     const bre = d.bre || [];
+    const neg = bre.filter(x => Number(x.cantidad) < 0).length;
+    if (neg) h.push('<div class="aviso" style="margin-top:12px"><b>Ojo: hay existencias '
+      + 'negativas.</b> ' + num(neg) + ' de los ' + num(bre.length) + ' de abajo tienen cantidad '
+      + 'menor a cero en Tango — salidas registradas sin la entrada que las respalde. '
+      + 'En toda la base son <b>35 artículos</b> con −389,3 unidades, en los depósitos 02 y 03. '
+      + 'Mientras eso esté así, la diferencia de esos renglones no significa nada: es un dato a '
+      + 'corregir en Tango, no una brecha de precio.</div>');
     if (bre.length) {
       h.push('<div class="tb-caja" style="margin-top:12px"><table><tr><th>Artículo</th>'
         + '<th>Descripción</th><th class="num">Cantidad</th><th class="num">Costó</th>'
         + '<th class="num">Costaría</th><th class="num">Diferencia</th>'
         + '<th>De dónde sale</th></tr>'
-        + bre.map(x => '<tr><td class="cod">' + esc(x.cod_articu) + '</td>'
+        + bre.map(x => '<tr class="' + (Number(x.cantidad) < 0 ? 'aparte' : '') + '">'
+          + '<td class="cod">' + esc(x.cod_articu) + '</td>'
           + '<td class="desc" title="' + esc(x.articulo) + '">' + esc(x.articulo) + '</td>'
           + '<td class="num">' + num(x.cantidad) + '</td>'
           + celda(x.valor_historico) + celda(x.valor_reposicion) + celda(x.brecha)
