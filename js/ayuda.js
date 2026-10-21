@@ -54,6 +54,9 @@ function valor(v) {
     .replace(/^(-?[\d.]+)$/, '$1');
   if (typeof v === 'boolean') return v ? 'sí' : 'no';
   if (typeof v === 'object') return esc(JSON.stringify(v));
+  /* una fecha ISO se lee al revés acá: 2025-09-30 va como 30/09/2025 */
+  const f = String(v).match(/^(\d{4})-(\d{2})-(\d{2})(?:[T ].*)?$/);
+  if (f) return f[3] + '/' + f[2] + '/' + f[1];
   return esc(v);
 }
 const esNumero = v => typeof v === 'number';
