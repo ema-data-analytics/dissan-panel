@@ -268,4 +268,6 @@ function pintar(d, ms, dias) {
       + exactoS(sumar(fut, 'a_cobrar')) + ' en las próximas ' + num(fut.length)
       + ' semanas.</div>');
   }
+
+  $('cuerpo').innerHTML = h.join('');
 }
