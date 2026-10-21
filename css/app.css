@@ -234,3 +234,5 @@ td.num,th.num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-n
   .ay-btn{width:100%;padding:12px}
 }
 .ay-corte{color:var(--ambar)}
+.tj .n .chico{font-size:15px;color:var(--gris);font-weight:600}
+.filtros .fg-chk.tb-accion{margin-top:25px}
