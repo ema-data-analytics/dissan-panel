@@ -233,3 +233,4 @@ td.num,th.num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-n
   .ay-caja{flex-direction:column}
   .ay-btn{width:100%;padding:12px}
 }
+.ay-corte{color:var(--ambar)}

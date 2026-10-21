@@ -21,7 +21,7 @@
    --------------------------------------------------------------------------- */
 'use strict';
 
-let AY = { pregunta: '', respuesta: null, todo: null, lectura: null, sello: 0 };
+let AY = { pregunta: '', respuesta: null, todo: null, lectura: null, sello: 0, recortado: null };
 
 /* core.js llama calcular() al entrar. Aca no hay nada que calcular. */
 async function calcular() { $('q').focus(); }
@@ -65,7 +65,7 @@ async function preguntar(texto) {
   $('q').value = q;
 
   const sello = ++AY.sello;                 // una respuesta vieja no pisa a una nueva
-  AY = { pregunta: q, respuesta: null, todo: null, lectura: null, sello: sello };
+  AY = { pregunta: q, respuesta: null, todo: null, lectura: null, sello: sello, recortado: null };
 
   const b = $('b-preg');
   b.disabled = true; b.textContent = 'Pensando...';
@@ -170,9 +170,12 @@ async function pedirLectura(sello) {
     return fallaLectura(sello, 'No hay filas que leer.');
 
   AY.todo = todo;
+  AY.recortado = recortado(todo.datos.length);
   const c = $('cuenta-filas');
   if (c) c.innerHTML = '<b>' + num(AY.respuesta.datos.length) + ' de ' + num(todo.datos.length)
-    + ' filas</b> en pantalla · el Excel y la lectura se llevan las ' + num(todo.datos.length);
+    + ' filas</b> en pantalla · el Excel y la lectura se llevan las ' + num(todo.datos.length)
+    + (AY.recortado ? ' <span class="ay-corte">· ' + AY.recortado + '</span>' : '');
+  avisarCorte();
 
   const q = (todo.entendido && todo.entendido.que) || {};
   const cu = (todo.entendido && todo.entendido.cuando) || {};
@@ -196,9 +199,47 @@ async function pedirLectura(sello) {
   caja.className = 'ay-lectura';
   caja.innerHTML = '<div class="enc">La lectura</div>'
     + '<div class="txt">' + lecturaHtml(data.lectura) + '</div>'
-    + '<div class="ay-pie">Escrita por ' + esc(data.modelo || 'el modelo') + ' sobre las '
-    + num(data.filas_leidas || todo.datos.length) + ' filas · '
-    + ((data.ms || 0) / 1000).toFixed(1) + ' s</div>';
+    /* El pie dice SOBRE QUÉ se midió, no cuántas filas vio el modelo.
+       La función «leer» calcula los totales EN SQL sobre todas las filas y al
+       modelo le pasa el resumen más una muestra; poner «sobre las 59 filas»
+       —que es lo que devuelve filas_leidas— hace creer que leyó 59 de 12.082
+       y tira abajo una lectura que está bien. */
+    + '<div class="ay-pie">Escrita por ' + esc(data.modelo || 'el modelo')
+    + ' · los totales salen de una cuenta en la base sobre las '
+    + num(todo.datos.length) + ' filas'
+    + (data.filas_leidas && data.filas_leidas < todo.datos.length
+        ? ' (al modelo se le pasó el resumen más una muestra de ' + num(data.filas_leidas) + ')'
+        : '')
+    + ' · ' + ((data.ms || 0) / 1000).toFixed(1) + ' s</div>';
+}
+
+/* ---------- EL RECORTE, QUE NO SE PUEDE CALLAR ----------
+   `ayuda.resolver` envuelve TODA consulta en un «limit 2000» escrito a mano
+   (línea 273 de la función) y después informa esa cantidad como si fuera el
+   total. Medido el 20/10: «qué artículos tienen stock cero» decía 2.000 y la
+   base tiene 12.082. Es la lista incompleta con pinta de completa, pero sobre
+   los datos.
+
+   Hasta que se arregle en la base —hay que hacerlo con el corpus de las 124
+   preguntas reales delante, no a ojo— la pantalla AVISA. Un número que puede
+   estar cortado y no lo dice es peor que no tenerlo. */
+const TOPES_CONOCIDOS = [2000, 5000];
+function recortado(n) {
+  return TOPES_CONOCIDOS.includes(n)
+    ? 'vinieron exactamente ' + num(n) + ': puede haber más' : null;
+}
+function avisarCorte() {
+  if (!AY.recortado) return;
+  const caja = $('cuerpo');
+  if (!caja || $('corte')) return;
+  const d = document.createElement('div');
+  d.id = 'corte'; d.className = 'aviso'; d.style.marginTop = '14px';
+  d.innerHTML = '<b>Ojo con el total.</b> La consulta devolvió exactamente '
+    + num(AY.todo.datos.length) + ' filas, que es un tope del motor de la Ayuda, '
+    + 'no necesariamente todo lo que hay. Las cifras de abajo están bien <b>sobre esas filas</b>; '
+    + 'el total real puede ser mayor.';
+  const ref = caja.querySelector('.ay-acciones');
+  if (ref) ref.parentNode.insertBefore(d, ref); else caja.appendChild(d);
 }
 
 function fallaLectura(sello, motivo) {
