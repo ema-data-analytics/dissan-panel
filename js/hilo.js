@@ -218,6 +218,20 @@ function pintarCamino(d, ms, a, z) {
   if (d.multiplica_filas && d.aviso)
     h.push('<div class="aviso" style="margin-top:14px"><b>Ojo.</b> ' + esc(d.aviso) + '</div>');
 
+  /* LIMITACION CONOCIDA DE api_hilo_camino, documentada desde el 08/10:
+     la guarda de catalogos mira el ORIGEN y el DESTINO, no los saltos del
+     medio. Por eso deja pasar rutas que cruzan una tabla puente — el caso
+     medido es sta_articulo_unidad_compra, 14.944 filas contra 14.987
+     articulos: una por articulo, o sea un catalogo, no un comprobante.
+     La funcion no se toca (la usa tambien el panel de Apps Script); la
+     pantalla lo DICE, que es lo que hay que hacer con un limite conocido. */
+  h.push('<div class="aviso" style="margin-top:14px"><b>Antes de usar este camino.</b> '
+    + 'El hilo controla que el origen y el destino sean comprobantes, <b>pero no controla los '
+    + 'saltos del medio</b>. Si en la ruta aparece una tabla con más o menos una fila por '
+    + 'artículo o por cliente, ese salto liga por catálogo y no por operación: el camino existe, '
+    + 'pero no significa que las dos puntas hablen de la misma operación. Mirá los eslabones de '
+    + 'abajo antes de sacar una cifra de acá.</div>');
+
   h.push(sec('Los eslabones, uno por uno',
     'La confianza del camino es la del eslabón más flojo: ' + cobertura(d.cobertura_minima) + '.'));
   h.push('<div class="tb-caja"><table><tr><th class="num">#</th><th>Eslabón</th></tr>'
