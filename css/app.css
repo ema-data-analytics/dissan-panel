@@ -247,3 +247,4 @@ td.num,th.num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-n
 .hi-flecha{color:var(--gris);font-size:15px}
 .hi-paso{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px;word-break:break-word}
 .hi-ojo{color:var(--ambar);font-weight:600}
+.tb-caja tr.hi-total td{border-top:1px solid var(--borde);background:rgba(255,255,255,.03)}
