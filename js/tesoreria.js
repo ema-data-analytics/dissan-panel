@@ -65,6 +65,13 @@ async function calcular() {
 
 const una = d => Array.isArray(d) ? (d[0] || {}) : (d || {});
 
+/* En esta pantalla la mitad de las cifras son negativas, y `pesoM` las escribe «$-1.584,0 M»
+   con el menos adentro del peso. Acá el signo va adelante. No se toca `pesoM`, que la usan
+   las siete pantallas ya cerradas. */
+const signo = n => Number(n || 0) < 0 ? '−' : '';
+const pesoMs   = n => signo(n) + pesoM(Math.abs(Number(n || 0)));
+const exactoS  = n => signo(n) + exacto(Math.abs(Number(n || 0)));
+
 function tarjeta(n, rotulo, detalle, clase) {
   return '<div class="tj"><div class="n ' + (clase || '') + '">' + n + '</div>'
        + '<div class="r">' + esc(rotulo) + '</div>'
@@ -75,8 +82,9 @@ function sec(t, s) {
 }
 function celda(v) {
   const n = Number(v || 0);
-  const txt = Math.abs(n) >= 1e6 ? '$' + nf1.format(n / 1e6) + ' M' : '$' + nf0.format(n);
-  return '<td class="num" title="' + esc(exacto(n)) + '">' + txt + '</td>';
+  const a = Math.abs(n);
+  const txt = signo(n) + (a >= 1e6 ? '$' + nf1.format(a / 1e6) + ' M' : '$' + nf0.format(a));
+  return '<td class="num" title="' + esc(exactoS(n)) + '">' + txt + '</td>';
 }
 function barras(filas, et, val, texto, tono) {
   if (!filas || !filas.length) return '';
@@ -116,13 +124,13 @@ function pintar(d, ms, desde, hasta) {
 
   /* ---------- tarjetas ---------- */
   const t = [];
-  t.push(tarjeta(pesoM(sumar(bancos, 'neto')), 'bancos',
-    num(bancos.length) + ' cuentas · ' + esc(exacto(sumar(bancos, 'neto')))));
-  t.push(tarjeta(pesoM(sumar(carte, 'neto')), 'cheques en cartera',
-    num(carte.length) + ' cuentas · ' + esc(exacto(sumar(carte, 'neto')))));
-  t.push(tarjeta(pesoM(sumar(cajas, 'neto')), 'cajas y efectivo',
-    num(cajas.length) + ' cuentas · ' + esc(exacto(sumar(cajas, 'neto'))), 'gris'));
-  t.push(tarjeta(pesoM(sumar(contra, 'neto')), 'contracuentas',
+  t.push(tarjeta(pesoMs(sumar(bancos, 'neto')), 'bancos',
+    num(bancos.length) + ' cuentas · ' + esc(exactoS(sumar(bancos, 'neto')))));
+  t.push(tarjeta(pesoMs(sumar(carte, 'neto')), 'cheques en cartera',
+    num(carte.length) + ' cuentas · ' + esc(exactoS(sumar(carte, 'neto')))));
+  t.push(tarjeta(pesoMs(sumar(cajas, 'neto')), 'cajas y efectivo',
+    num(cajas.length) + ' cuentas · ' + esc(exactoS(sumar(cajas, 'neto'))), 'gris'));
+  t.push(tarjeta(pesoMs(sumar(contra, 'neto')), 'contracuentas',
     num(contra.length) + ' cuentas de un solo lado', 'gris'));
   t.push(tarjeta(num(c.movimientos), 'movimientos', 'en toda la tesorería', 'gris'));
   t.push(tarjeta(num(c.asientos_sin_cerrar), 'asientos que no cierran',
@@ -149,9 +157,9 @@ function pintar(d, ms, desde, hasta) {
     + ' de ' + num(c.asientos) + ' asientos. Si el debe no da igual al haber, hay un asiento '
     + 'con una pata sola.'));
   h.push('<div class="aviso"><b>Debe ' + exacto(c.debe) + ' contra haber '
-    + exacto(c.haber) + '</b> — difieren <b>' + exacto(c.diferencia) + '</b> sobre '
+    + exacto(c.haber) + '</b> — difieren <b>' + exactoS(c.diferencia) + '</b> sobre '
     + pesoM(c.debe) + ', y la suma de los netos de las ' + num(ctas.length) + ' cuentas da '
-    + exacto(neto) + ', que es la misma diferencia. '
+    + exactoS(neto) + ', que es la misma diferencia. '
     + '<b>' + num(c.cuentas_saldo_coincide) + ' de ' + num(c.cuentas) + ' cuentas</b> tienen el '
     + 'saldo guardado por Tango igual a su debe menos haber'
     + (Number(c.cuentas_saldo_no_coincide) ? ', y ' + num(c.cuentas_saldo_no_coincide)
@@ -162,7 +170,7 @@ function pintar(d, ms, desde, hasta) {
   if (d.sin.length) {
     h.push(sec('Los asientos que no cierran', 'Son ' + num(d.sin.length)
       + ' y entre ellos está todo el descuadre: suman '
-      + exacto(sumar(d.sin, 'descuadre')) + ', contra los ' + exacto(c.diferencia)
+      + exactoS(sumar(d.sin, 'descuadre')) + ', contra los ' + exactoS(c.diferencia)
       + ' de la tesorería entera.'));
     h.push('<div class="tb-caja"><table><tr><th>Comprobante</th><th>Número</th><th>Fecha</th>'
       + '<th class="num">Patas</th><th class="num">Entra</th><th class="num">Sale</th>'
@@ -186,7 +194,7 @@ function pintar(d, ms, desde, hasta) {
           + 'descuadre al revés), así que no mueven plata. ' : '')
       + (reales.length
           ? 'Queda' + (reales.length > 1 ? 'n ' : ' ') + '<b>' + num(reales.length)
-            + '</b> de verdad, por <b>' + exacto(sumar(reales, 'descuadre')) + '</b>: '
+            + '</b> de verdad, por <b>' + exactoS(sumar(reales, 'descuadre')) + '</b>: '
             + reales.map(x => esc(x.cod_comp) + ' ' + esc(String(x.n_comp || '').trim())
               + ' del ' + fecha(x.fecha)).join(', ')
             + '. Mirá la última columna: ahí se ve que una cuenta recibe un importe y la otra '
@@ -216,8 +224,8 @@ function pintar(d, ms, desde, hasta) {
             + '<td class="num" title="' + (viva ? 'se movió en los últimos 60 días'
                 : 'quieta') + '">' + num(x.dias_sin_mover) + (viva ? ' ●' : '') + '</td>'
             + '<td>' + (Number(x.asientos_iniciales || 0)
-                ? '<span title="' + esc(exacto(x.importe_inicial)) + '">sí, '
-                  + pesoM(x.importe_inicial) + '</span>'
+                ? '<span title="' + esc(exactoS(x.importe_inicial)) + '">sí, '
+                  + pesoMs(x.importe_inicial) + '</span>'
                 : '<span title="esta cuenta arranca sin saldo inicial">no</span>') + '</td>'
             + celda(x.debe) + celda(x.haber) + celda(x.neto) + '</tr>';
         }).join('')
@@ -246,8 +254,8 @@ function pintar(d, ms, desde, hasta) {
       d.comp.length + ' tipos de comprobante en el período elegido.'));
     h.push(barras(d.comp.map(x => Object.assign({}, x,
         { etiqueta: x.cod_comp + ' · ' + x.que_es })), 'etiqueta', 'movimientos',
-      f => num(f.movimientos) + ' mov. · entra ' + pesoM(f.entra) + ' · sale '
-           + pesoM(f.sale), 'v'));
+      f => num(f.movimientos) + ' mov. · entra ' + pesoMs(f.entra) + ' · sale '
+           + pesoMs(f.sale), 'v'));
     h.push('<div class="aviso">Los rótulos de los tipos están escritos a mano acá, no vienen '
       + 'de la base: si alguno está mal, se corrige en un renglón. '
       + (ini.length ? '<b>Los asientos de saldo inicial están a la vista</b> ('
@@ -282,30 +290,42 @@ function pintar(d, ms, desde, hasta) {
 
   /* ---------- los movimientos ---------- */
   if (d.mov.length) {
-    const ent = d.mov.filter(x => x.sentido === 'entra');
-    const sal = d.mov.filter(x => x.sentido === 'sale');
+    /* Lo que el renglón aporta al neto de la cuenta es +importe si entra y −importe si sale.
+       Y el importe puede venir NEGATIVO: las reversiones se cargan así. Un renglón del haber
+       con importe negativo devuelve plata, no la saca. Mostrarlo como salida normal sería
+       invertirle el sentido a 998 movimientos de la base. */
+    const aporta = x => (x.sentido === 'entra' ? 1 : -1) * Number(x.importe || 0);
+    const rev = d.mov.filter(x => Number(x.importe || 0) < 0);
+    const suben = d.mov.filter(x => aporta(x) > 0);
+    const bajan = d.mov.filter(x => aporta(x) < 0);
     h.push(sec('Los movimientos, uno por uno',
-      'Los ' + num(d.mov.length) + ' más nuevos del período: ' + num(ent.length)
-      + ' que entran por ' + exacto(sumar(ent, 'importe')) + ' y ' + num(sal.length)
-      + ' que salen por ' + exacto(sumar(sal, 'importe'))
+      'Los ' + num(d.mov.length) + ' más nuevos del período: ' + num(suben.length)
+      + ' que suman ' + exactoS(suben.reduce((a, x) => a + aporta(x), 0))
+      + ' y ' + num(bajan.length) + ' que restan '
+      + exactoS(bajan.reduce((a, x) => a + aporta(x), 0))
       + '. El sentido sale de la columna de la base, no del signo del importe.'));
     h.push('<div class="tb-caja"><table><tr><th>Fecha</th><th>Comprobante</th><th>Número</th>'
-      + '<th>Cuenta</th><th>Sentido</th><th class="num">Importe</th><th>Leyenda</th></tr>'
+      + '<th>Cuenta</th><th>Sentido</th><th class="num">Al neto</th><th>Leyenda</th></tr>'
       + d.mov.map(x => {
-          const entra = x.sentido === 'entra';
-          const n = Number(x.importe || 0);
-          return '<tr class="' + (entra ? 'bien' : '') + '">'
+          const n = Number(x.importe || 0), ap = aporta(x);
+          return '<tr class="' + (ap > 0 ? 'bien' : '') + '">'
             + '<td>' + fecha(x.fecha) + '</td>'
             + '<td class="cod">' + esc(x.cod_comp) + '</td>'
             + '<td class="cod">' + esc(String(x.n_comp || '').trim()) + '</td>'
             + '<td class="desc" title="' + esc(x.cuenta || '') + '">'
             + esc(x.cuenta || x.cod_cta) + '</td>'
-            + '<td>' + (entra ? 'entra' : 'sale') + '</td>'
-            + '<td class="num" title="' + esc(exacto(n)) + '">'
-            + (entra ? '+' : '−') + '$' + nf2.format(Math.abs(n)) + '</td>'
+            + '<td>' + esc(x.sentido) + (n < 0 ? ', reversión' : '') + '</td>'
+            + '<td class="num" title="La base lo guarda como ' + esc(exactoS(n))
+            + ' del lado «' + esc(x.sentido) + '»">'
+            + (ap >= 0 ? '+' : '−') + '$' + nf2.format(Math.abs(ap)) + '</td>'
             + '<td class="desc" title="' + esc(x.leyenda || '') + '">'
             + esc(x.leyenda || '—') + '</td></tr>';
         }).join('') + '</table></div>');
+    if (rev.length) h.push('<div class="aviso">De estos ' + num(d.mov.length)
+      + ' movimientos, <b>' + num(rev.length) + ' tienen el importe negativo</b>: son '
+      + 'reversiones. Un renglón del haber con importe negativo <b>devuelve</b> plata, no la '
+      + 'saca, así que la columna muestra lo que el renglón le suma o le resta al neto de la '
+      + 'cuenta, y el importe tal como lo guarda la base queda en el cartelito.</div>');
   }
 
   /* ---------- qué mira el filtro y qué no ---------- */
