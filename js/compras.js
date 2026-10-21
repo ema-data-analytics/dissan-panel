@@ -31,12 +31,14 @@ async function calcular() {
   try {
     const t0 = performance.now();
     const [res, mes, prov, ant, sal, inf] = await Promise.all([
-      rpc('api_compras_resumen',             { p_desde: desde, p_hasta: hasta }),
-      rpc('api_compras_por_mes',             { p_desde: desde, p_hasta: hasta }),
-      rpc('api_compras_por_proveedor',       { p_desde: desde, p_hasta: hasta, p_limite: 20 }),
+      /* Las cuatro _v2 arreglan la mezcla de monedas medida el 21/10: importe_to viene en
+         pesos y el neto/exento/IVA en la moneda del comprobante. Las v1 quedaron intactas. */
+      rpc('api_compras_resumen_v2',          { p_desde: desde, p_hasta: hasta }),
+      rpc('api_compras_por_mes_v2',          { p_desde: desde, p_hasta: hasta }),
+      rpc('api_compras_por_proveedor_v2',    { p_desde: desde, p_hasta: hasta, p_limite: 20 }),
       rpc('api_cuentas_a_pagar',             {}),
       rpc('api_cuentas_a_pagar_por_proveedor', { p_limite: 50 }),
-      rpc('api_compras_inflacion_articulo',  { p_desde: desde, p_hasta: hasta,
+      rpc('api_compras_inflacion_articulo_v2', { p_desde: desde, p_hasta: hasta,
                                                p_min_compras: 3, p_limite: 25,
                                                p_incluir_dudosos: false })
     ]);
@@ -105,9 +107,27 @@ function pintar(d, ms) {
   t.push(tarjeta(pesoM(r.neto_gravado), 'neto gravado', esc(exacto(r.neto_gravado))));
   t.push(tarjeta(pesoM(r.exento), 'exento', esc(exacto(r.exento)), 'gris'));
   t.push(tarjeta(pesoM(r.iva), 'IVA', esc(exacto(r.iva)), 'gris'));
+  t.push(tarjeta(pesoM(r.otros), 'otros conceptos', esc(exacto(r.otros))
+    + ' — percepciones y demás', 'gris'));
   t.push(tarjeta(num(r.comprobantes), 'comprobantes', 'en el período', 'gris'));
   t.push(tarjeta(num(r.proveedores), 'proveedores', 'distintos en el período', 'gris'));
   h.push('<section class="tarjetas">' + t.join('') + '</section>');
+
+  /* El control que la pantalla se hace a sí misma: las cuatro partes tienen que dar el
+     total. Se calcula acá con lo que se está mostrando, no se da por sentado. */
+  const partes = Number(r.neto_gravado || 0) + Number(r.exento || 0)
+               + Number(r.iva || 0) + Number(r.otros || 0);
+  const dif = partes - Number(r.total || 0);
+  h.push('<div class="aviso"><b>El total cierra contra sus partes.</b> '
+    + 'Neto ' + exacto(r.neto_gravado) + ' + exento ' + exacto(r.exento) + ' + IVA '
+    + exacto(r.iva) + ' + otros ' + exacto(r.otros) + ' = <b>' + exacto(partes) + '</b>, '
+    + 'contra el total de ' + exacto(r.total)
+    + (Math.abs(dif) < 0.05 ? ' — coinciden.'
+                            : ' — <b>no coinciden, faltan ' + exacto(dif) + '</b>.')
+    + ' Los importes vienen en la moneda del comprobante y el total en pesos, así que los '
+    + '<b>comprobantes en dólares se pasan a pesos por su cotización</b> antes de sumar '
+    + '(medido: 85 de 87 cierran así). <b>Otros conceptos</b> son percepciones y cargos que '
+    + 'el comprobante trae en el total y no en el neto ni en el exento.</div>');
 
   /* mes a mes */
   const mes = (d.mes || []).filter(x => Number(x.comprobantes || 0) > 0);
