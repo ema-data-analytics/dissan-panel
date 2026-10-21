@@ -250,12 +250,18 @@ function pintar(d, ms, desde, hasta) {
     const ini = d.comp.filter(x => x.que_es === 'SALDO INICIAL');
     const sinRotulo = d.comp.filter(x => String(x.que_es).startsWith('no está rotulado')
                                       || String(x.que_es).startsWith('no esta rotulado'));
+    /* No se muestran «entra» y «sale» por separado: dentro de un tipo de comprobante son el
+       mismo número, porque cada asiento cierra. Dos columnas iguales no informan nada. */
     h.push(sec('Qué clase de movimientos hay',
-      d.comp.length + ' tipos de comprobante en el período elegido.'));
+      d.comp.length + ' tipos de comprobante en el período elegido. La plata que mueve cada '
+      + 'tipo es la misma de los dos lados, porque cada asiento cierra: por eso va una sola '
+      + 'cifra.'));
     h.push(barras(d.comp.map(x => Object.assign({}, x,
         { etiqueta: x.cod_comp + ' · ' + x.que_es })), 'etiqueta', 'movimientos',
-      f => num(f.movimientos) + ' mov. · entra ' + pesoMs(f.entra) + ' · sale '
-           + pesoMs(f.sale), 'v'));
+      f => num(f.movimientos) + ' mov. · mueve ' + pesoMs(f.entra)
+           + (Math.abs(Number(f.entra || 0) - Number(f.sale || 0)) >= 0.02
+              ? ' · ¡no cierra por ' + exactoS(Number(f.entra) - Number(f.sale)) + '!' : ''),
+      'v'));
     h.push('<div class="aviso">Los rótulos de los tipos están escritos a mano acá, no vienen '
       + 'de la base: si alguno está mal, se corrige en un renglón. '
       + (ini.length ? '<b>Los asientos de saldo inicial están a la vista</b> ('
