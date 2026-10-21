@@ -118,11 +118,84 @@ async function entrar() {
 
 async function salir() { await sb.auth.signOut(); location.reload(); }
 
+/* ---------- EL PORTERO ----------
+   El panel viejo pregunta app_puede(token, modulo) contra la tabla `sesiones`. Acá no hay
+   tabla de sesiones: el equivalente es api_mis_modulos(), que cruza el rol del usuario del
+   JWT contra modulos.activo y modulos.roles. Es el MISMO criterio y los mismos datos.
+
+   Medido el 21/10/2026 simulando los dos usuarios reales:
+     super@dissan.com.ar  (rol super)     → 6 módulos: Dashboard, Informe, MargenDeVentas,
+                                            Hilo, Ayuda, Seguridad
+     dissan@dissan.com.ar (rol operador)  → 4 módulos: sin Ayuda y sin Seguridad
+   Sin JWT devuelve 0 filas, o sea que falla cerrada.
+
+   El menú se arma con esa lista, no con enlaces escritos en el HTML: así la pantalla
+   muestra exactamente lo que ese usuario podía ver antes, y encender o apagar un módulo es
+   una fila en la tabla `modulos`, como siempre fue. */
+const PANTALLAS = {
+  Dashboard:      { archivo: 'tablero.html',   rotulo: 'Tablero general' },
+  Informe:        { archivo: 'informe.html',   rotulo: 'Informe' },
+  MargenDeVentas: { archivo: 'index.html',     rotulo: 'Margen' },
+  Hilo:           { archivo: 'hilo.html',      rotulo: 'Hilo' },
+  Ayuda:          { archivo: 'ayuda.html',     rotulo: 'Ayuda' },
+  Seguridad:      { archivo: 'seguridad.html', rotulo: 'Seguridad' },
+  Stock:          { archivo: 'stock.html',     rotulo: 'Stock' },
+  Compras:        { archivo: 'compras.html',   rotulo: 'Compras' },
+  Tesoreria:      { archivo: 'tesoreria.html', rotulo: 'Tesorería' },
+  Cartera:        { archivo: 'cartera.html',   rotulo: 'Cartera' }
+};
+
+let MI_ROL = '';
+
+async function armarMenu() {
+  const mio = $('app').dataset.modulo || '';
+  let lista = [];
+  try {
+    const { data } = await rpc('api_mis_modulos', {});
+    lista = data || [];
+    const p = await rpc('api_mi_perfil', {});
+    MI_ROL = (p.data && p.data[0] && p.data[0].rol) || '';
+  } catch (e) {
+    $('menu').innerHTML = '';
+    tapar('No se pudo comprobar qué módulos tenés habilitados. ' + esc(e.message || e));
+    return false;
+  }
+
+  const claves = lista.map(x => x.clave);
+  $('menu').innerHTML = lista
+    .filter(x => PANTALLAS[x.clave] && x.clave !== mio)
+    .map(x => '<a class="btn-s" href="' + PANTALLAS[x.clave].archivo + '">'
+              + esc(PANTALLAS[x.clave].rotulo) + '</a>').join('');
+
+  if (mio && claves.indexOf(mio) === -1) {
+    tapar('<b>Este módulo no está habilitado para tu usuario.</b> '
+      + (MI_ROL ? 'Entraste como <b>' + esc(MI_ROL) + '</b> y ' : '')
+      + 'el módulo <b>' + esc(mio) + '</b> no está en la lista de los que podés ver'
+      + (claves.length ? ': ' + claves.map(esc).join(', ') + '.'
+                       : ', y no hay ninguno habilitado para tu usuario.')
+      + ' Lo habilita un administrador desde Seguridad.');
+    return false;
+  }
+  return true;
+}
+
+/* Tapa la pantalla con un cartel y deja el menú a la vista para poder irse a otra. */
+function tapar(html) {
+  ['reloj'].forEach(id => { if ($(id)) $(id).hidden = true; });
+  document.querySelectorAll('.filtros').forEach(f => { f.hidden = true; });
+  const a = $('aviso');
+  if (a) { a.hidden = false; a.innerHTML = html; }
+  if ($('cuerpo')) $('cuerpo').innerHTML = '';
+  if ($('tarjetas')) $('tarjetas').innerHTML = '';
+  if ($('meses')) $('meses').hidden = true;
+}
+
 async function abrirApp() {
   const { data } = await sb.auth.getUser();
   $('quien').textContent = (data && data.user && data.user.email) || '';
   $('login-wrap').hidden = true;
   $('app').hidden = false;
+  if (!await armarMenu()) return;
   await calcular();
 }
 

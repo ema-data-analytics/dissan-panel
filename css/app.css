@@ -248,3 +248,15 @@ td.num,th.num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-n
 .hi-paso{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px;word-break:break-word}
 .hi-ojo{color:var(--ambar);font-weight:600}
 .tb-caja tr.hi-total td{border-top:1px solid var(--borde);background:rgba(255,255,255,.03)}
+
+/* ---------- Seguridad: usuarios y permisos (prefijo sg-) ---------- */
+/* La forma de alta y de cambios vive DENTRO de la pantalla, no en un modal ni
+   en un prompt del navegador: un confirm() bloquea la pestaña entera. */
+.sg-forma{display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap;margin:10px 0 4px}
+.sg-forma .fg{display:flex;flex-direction:column}
+.sg-forma .fl{margin:0 0 6px}
+.sg-forma .fi{width:auto;min-width:200px}
+.sg-forma .btn{width:auto;margin-top:0;padding:11px 26px;align-self:flex-start;margin-top:25px}
+.sg-forma .btn-s{align-self:flex-start;margin-top:25px;padding:11px 18px}
+.sg-acc{white-space:nowrap}
+.sg-acc .btn-s{padding:6px 10px;font-size:12px;margin:2px 0}

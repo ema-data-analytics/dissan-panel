@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DISSAN · Usuarios y permisos</title>
+<link rel="icon" href="data:,">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/app.css?v=11">
+</head>
+<body>
+
+<!-- ================== LOGIN ================== -->
+<div id="login-wrap">
+  <div class="login-box">
+    <div class="marca">EMA DATA ANALYTIC</div>
+    <h1 class="login-tit">Ingresar al panel DISSAN</h1>
+
+    <label class="fl">Usuario</label>
+    <input id="l-user" class="fi" autocomplete="username" spellcheck="false">
+
+    <label class="fl">Contraseña</label>
+    <div class="clave">
+      <input id="l-pass" class="fi" type="password" autocomplete="current-password">
+      <button type="button" class="ojo" id="l-ojo" onclick="verClave()"
+              aria-label="Mostrar la contraseña" aria-pressed="false"></button>
+    </div>
+
+    <button id="l-btn" class="btn" onclick="entrar()">Entrar</button>
+    <div id="l-err" class="err"></div>
+    <div class="pie">Mismo usuario y contraseña que el panel de siempre</div>
+  </div>
+</div>
+
+<!-- ================== APP ================== -->
+<div id="app" hidden data-modulo="Seguridad">
+  <header class="top">
+    <div>
+      <h1>Usuarios y permisos</h1>
+      <div class="sub">Quién entra al panel y qué puede ver. Sólo para administradores.</div>
+    </div>
+    <div class="top-der">
+      <span id="menu"></span>
+      <span class="quien" id="quien"></span>
+      <button class="btn-s" onclick="salir()">Salir</button>
+    </div>
+  </header>
+
+  <section class="filtros tb-filtros">
+    <div class="fg">
+      <label class="fl" for="f-buscar">Buscar</label>
+      <input id="f-buscar" class="fi" autocomplete="off" spellcheck="false"
+             placeholder="nombre, email o rol…" oninput="filtrar()">
+    </div>
+    <button class="btn tb-accion" id="b-nuevo" onclick="formaNuevo()">Nuevo usuario</button>
+    <button class="btn-s tb-accion" id="b-calc" onclick="calcular()">Actualizar</button>
+  </section>
+
+  <div id="reloj" class="reloj" hidden></div>
+  <div id="aviso" class="aviso" hidden></div>
+  <div id="forma" hidden></div>
+
+  <div id="cuerpo"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="js/core.js?v=5"></script>
+<script src="js/seguridad.js?v=1"></script>
+</body>
+</html>

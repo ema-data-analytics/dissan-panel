@@ -7,7 +7,7 @@
 <link rel="icon" href="data:,">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=10">
+<link rel="stylesheet" href="css/app.css?v=11">
 </head>
 <body>
 
@@ -34,17 +34,14 @@
 </div>
 
 <!-- ================== APP ================== -->
-<div id="app" hidden>
+<div id="app" hidden data-modulo="MargenDeVentas">
   <header class="top">
     <div>
       <h1>Margen de ventas reales</h1>
       <div class="sub" id="metodo">—</div>
     </div>
     <div class="top-der">
-      <a class="btn-s" href="tablero.html">Tablero general</a>
-      <a class="btn-s" href="ayuda.html">Ayuda</a>
-      <a class="btn-s" href="informe.html">Informe</a>
-      <a class="btn-s" href="hilo.html">Hilo</a>
+      <span id="menu"></span>
       <span class="quien" id="quien"></span>
       <button class="btn-s" onclick="salir()">Salir</button>
     </div>
@@ -76,7 +73,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="js/core.js?v=4"></script>
+<script src="js/core.js?v=5"></script>
 <script src="js/margen.js?v=3"></script>
 </body>
 </html>
