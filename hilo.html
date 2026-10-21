@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DISSAN · Hilo conductor</title>
+<link rel="icon" href="data:,">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/app.css?v=9">
+</head>
+<body>
+
+<!-- ================== LOGIN ================== -->
+<div id="login-wrap">
+  <div class="login-box">
+    <div class="marca">EMA DATA ANALYTIC</div>
+    <h1 class="login-tit">Ingresar al panel DISSAN</h1>
+
+    <label class="fl">Usuario</label>
+    <input id="l-user" class="fi" autocomplete="username" spellcheck="false">
+
+    <label class="fl">Contraseña</label>
+    <div class="clave">
+      <input id="l-pass" class="fi" type="password" autocomplete="current-password">
+      <button type="button" class="ojo" id="l-ojo" onclick="verClave()"
+              aria-label="Mostrar la contraseña" aria-pressed="false"></button>
+    </div>
+
+    <button id="l-btn" class="btn" onclick="entrar()">Entrar</button>
+    <div id="l-err" class="err"></div>
+    <div class="pie">Mismo usuario y contraseña que el panel de siempre</div>
+  </div>
+</div>
+
+<!-- ================== APP ================== -->
+<div id="app" hidden>
+  <header class="top">
+    <div>
+      <h1>Hilo conductor</h1>
+      <div class="sub">El mapa <b>medido</b> de la base: con qué se liga cada tabla y cómo se va
+        de una a otra. Las relaciones no están supuestas — están contadas fila por fila.</div>
+    </div>
+    <div class="top-der">
+      <a class="btn-s" href="index.html">Margen</a>
+      <a class="btn-s" href="tablero.html">Tablero general</a>
+      <a class="btn-s" href="ayuda.html">Ayuda</a>
+      <a class="btn-s" href="informe.html">Informe</a>
+      <span class="quien" id="quien"></span>
+      <button class="btn-s" onclick="salir()">Salir</button>
+    </div>
+  </header>
+
+  <section id="mapa" class="tarjetas"></section>
+
+  <section class="filtros tb-filtros" style="margin-top:18px">
+    <div class="fg tb-busca">
+      <label class="fl" for="f-t1">Mirar una tabla</label>
+      <input id="f-t1" class="fi" autocomplete="off" placeholder="gva53, facturas, stock…">
+      <div class="tb-lista" id="l-t1" hidden></div>
+    </div>
+    <button class="btn tb-accion" id="b-vec" onclick="verRelaciones()">Ver relaciones</button>
+
+    <div class="hi-sep"></div>
+
+    <div class="fg tb-busca">
+      <label class="fl" for="f-t2">Desde la tabla</label>
+      <input id="f-t2" class="fi" autocomplete="off" placeholder="gva53">
+      <div class="tb-lista" id="l-t2" hidden></div>
+    </div>
+    <div class="fg tb-busca">
+      <label class="fl" for="f-t3">Hasta la tabla</label>
+      <input id="f-t3" class="fi" autocomplete="off" placeholder="cpa46">
+      <div class="tb-lista" id="l-t3" hidden></div>
+    </div>
+    <button class="btn tb-accion" id="b-cam" onclick="buscarCamino()">Buscar el camino</button>
+  </section>
+
+  <div id="reloj" class="reloj" hidden></div>
+  <div id="aviso" class="aviso" hidden></div>
+
+  <div id="cuerpo"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="js/core.js?v=4"></script>
+<script src="js/hilo.js?v=1"></script>
+</body>
+</html>

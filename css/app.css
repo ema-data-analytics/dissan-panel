@@ -236,3 +236,14 @@ td.num,th.num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-n
 .ay-corte{color:var(--ambar)}
 .tj .n .chico{font-size:15px;color:var(--gris);font-weight:600}
 .filtros .fg-chk.tb-accion{margin-top:25px}
+
+/* ===================== Hilo conductor ===================== */
+.hi-sep{flex-basis:100%;height:1px;background:var(--borde);margin:4px 0}
+.hi-ruta{display:flex;flex-wrap:wrap;align-items:center;gap:8px;background:var(--caja);
+  border:1px solid var(--borde);border-radius:10px;padding:14px 16px}
+.hi-nodo{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;padding:6px 11px;
+  border-radius:7px;background:rgba(8,165,122,.15);border:1px solid rgba(8,165,122,.4);
+  color:var(--verde2)}
+.hi-flecha{color:var(--gris);font-size:15px}
+.hi-paso{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px;word-break:break-word}
+.hi-ojo{color:var(--ambar);font-weight:600}
