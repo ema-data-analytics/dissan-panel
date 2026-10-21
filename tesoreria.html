@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DISSAN · Tesorería</title>
+<link rel="icon" href="data:,">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/app.css?v=10">
+</head>
+<body>
+
+<!-- ================== LOGIN ================== -->
+<div id="login-wrap">
+  <div class="login-box">
+    <div class="marca">EMA DATA ANALYTIC</div>
+    <h1 class="login-tit">Ingresar al panel DISSAN</h1>
+
+    <label class="fl">Usuario</label>
+    <input id="l-user" class="fi" autocomplete="username" spellcheck="false">
+
+    <label class="fl">Contraseña</label>
+    <div class="clave">
+      <input id="l-pass" class="fi" type="password" autocomplete="current-password">
+      <button type="button" class="ojo" id="l-ojo" onclick="verClave()"
+              aria-label="Mostrar la contraseña" aria-pressed="false"></button>
+    </div>
+
+    <button id="l-btn" class="btn" onclick="entrar()">Entrar</button>
+    <div id="l-err" class="err"></div>
+    <div class="pie">Mismo usuario y contraseña que el panel de siempre</div>
+  </div>
+</div>
+
+<!-- ================== APP ================== -->
+<div id="app" hidden>
+  <header class="top">
+    <div>
+      <h1>Tesorería</h1>
+      <div class="sub">Bancos, cheques en cartera, cajas y contracuentas. El sentido de cada
+        movimiento sale de la columna de la base, no del signo del importe.</div>
+    </div>
+    <div class="top-der">
+      <a class="btn-s" href="index.html">Margen</a>
+      <a class="btn-s" href="tablero.html">Tablero general</a>
+      <a class="btn-s" href="ayuda.html">Ayuda</a>
+      <a class="btn-s" href="informe.html">Informe</a>
+      <a class="btn-s" href="hilo.html">Hilo</a>
+      <a class="btn-s" href="stock.html">Stock</a>
+      <a class="btn-s" href="compras.html">Compras</a>
+      <span class="quien" id="quien"></span>
+      <button class="btn-s" onclick="salir()">Salir</button>
+    </div>
+  </header>
+
+  <section class="filtros tb-filtros">
+    <div class="fg">
+      <label class="fl" for="f-desde">Desde</label>
+      <input id="f-desde" class="fi" type="date" value="2026-01-01">
+    </div>
+    <div class="fg">
+      <label class="fl" for="f-hasta">Hasta</label>
+      <input id="f-hasta" class="fi" type="date" value="2026-12-31">
+    </div>
+    <button class="btn tb-accion" id="b-calc" onclick="calcular()">Ver</button>
+  </section>
+
+  <div id="reloj" class="reloj" hidden></div>
+  <div id="aviso" class="aviso" hidden></div>
+
+  <div id="cuerpo"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="js/core.js?v=4"></script>
+<script src="js/tesoreria.js?v=1"></script>
+</body>
+</html>
