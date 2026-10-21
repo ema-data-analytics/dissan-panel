@@ -21,6 +21,11 @@
    --------------------------------------------------------------------------- */
 'use strict';
 
+/* El techo del motor de la Ayuda: ayuda.resolver trae hasta 50.000 filas.
+   Se pide ese mismo numero para la lectura y para el Excel, asi el archivo
+   nunca se lleva menos de lo que dice la pantalla. */
+const TOPE_DEL_MOTOR = 50000;
+
 let AY = { pregunta: '', respuesta: null, todo: null, lectura: null, sello: 0, recortado: null };
 
 /* core.js llama calcular() al entrar. Aca no hay nada que calcular. */
@@ -165,7 +170,7 @@ async function pedirLectura(sello) {
   let todo;
   try {
     const r = await rpc('api_preguntar_todo',
-      { p_texto: AY.pregunta, p_contexto: null, p_tope: 5000 });
+      { p_texto: AY.pregunta, p_contexto: null, p_tope: TOPE_DEL_MOTOR });
     todo = r.data;
   } catch (e) { return fallaLectura(sello, 'No se pudieron volver a buscar las filas.'); }
   if (sello !== AY.sello) return;
@@ -174,6 +179,9 @@ async function pedirLectura(sello) {
 
   AY.todo = todo;
   AY.recortado = recortado(todo.datos.length);
+  /* El contador dice el MISMO total que la respuesta de arriba. Antes decia
+     "50 de 5.000" mientras la respuesta decia 12.082: dos numeros de la misma
+     pantalla que no coinciden son un defecto aunque los dos esten bien. */
   const c = $('cuenta-filas');
   if (c) c.innerHTML = '<b>' + num(AY.respuesta.datos.length) + ' de ' + num(todo.datos.length)
     + ' filas</b> en pantalla · el Excel y la lectura se llevan las ' + num(todo.datos.length)
@@ -231,7 +239,6 @@ async function pedirLectura(sello) {
    Queda el techo de 50.000. Si una consulta vuelve con exactamente ese número,
    la pantalla lo dice: un número que puede estar cortado y no lo dice es peor
    que no tenerlo. */
-const TOPE_DEL_MOTOR = 50000;
 function recortado(n) {
   return n === TOPE_DEL_MOTOR
     ? 'vinieron exactamente ' + num(n) + ': puede haber más' : null;
@@ -270,7 +277,7 @@ async function bajarExcel() {
     let todo = AY.todo;
     if (!todo) {
       const r = await rpc('api_preguntar_todo',
-        { p_texto: AY.pregunta, p_contexto: null, p_tope: 5000 });
+        { p_texto: AY.pregunta, p_contexto: null, p_tope: TOPE_DEL_MOTOR });
       todo = r.data; AY.todo = todo;
     }
     if (!todo || !todo.datos || !todo.datos.length) throw new Error('No hay filas que escribir.');
