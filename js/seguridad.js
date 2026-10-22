@@ -1,305 +1,339 @@
-/* DISSAN · Seguridad — usuarios y permisos
-   ---------------------------------------------------------------------------
-   ES EL MISMO MODULO DE ANTES: la tabla Usuario / Email / Rol / Estado /
-   Acciones, el buscador, el alta, y los cuatro cambios (nombre y rol, email,
-   contraseña, baja y alta). Nada nuevo.
+/* ===================================================================
+   USUARIOS Y PERMISOS  —  el modulo de Apps Script, tal cual, en la
+   plataforma nueva.
+   -------------------------------------------------------------------
+   El marcado, la hoja de estilo, la tabla con sus insignias, los cuatro
+   modales y los botones de icono son los del modulo viejo, copiados
+   verbatim. Lo unico que cambia son los puentes:
 
-   LO QUE CAMBIA ES POR DONDE PASA. El modulo viejo hacia todo esto desde Apps
-   Script con la CLAVE DE SERVICIO de Supabase. Acá el navegador no puede tener
-   esa clave -el repositorio es publico- asi que las operaciones van por la
-   Edge Function `usuarios`, que la toma del entorno de Supabase y nunca la
-   devuelve. La funcion esta desplegada con verify_jwt, y ademas adentro exige
-   que el que llama tenga rol super y este activo, igual que exigirSuper_().
+     listarUsuarios          -> usuarios {accion:'listar'}
+     crearUsuario            -> usuarios {accion:'crear'}
+     editarPerfilUsuario     -> usuarios {accion:'perfil'}
+     cambiarEmailUsuario     -> usuarios {accion:'email'}
+     cambiarPasswordUsuario  -> usuarios {accion:'password'}
+     anular / reactivar      -> usuarios {accion:'estado'}
 
-   LAS REGLAS SON LAS DE ANTES, leidas del codigo viejo antes de escribir esto:
-     · Solo un super entra.
-     · No se puede dejar el sistema sin administrador: no se da de baja ni se
-       le saca el rol al ultimo super activo, y nadie se lo saca a si mismo.
-     · La contraseña, 12 caracteres como minimo. El panel viejo pedia 12 al
-       crear y 6 al cambiar; se unifica en 12, la mas estricta de las dos.
+   POR QUE UNA EDGE FUNCTION Y NO UNA rpc: todo esto necesita la clave de
+   SERVICIO (/auth/v1/admin/users). Esta pagina es publica; esa clave no
+   puede estar aca. Vive en el entorno de la Edge Function «usuarios»
+   como SUPABASE_SERVICE_ROLE_KEY, nunca se devuelve, y la funcion exige
+   rol super y activo antes de hacer nada — igual que exigirSuper_().
 
-   DOS COSAS QUE ENCONTRE EN EL MODULO VIEJO Y NO REPITO:
-     1. Su desplegable de rol ofrecia «Usuario», «Admin» y «Super», y el
-        servidor validaba contra super, admin, gerencia y consulta: elegir el
-        PRIMER item del desplegable fallaba con «Rol invalido».
-     2. Ni el desplegable ni la lista del servidor incluian `operador`, que es
-        el rol real del usuario de DISSAN. Editarle el perfil desde esa
-        pantalla le cambiaba el rol sin querer.
-   Acá los roles salen de `api_roles_v2()`, que los lee de la tabla `modulos`:
-   los que el sistema usa de verdad.
+   DOS COSAS QUE NO SE COPIAN, Y POR QUE (las dos son defectos medidos
+   del modulo viejo, no mejoras):
 
-   No se usan alert, confirm ni prompt del navegador: los avisos y las
-   confirmaciones son parte de la pantalla.
-   --------------------------------------------------------------------------- */
-'use strict';
+   1. LOS ROLES SALEN DE api_roles_v2(), NO DE UNA LISTA A MANO. El
+      desplegable viejo ofrecia «usuario», que el servidor rechaza con
+      «Rol invalido», y NO ofrecia «operador», que es el rol real del
+      usuario de DISSAN: editarle el nombre le cambiaba el rol sin
+      querer. Los roles de verdad los lee modulos.roles: admin,
+      consulta, gerencia, operador, super.
 
-let USUARIOS = [], ROLES = [], ROLES_INFO = [], YO = '';
+   2. LA INSIGNIA NO VA ESCAPADA DOS VECES. El modulo viejo hacia
+      esc(badgeRol) sobre un texto que YA es HTML, asi que en las
+      columnas Rol y Estado se leia el <span ...> escrito como texto en
+      vez de la insignia. El contenido de la insignia ya pasa por esc()
+      cuando se arma.
+   =================================================================== */
 
-async function llamar(cuerpo, intentos = 2) {
-  let ultimo = '';
-  for (let i = 1; i <= intentos; i++) {
-    try {
-      const s = (await sb.auth.getSession()).data.session;
-      if (!s) throw new Error('La sesión venció. Volvé a entrar.');
-      const r = await fetch(SB_URL + '/functions/v1/usuarios', {
+/* El puente. No se usa sb.functions.invoke: con payloads grandes miente
+   con «non-2xx status code» mientras un fetch crudo devuelve 200 (medido
+   el 20/10). Va fetch, con el codigo HTTP y el cuerpo a la vista. */
+function SEG_FN(cuerpo, intentos){
+  intentos = intentos || 2;
+  var ultimo = '';
+  function una(i){
+    return sb.auth.getSession().then(function(s){
+      var ses = s && s.data ? s.data.session : null;
+      if (!ses) throw new Error('La sesión venció. Volvé a entrar.');
+      return fetch(SB_URL + '/functions/v1/usuarios', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json',
-                   'Authorization': 'Bearer ' + s.access_token, 'apikey': SB_KEY },
+        headers: { 'Content-Type':'application/json',
+                   'Authorization':'Bearer ' + ses.access_token,
+                   'apikey': SB_KEY },
         body: JSON.stringify(cuerpo)
       });
-      const txt = await r.text();
-      let j = null;
-      try { j = JSON.parse(txt); } catch (e) { /* abajo */ }
-      if (j && typeof j.ok === 'boolean') return j;          // contestó, bien o mal
-      ultimo = 'HTTP ' + r.status + ' · ' + txt.slice(0, 160);
-    } catch (e) { ultimo = String(e.message || e); }
+    }).then(function(r){
+      return r.text().then(function(txt){
+        var j = null;
+        try { j = JSON.parse(txt); } catch(e){}
+        if (j && typeof j.ok === 'boolean') return j;   /* contesto, bien o mal */
+        ultimo = 'HTTP ' + r.status + ' · ' + txt.slice(0,160);
+        throw new Error(ultimo);
+      });
+    }).catch(function(e){
+      ultimo = String(e.message || e);
+      if (i < intentos) return una(i + 1);
+      /* la pantalla espera {ok:false, error:...}, como el servidor viejo */
+      return { ok:false, error: ultimo || 'no contestó' };
+    });
   }
-  return { ok: false, motivo: ultimo || 'no contestó' };
+  return una(1);
 }
 
-function aviso(html, mal) {
-  const a = $('aviso');
-  a.hidden = false;
-  a.innerHTML = (mal ? '<b>No se pudo.</b> ' : '') + html;
-  a.scrollIntoView({ block: 'nearest' });
-}
-function limpiarAviso() { $('aviso').hidden = true; $('aviso').innerHTML = ''; }
-
-async function calcular() {
-  const b = $('b-calc');
-  if (b.disabled) return;
-  b.disabled = true; b.textContent = 'Buscando…';
-  cerrarForma();
-  try {
-    const t0 = performance.now();
-    const r = await llamar({ accion: 'listar' });
-    const ms = Math.round(performance.now() - t0);
-    if (!r.ok) { USUARIOS = []; ROLES_INFO = []; pintar(ms); return aviso(esc(r.motivo), true); }
-    USUARIOS = r.usuarios || [];
-    ROLES = (r.roles || []).map(x => x.rol);
-    ROLES_INFO = r.roles || [];
-    YO = r.yo || '';
-    limpiarAviso();
-    pintar(ms);
-  } finally {
-    b.disabled = false; b.textContent = 'Actualizar';
-  }
+/* El motivo que devuelve la Edge Function se llama «motivo»; el servidor
+   viejo lo llamaba «error». La pantalla lee los dos. */
+function SEG_MOTIVO(res){
+  if (!res) return 'No salió.';
+  return res.motivo || res.error || 'No salió.';
 }
 
-/* Los iconos son los del modulo viejo, copiados de Seguridad.html. */
-const ICONO = {
-  perfil: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">'
-        + '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>',
-  email:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">'
-        + '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>',
-  clave:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">'
-        + '<circle cx="8" cy="15" r="4"/><path d="M10.5 12.5L20 3M17 6l3 3M14 9l2.5 2.5"/></svg>',
-  baja:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">'
-        + '<circle cx="12" cy="12" r="9"/><path d="M5.5 5.5l13 13"/></svg>',
-  alta:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">'
-        + '<circle cx="12" cy="12" r="9"/><path d="M8.5 12.5l2.5 2.5 5-5"/></svg>'
-};
+var SEG_ROLES = [];   /* los que manda api_roles_v2(), via la Edge Function */
 
-const esc2 = s => esc(s).replace(/"/g, '&quot;');
-const fecha = v => {
-  const f = String(v || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
-  return f ? f[3] + '/' + f[2] + '/' + f[1] : '—';
-};
-
-function pintar(ms) {
-  const activos = USUARIOS.filter(u => u.activo === true);
-  const supers = activos.filter(u => u.rol === 'super');
-
-  $('reloj').hidden = false;
-  $('reloj').innerHTML = 'La base contestó en <b>' + (ms / 1000).toFixed(2) + ' s</b>'
-    + ' &nbsp;·&nbsp; ' + num(USUARIOS.length) + ' usuarios, ' + num(activos.length)
-    + ' activos &nbsp;·&nbsp; ' + num(supers.length) + ' administrador'
-    + (supers.length === 1 ? '' : 'es') + ' activo' + (supers.length === 1 ? '' : 's');
-
-  filtrar();
+/* Carga los roles de verdad en los tres desplegables. */
+function segCargarRoles(lista, rolDe){
+  if (lista && lista.length) SEG_ROLES = lista.map(function(x){ return x.rol || x; });
+  if (!SEG_ROLES.length) return;
+  ['segRol','perfilRol'].forEach(function(id){
+    var s = document.getElementById(id);
+    if (!s) return;
+    var antes = s.value;
+    s.innerHTML = SEG_ROLES.map(function(r){
+      return '<option value="' + esc(r) + '">' + esc(r) + '</option>'; }).join('');
+    if (antes && SEG_ROLES.indexOf(antes) >= 0) s.value = antes;
+  });
 }
 
-/* Se llama sin argumentos desde el buscador, asi que la info de roles vive en una
-   variable del modulo: pasarla por parametro hacia desaparecer el cuadro al tipear. */
-function filtrar() {
-  const roles = ROLES_INFO;
-  const q = ($('f-buscar').value || '').trim().toLowerCase();
-  const filas = USUARIOS.filter(u => !q
-    || String(u.nombre || '').toLowerCase().includes(q)
-    || String(u.email || '').toLowerCase().includes(q)
-    || String(u.rol || '').toLowerCase().includes(q));
+/* core.js llama calcular() al entrar, y es tambien el boton Actualizar. */
+function calcular(){ cargarListaUsuarios(); }
 
-  const h = [];
-  h.push('<div class="tb-caja"><table><tr><th>Usuario</th><th>Email</th><th>Rol</th>'
-    + '<th>Estado</th><th>Desde</th><th>Acciones</th></tr>'
-    + (filas.length ? filas.map(u => {
-        const yo = String(u.id) === String(YO);
-        return '<tr class="' + (u.activo ? '' : 'mal') + '">'
-          + '<td class="desc">' + esc(u.nombre || '—')
-          + (yo ? ' <b title="Sos vos">(vos)</b>' : '') + '</td>'
-          + '<td class="desc">' + esc(u.email || '—') + '</td>'
-          + '<td>' + esc(u.rol || '—') + '</td>'
-          + '<td>' + (u.activo ? 'activo' : 'dado de baja') + '</td>'
-          + '<td>' + fecha(u.creado) + '</td>'
-          + '<td class="sg-acc">'
-          + '<button class="btn-icono" title="Editar nombre y rol" onclick="formaPerfil(\''
-          + esc2(u.id) + '\')">' + ICONO.perfil + '</button>'
-          + '<button class="btn-icono" title="Cambiar email" onclick="formaEmail(\''
-          + esc2(u.id) + '\')">' + ICONO.email + '</button>'
-          + '<button class="btn-icono" title="Cambiar contraseña" onclick="formaClave(\''
-          + esc2(u.id) + '\')">' + ICONO.clave + '</button>'
-          + '<button class="btn-icono ' + (u.activo ? 'peligro' : 'exito') + '" title="'
-          + (u.activo ? 'Dar de baja' : 'Reactivar') + '" onclick="formaEstado(\''
-          + esc2(u.id) + '\',' + (u.activo ? 'false' : 'true') + ')">'
-          + (u.activo ? ICONO.baja : ICONO.alta) + '</button>'
-          + '</td></tr>';
-      }).join('')
-      : '<tr><td colspan="6">Ningún usuario coincide con «' + esc(q) + '».</td></tr>')
-    + '</table></div>');
-
-  if (roles && roles.length) {
-    h.push('<div class="aviso"><b>Qué ve cada rol.</b> Sale de la tabla <b>modulos</b>, que '
-      + 'es la que manda: '
-      + roles.map(r => '<b>' + esc(r.rol) + '</b> ' + num(r.modulos_visibles)
-          + ' módulo' + (Number(r.modulos_visibles) === 1 ? '' : 's')
-          + (Number(r.modulos_apagados) ? ' (y ' + num(r.modulos_apagados)
-             + ' apagado' + (Number(r.modulos_apagados) === 1 ? '' : 's') + ')' : '')
-          + ' · ' + num(r.cuantos_usuarios) + ' usuario'
-          + (Number(r.cuantos_usuarios) === 1 ? '' : 's')).join(' &nbsp;·&nbsp; ')
-      + '. Un módulo se enciende o se apaga en esa tabla, y el menú del panel se arma con '
-      + 'eso: lo que un usuario no tiene, no lo ve ni entrando por la dirección.</div>');
+  // ============================================
+  // R8 — ningun pedido al servidor queda sin manejo de error.
+  // Antes, si fallaba una llamada, la pantalla quedaba en blanco o trabada
+  // en "Cargando..." sin decir nada.
+  // ============================================
+  function avisarFalloServidor(err) {
+    var texto = (err && err.message) ? err.message : 'No se pudo contactar al servidor.';
+    var caja = document.getElementById('avisoError');
+    if (!caja) {
+      caja = document.createElement('div');
+      caja.id = 'avisoError';
+      caja.setAttribute('style',
+        'position:fixed;left:16px;right:16px;bottom:16px;z-index:9999;' +
+        'background:#3B1111;color:#FFD7D7;border:1px solid #7A2323;' +
+        'border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.5');
+      document.body.appendChild(caja);
+    }
+    caja.textContent = 'No se pudo cargar la informacion: ' + texto +
+                       '  (probá de nuevo; si sigue, avisá al administrador)';
+    // Que no quede nada trabado en "Cargando..."
+    var cargando = document.querySelectorAll('[data-cargando], .cargando');
+    for (var i = 0; i < cargando.length; i++) cargando[i].textContent = 'No se pudo cargar.';
   }
 
-  $('cuerpo').innerHTML = h.join('');
-}
+  // ============================================
+  // ESCAPADO  (S8)
+  // Todo lo que viene de la base pasa por aca antes de entrar a la pagina.
+  // Sin esto, un nombre como  D'Angelo  rompe el boton de editar, y un nombre
+  // armado a proposito ejecuta codigo con los permisos del que esta mirando.
+  // ============================================
+  /* esc() ya vive en core.js y escapa los mismos cinco caracteres:
+     & < > " '  — no se declara de nuevo (un segundo `esc` en el mismo
+     ambito global rompe el archivo entero con SyntaxError). */
+  // Para un valor que queda dentro de onclick="f('AQUI')": primero cadena de
+  // JavaScript, despues atributo HTML.
+  function escAtr(v) {
+    if (v === null || v === undefined) return '';
+    // Sin literales con barra invertida: el mismo escape, armado con
+    // fromCharCode(92). Asi el archivo se puede trasladar a cualquier editor
+    // sin que se pierdan o se dupliquen las barras por el camino.
+    var B = String.fromCharCode(92);
+    var s = String(v).split(B).join(B + B);
+    s = s.split("'").join(B + "'");
+    return esc(s);
+  }
 
-/* ---------- las formas, dentro de la pantalla ---------- */
-function cerrarForma() { $('forma').hidden = true; $('forma').innerHTML = ''; }
+  let segUsuariosCache = [];
 
-function abrirForma(titulo, campos, accionBoton, onGuardar) {
-  const f = $('forma');
-  f.hidden = false;
-  f.innerHTML = '<div class="tb-sec">' + esc(titulo) + '</div>'
-    + '<div class="sg-forma">'
-    + campos.map(c => '<div class="fg"><label class="fl" for="' + c.id + '">'
-        + esc(c.rotulo) + '</label>'
-        + (c.opciones
-            ? '<select id="' + c.id + '" class="fi">'
-              + c.opciones.map(o => '<option value="' + esc2(o)
-                  + '"' + (o === c.valor ? ' selected' : '') + '>' + esc(o) + '</option>').join('')
-              + '</select>'
-            : '<input id="' + c.id + '" class="fi" type="' + (c.tipo || 'text') + '"'
-              + ' value="' + esc2(c.valor || '') + '"'
-              + (c.tipo === 'password' ? ' autocomplete="new-password"' : '')
-              + (c.ayuda ? ' placeholder="' + esc2(c.ayuda) + '"' : '') + '>')
-        + '</div>').join('')
-    + '<button class="btn tb-accion" id="b-guardar">' + esc(accionBoton) + '</button>'
-    + '<button class="btn-s tb-accion" onclick="cerrarForma()">Cancelar</button>'
-    + '</div>';
-  $('b-guardar').onclick = async () => {
-    const b = $('b-guardar');
-    if (b.disabled) return;
-    b.disabled = true; b.textContent = 'Guardando…';
-    const r = await onGuardar();
-    b.disabled = false; b.textContent = accionBoton;
-    if (!r.ok) return aviso(esc(r.motivo), true);
-    cerrarForma();
-    await calcular();
-    aviso(r.hecho || 'Hecho.');
-  };
-  f.scrollIntoView({ block: 'nearest' });
-}
+  function iniciarSeguridad() {
+    cargarListaUsuarios();
+  }
 
-const quien = id => USUARIOS.find(u => String(u.id) === String(id)) || {};
-/* El rol que tiene el usuario entra en la lista aunque no este en modulos: si no, guardar
-   le cambiaria el rol sin querer, que es justo lo que hacia la pantalla vieja. */
-const rolesPara = u => ROLES.includes(u.rol) || !u.rol ? ROLES : ROLES.concat([u.rol]);
+  function cargarListaUsuarios() {
+    var t0 = performance.now();
+    SEG_FN({ accion: 'listar' }).then(function(res) {
+      if (!res.ok) {
+        document.getElementById('segTablaBody').innerHTML =
+          '<tr><td colspan="5">' + esc(SEG_MOTIVO(res)) + '</td></tr>';
+        return;
+      }
+      segCargarRoles(res.roles);
+      segUsuariosCache = res.usuarios || [];
+      renderTabla(segUsuariosCache);
+      /* el reloj es parte del control: contra este numero se compara la base */
+      var r = document.getElementById('reloj');
+      if (r) { r.hidden = false;
+               r.textContent = segUsuariosCache.length + ' usuarios · ' +
+                               Math.round(performance.now() - t0) + ' ms'; }
+    });
+  }
 
-function formaNuevo() {
-  limpiarAviso();
-  abrirForma('Nuevo usuario', [
-    { id: 'n-nombre', rotulo: 'Nombre', ayuda: 'Cómo se lo va a ver en la lista' },
-    { id: 'n-email', rotulo: 'Email', tipo: 'email', ayuda: 'con qué entra' },
-    { id: 'n-clave', rotulo: 'Contraseña', tipo: 'password', ayuda: '12 caracteres o más' },
-    { id: 'n-rol', rotulo: 'Rol', opciones: ROLES, valor: ROLES[ROLES.length - 1] }
-  ], 'Crear usuario', async () => {
-    const r = await llamar({ accion: 'crear', nombre: $('n-nombre').value.trim(),
-      email: $('n-email').value.trim(), password: $('n-clave').value,
-      rol: $('n-rol').value });
-    if (r.ok) r.hecho = 'Usuario creado.';
-    return r;
-  });
-}
+  function iconoUsuario() {
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>';
+  }
+  function iconoEditar() {
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>';
+  }
+  function iconoLlave() {
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8" cy="15" r="4"/><path d="M10.5 12.5L20 3M17 6l3 3M14 9l2.5 2.5"/></svg>';
+  }
+  function iconoBan() {
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M5.5 5.5l13 13"/></svg>';
+  }
+  function iconoCheck() {
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M8.5 12.5l2.5 2.5 5-5"/></svg>';
+  }
 
-function formaPerfil(id) {
-  limpiarAviso();
-  const u = quien(id);
-  abrirForma('Nombre y rol de ' + (u.email || ''), [
-    { id: 'p-nombre', rotulo: 'Nombre', valor: u.nombre },
-    { id: 'p-rol', rotulo: 'Rol', opciones: rolesPara(u), valor: u.rol }
-  ], 'Guardar', async () => {
-    const r = await llamar({ accion: 'perfil', id, nombre: $('p-nombre').value.trim(),
-      rol: $('p-rol').value });
-    if (r.ok) r.hecho = 'Nombre y rol guardados.';
-    return r;
-  });
-}
+  function renderTabla(lista) {
+    const cuerpo = document.getElementById('segTablaBody');
+    if (lista.length === 0) {
+      cuerpo.innerHTML = '<tr><td colspan="5">No se encontraron usuarios.</td></tr>';
+      return;
+    }
+    cuerpo.innerHTML = lista.map(function(u) {
+      const inicial = (u.nombre || '?').charAt(0).toUpperCase();
+      const badgeRol = '<span class="badge badge-' + esc(u.rol) + '">' + esc(u.rol) + '</span>';
+      const badgeEstado = u.activo
+        ? '<span class="badge badge-activo">Activo</span>'
+        : '<span class="badge badge-anulado">Anulado</span>';
+      const botonEstado = u.activo
+        ? '<button class="btn-icono peligro" title="Anular" onclick="cambiarEstado(\'' + escAtr(u.id) + '\', false)">' + iconoBan() + '</button>'
+        : '<button class="btn-icono exito" title="Reactivar" onclick="cambiarEstado(\'' + escAtr(u.id) + '\', true)">' + iconoCheck() + '</button>';
 
-function formaEmail(id) {
-  limpiarAviso();
-  const u = quien(id);
-  abrirForma('Cambiar el email de ' + (u.nombre || ''), [
-    { id: 'e-email', rotulo: 'Email nuevo', tipo: 'email', valor: u.email }
-  ], 'Guardar', async () => {
-    const r = await llamar({ accion: 'email', id, email: $('e-email').value.trim() });
-    if (r.ok) r.hecho = 'Email cambiado. Con ese email entra desde ahora.';
-    return r;
-  });
-}
+      return '<tr>' +
+        '<td><div class="fila-usuario"><div class="mini-avatar">' + esc(inicial) + '</div>' + esc(u.nombre) + '</div></td>' +
+        '<td>' + esc(u.email) + '</td>' +
+        '<td>' + badgeRol + '</td>' +
+        '<td>' + badgeEstado + '</td>' +
+        '<td><div class="acciones-fila">' +
+          '<button class="btn-icono" title="Editar nombre y rol" onclick="abrirModalPerfil(\'' + escAtr(u.id) + '\', \'' + escAtr(u.nombre) + '\', \'' + escAtr(u.rol) + '\')">' + iconoUsuario() + '</button>' +
+          '<button class="btn-icono" title="Cambiar email" onclick="abrirModalEmail(\'' + escAtr(u.id) + '\', \'' + escAtr(u.email) + '\')">' + iconoEditar() + '</button>' +
+          '<button class="btn-icono" title="Cambiar contraseña" onclick="abrirModalPassword(\'' + escAtr(u.id) + '\')">' + iconoLlave() + '</button>' +
+          botonEstado +
+        '</div></td>' +
+      '</tr>';
+    }).join('');
+  }
 
-function formaClave(id) {
-  limpiarAviso();
-  const u = quien(id);
-  abrirForma('Contraseña nueva para ' + (u.email || ''), [
-    { id: 'c-clave', rotulo: 'Contraseña', tipo: 'password', ayuda: '12 caracteres o más' },
-    { id: 'c-clave2', rotulo: 'Repetila', tipo: 'password' }
-  ], 'Guardar', async () => {
-    const a = $('c-clave').value, b = $('c-clave2').value;
-    if (a !== b) return { ok: false, motivo: 'Las dos contraseñas no son iguales.' };
-    const r = await llamar({ accion: 'password', id, password: a });
-    if (r.ok) r.hecho = 'Contraseña cambiada.';
-    return r;
-  });
-}
+  function filtrarUsuarios() {
+    const q = document.getElementById('segBuscar').value.toLowerCase();
+    renderTabla(segUsuariosCache.filter(function(u) {
+      /* un nombre o email nulo tiraba TypeError y dejaba la tabla sin pintar */
+      return String(u.nombre || '').toLowerCase().includes(q) ||
+             String(u.email  || '').toLowerCase().includes(q) ||
+             String(u.rol    || '').toLowerCase().includes(q);
+    }));
+  }
 
-/* La baja se confirma en la pantalla, no con un confirm() del navegador. */
-function formaEstado(id, activo) {
-  limpiarAviso();
-  const u = quien(id);
-  const f = $('forma');
-  f.hidden = false;
-  f.innerHTML = '<div class="tb-sec">' + (activo ? 'Reactivar a ' : 'Dar de baja a ')
-    + esc(u.nombre || u.email || '') + '</div>'
-    + '<div class="aviso">' + (activo
-        ? 'Vuelve a poder entrar con su email y su contraseña de siempre.'
-        : '<b>No va a poder entrar más al panel.</b> No se borra nada: queda en la lista '
-          + 'como dado de baja y se puede reactivar.')
-    + ' Es <b>' + esc(u.email || '') + '</b>, rol <b>' + esc(u.rol || '') + '</b>.</div>'
-    + '<div class="sg-forma">'
-    + '<button class="btn tb-accion" id="b-guardar">'
-    + (activo ? 'Sí, reactivarlo' : 'Sí, darlo de baja') + '</button>'
-    + '<button class="btn-s tb-accion" onclick="cerrarForma()">No, dejarlo como está</button>'
-    + '</div>';
-  $('b-guardar').onclick = async () => {
-    const b = $('b-guardar');
-    if (b.disabled) return;
-    b.disabled = true; b.textContent = 'Guardando…';
-    const r = await llamar({ accion: 'estado', id, activo });
-    b.disabled = false;
-    if (!r.ok) { b.textContent = activo ? 'Sí, reactivarlo' : 'Sí, darlo de baja';
-                 return aviso(esc(r.motivo), true); }
-    cerrarForma();
-    await calcular();
-    aviso(activo ? 'Usuario reactivado.' : 'Usuario dado de baja.');
-  };
-}
+  function abrirModal(id) { document.getElementById(id).classList.add('visible'); }
+  function cerrarModal(id) { document.getElementById(id).classList.remove('visible'); }
+
+  function cambiarEstado(id, activar) {
+    SEG_FN({ accion: 'estado', id: id, activo: !!activar }).then(function(res) {
+      if (res && res.ok) { cargarListaUsuarios(); return; }
+      /* el candado del ultimo administrador contesta por acá, y hay que verlo */
+      avisarFalloServidor({ message: SEG_MOTIVO(res) });
+    });
+  }
+
+  function crearUsuarioForm(e) {
+    e.preventDefault();
+    const msg = document.getElementById('segMensajeNuevo');
+    msg.className = 'modal-mensaje';
+
+    const nombre = document.getElementById('segNombre').value.trim();
+    const email = document.getElementById('segEmail').value.trim();
+    const password = document.getElementById('segPassword').value;
+    const rol = document.getElementById('segRol').value;
+
+    SEG_FN({ accion: 'crear', nombre: nombre, email: email,
+             password: password, rol: rol }).then(function(res) {
+      if (res.ok) {
+        document.getElementById('formNuevoUsuario').reset();
+        segCargarRoles();
+        cerrarModal('modalNuevo');
+        cargarListaUsuarios();
+      } else {
+        msg.textContent = SEG_MOTIVO(res);
+        msg.className = 'modal-mensaje error';
+      }
+    });
+    return false;
+  }
+
+  function abrirModalPerfil(id, nombreActual, rolActual) {
+    document.getElementById('perfilUsuarioId').value = id;
+    document.getElementById('perfilNombre').value = nombreActual;
+    document.getElementById('perfilRol').value = rolActual;
+    document.getElementById('segMensajePerfil').className = 'modal-mensaje';
+    abrirModal('modalPerfil');
+  }
+
+  function guardarPerfil(e) {
+    e.preventDefault();
+    const id = document.getElementById('perfilUsuarioId').value;
+    const nombre = document.getElementById('perfilNombre').value.trim();
+    const rol = document.getElementById('perfilRol').value;
+    const msg = document.getElementById('segMensajePerfil');
+
+    SEG_FN({ accion: 'perfil', id: id, nombre: nombre, rol: rol }).then(function(res) {
+      if (res.ok) {
+        cerrarModal('modalPerfil');
+        cargarListaUsuarios();
+      } else {
+        msg.textContent = SEG_MOTIVO(res);
+        msg.className = 'modal-mensaje error';
+      }
+    });
+    return false;
+  }
+
+  function abrirModalEmail(id, emailActual) {
+    document.getElementById('emailUsuarioId').value = id;
+    document.getElementById('emailNuevo').value = emailActual;
+    document.getElementById('segMensajeEmail').className = 'modal-mensaje';
+    abrirModal('modalEmail');
+  }
+
+  function guardarEmail(e) {
+    e.preventDefault();
+    const id = document.getElementById('emailUsuarioId').value;
+    const nuevo = document.getElementById('emailNuevo').value.trim();
+    const msg = document.getElementById('segMensajeEmail');
+
+    SEG_FN({ accion: 'email', id: id, email: nuevo }).then(function(res) {
+      if (res.ok) {
+        cerrarModal('modalEmail');
+        cargarListaUsuarios();
+      } else {
+        msg.textContent = SEG_MOTIVO(res);
+        msg.className = 'modal-mensaje error';
+      }
+    });
+    return false;
+  }
+
+  function abrirModalPassword(id) {
+    document.getElementById('passwordUsuarioId').value = id;
+    document.getElementById('passwordNueva').value = '';
+    document.getElementById('segMensajePassword').className = 'modal-mensaje';
+    abrirModal('modalPassword');
+  }
+
+  function guardarPassword(e) {
+    e.preventDefault();
+    const id = document.getElementById('passwordUsuarioId').value;
+    const nueva = document.getElementById('passwordNueva').value;
+    const msg = document.getElementById('segMensajePassword');
+
+    SEG_FN({ accion: 'password', id: id, password: nueva }).then(function(res) {
+      if (res.ok) {
+        cerrarModal('modalPassword');
+        msg.className = 'modal-mensaje';
+      } else {
+        msg.textContent = SEG_MOTIVO(res);
+        msg.className = 'modal-mensaje error';
+      }
+    });
+    return false;
+  }

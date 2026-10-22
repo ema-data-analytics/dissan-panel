@@ -1,0 +1,193 @@
+/* ===================================================================
+   AYUDA INTELIGENTE — la hoja del modulo de Apps Script, verbatim.
+   Lo unico agregado es el bloque de variables de abajo: en el panel
+   viejo vivian en el :root de Indice.html.
+   =================================================================== */
+.ay{
+  --navy-card:#123252;
+  --green:#08A57A;
+  --green-hover:#0BC492;
+  --off-white:#F2F5F3;
+}
+  /* ---- Ayuda inteligente. Tema oscuro del sistema. ----
+     Series validadas contra el fondo #0B2740. Ninguna barra depende del
+     color: todas llevan el número escrito al lado. */
+  .ay{ --s1:#3987e5; --s2:#d95926; --s3:#149d72; --ok:#3DD68C; --mal:#FF8A8A; --ojo:#E8B93B; }
+
+  .ay-cab p{ color:#9FB3C8; font-size:13px; line-height:1.6; max-width:780px; margin:6px 0 0; }
+
+  /* ---- la caja de preguntar ---- */
+  .ay-caja{ display:flex; align-items:stretch; gap:0; background:var(--navy-card);
+            border:1px solid rgba(255,255,255,.14); border-radius:10px; padding:4px;
+            margin:16px 0 8px; }
+  .ay-caja:focus-within{ border-color:var(--s1); }
+  .ay-caja textarea{ flex:1; background:transparent; border:0; outline:none; resize:none;
+                     color:var(--off-white); font:inherit; font-size:15px; line-height:1.45;
+                     padding:11px 12px; min-height:46px; max-height:150px; }
+  .ay-caja textarea::placeholder{ color:#6F8699; }
+  .ay-btn{ background:var(--green); color:#fff; border:0; border-radius:7px; padding:9px 20px;
+           font:inherit; font-weight:600; cursor:pointer; white-space:nowrap; }
+  .ay-btn:hover:not(:disabled){ background:var(--green-hover); }
+  .ay-btn:disabled{ opacity:.5; cursor:not-allowed; }
+  .ay-btn.sec{ background:transparent; border:1px solid rgba(255,255,255,.18); color:#C9D8E6;
+               font-weight:400; font-size:13px; padding:6px 13px; }
+  .ay-btn.sec:hover:not(:disabled):not([aria-pressed="true"]){ background:rgba(255,255,255,.07); }
+  .ay-btn.sec[aria-pressed="true"]{ background:var(--s1); border-color:var(--s1); color:#fff; cursor:default; }
+  .ay-pista{ color:#7C93A3; font-size:12px; margin:0 0 18px 3px; }
+
+  /* ---- ejemplos ---- */
+  .ay-grupo{ color:#7C93A3; font-size:12px; margin:0 0 7px; }
+  .ay-chips{ display:flex; flex-wrap:wrap; gap:7px; margin-bottom:15px; }
+  .ay-chips button{ background:var(--navy-card); border:1px solid rgba(255,255,255,.12);
+                    border-radius:15px; padding:5px 13px; font:inherit; font-size:13px;
+                    color:#C9D8E6; cursor:pointer; }
+  .ay-chips button:hover{ border-color:var(--s1); color:#fff; }
+
+  /* ---- respuesta ---- */
+  .ay-enc{ display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; margin:0 0 12px; }
+  .ay-enc h3{ font-size:16px; font-weight:600; margin:0; color:var(--off-white); }
+  .ay-sello{ font-size:11px; font-weight:600; padding:2px 9px; border-radius:11px; white-space:nowrap;
+             background:rgba(61,214,140,.15); color:var(--ok); }
+  .ay-sello.cache{ background:rgba(57,135,229,.18); color:#7FB4F2; }
+  .ay-sello.no{ background:rgba(232,185,59,.15); color:var(--ojo); }
+  .ay-sello.err{ background:rgba(255,90,90,.15); color:var(--mal); }
+
+  .ay-grande{ background:var(--navy-card); border-radius:10px; padding:22px 24px; }
+  .ay-grande b{ display:block; font-size:42px; font-weight:700; letter-spacing:-.02em; line-height:1.05;
+                font-variant-numeric:tabular-nums; }
+  .ay-grande span{ display:block; font-size:13px; color:#9FB3C8; margin-top:6px; }
+
+  .ay-vistas{ display:flex; gap:7px; margin-bottom:10px; }
+  .ay-panel[hidden]{ display:none; }
+
+  .ay-tabla{ background:var(--navy-card); border-radius:10px; overflow:auto; max-height:440px; }
+  table.ay-tb{ width:100%; border-collapse:collapse; font-size:13px; }
+  table.ay-tb th{ text-align:left; padding:9px 12px; color:#9FB3C8; font-weight:600; white-space:nowrap;
+                  border-bottom:1px solid rgba(255,255,255,.12); position:sticky; top:0;
+                  background:var(--navy-card); z-index:1; }
+  table.ay-tb td{ padding:8px 12px; border-bottom:1px solid rgba(255,255,255,.05); }
+  table.ay-tb tr:last-child td{ border-bottom:0; }
+  .ay-n{ text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .ay-nulo{ color:#5F7488; }
+
+  .ay-graf{ background:var(--navy-card); border-radius:10px; padding:16px 18px 10px; position:relative; }
+  .ay-graf .tit{ font-size:13px; font-weight:500; color:#9FB3C8; margin:0 0 14px; }
+  .ay-graf svg{ display:block; width:100%; overflow:visible; }
+  .ay-graf .et{ font-size:11.5px; fill:#9FB3C8; }
+  .ay-graf .val{ font-size:11.5px; fill:var(--off-white); font-weight:600; font-variant-numeric:tabular-nums; }
+  .ay-graf .eje{ stroke:rgba(255,255,255,.18); stroke-width:1; }
+  .ay-graf rect.b{ fill:var(--s1); rx:3; transition:opacity .12s; }
+  .ay-graf g.f.neg rect.b{ fill:var(--s2); }
+  .ay-graf g.f:hover rect.b{ opacity:.78; }
+  .ay-graf rect.z{ fill:transparent; }
+  .ay-tip{ position:absolute; pointer-events:none; opacity:0; transition:opacity .1s; z-index:9;
+           background:#04101C; border:1px solid rgba(255,255,255,.18); color:var(--off-white);
+           font-size:12px; padding:6px 10px; border-radius:5px; white-space:nowrap;
+           transform:translate(-50%,-100%); }
+
+  /* ---- LA LECTURA: lo que contesta, arriba de la tabla ----
+     La tabla sigue abajo igual. Esto es la respuesta escrita, que es lo que
+     pedia el usuario: "que responda como lo responderias aca". */
+  .ay-lectura{ background:linear-gradient(180deg, rgba(57,135,229,.11), rgba(57,135,229,.035));
+               border:1px solid rgba(57,135,229,.30); border-radius:10px;
+               padding:14px 17px; margin:0 0 14px; }
+  .ay-lectura .enc{ display:flex; align-items:baseline; gap:9px; flex-wrap:wrap;
+                    font-size:11px; font-weight:700; letter-spacing:.07em;
+                    text-transform:uppercase; color:#7FB4F2; margin:0 0 10px; }
+  .ay-lectura .enc .de{ font-weight:400; letter-spacing:0; text-transform:none;
+                        color:#6F8699; font-size:11.5px; }
+  .ay-lectura .txt{ font-size:14px; line-height:1.68; color:var(--off-white);
+                    overflow-wrap:anywhere; }
+  .ay-lectura .txt p{ margin:0 0 10px; }
+  .ay-lectura .txt p:last-child{ margin-bottom:0; }
+  .ay-lectura .txt ul{ margin:0 0 10px; padding-left:19px; }
+  .ay-lectura .txt ul:last-child{ margin-bottom:0; }
+  .ay-lectura .txt li{ margin:0 0 4px; }
+  .ay-lectura .txt b{ font-weight:700; font-variant-numeric:tabular-nums; color:#fff; }
+  .ay-lectura.pensando{ border-style:dashed; }
+  .ay-lectura.pensando .txt{ color:#9FB3C8; }
+  .ay-lectura.nope{ border-color:rgba(232,185,59,.32); background:rgba(232,185,59,.07); }
+  .ay-lectura.nope .enc{ color:var(--ojo); }
+
+  /* ---- EL ARCHIVO LISTO ----
+     El clic de descarga NO se puede disparar solo desde acá: el panel vive en
+     un iframe con sandbox y el navegador exige que la bajada salga de un clic
+     del usuario. El nuestro ocurre segundos después, en la respuesta del
+     servidor, cuando esa activación ya venció: Chrome la bloquea EN SILENCIO,
+     sin archivo y sin error. Por eso el archivo queda acá, a la vista, con un
+     enlace que el usuario aprieta. */
+  .ay-archivo{ display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+               background:rgba(61,214,140,.10); border:1px solid rgba(61,214,140,.38);
+               border-radius:10px; padding:12px 16px; margin:0 0 14px; }
+  .ay-archivo[hidden]{ display:none !important; }
+  .ay-archivo .txt{ font-size:13.5px; color:var(--off-white); }
+  .ay-archivo .txt b{ font-weight:700; }
+  .ay-archivo .de{ color:#9FB3C8; font-size:12px; }
+  .ay-archivo a.baja{ background:var(--ok); color:#06301C; text-decoration:none;
+                      font-weight:700; font-size:13.5px; padding:9px 18px;
+                      border-radius:7px; white-space:nowrap; }
+  .ay-archivo a.baja:hover{ filter:brightness(1.08); }
+
+  .ay-aviso{ background:rgba(232,185,59,.10); border:1px solid rgba(232,185,59,.32);
+             border-radius:9px; padding:13px 15px; font-size:13px; line-height:1.6; }
+  .ay-aviso.mal{ background:rgba(255,90,90,.10); border-color:rgba(255,90,90,.32); }
+  .ay-aviso .det{ color:#9FB3C8; font-size:12.5px; margin-top:6px; }
+
+  /* ---- Opciones de salida: grafico, dashboard, pulgares ---- */
+  .ay-extra{margin:10px 0 14px;border:1px solid rgba(255,255,255,.09);border-radius:10px;
+            background:#0E2B47;padding:14px}
+  .ay-extra h4{margin:0 0 10px;font-size:13px;color:#C8D6E3;font-weight:600}
+  .ay-kpis{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px}
+  .ay-kpi{flex:1 1 150px;border:1px solid rgba(255,255,255,.09);border-radius:9px;padding:10px 12px}
+  .ay-kpi .et{font-size:11px;color:#9FB3C8;text-transform:uppercase;letter-spacing:.4px}
+  .ay-kpi .nu{font-size:19px;color:#E8EEF4;margin-top:3px;font-variant-numeric:tabular-nums}
+  .ay-sinmas{font-size:12.5px;color:#9FB3C8;line-height:1.6}
+  .ay-pulg{display:inline-flex;gap:6px;margin-left:10px}
+  .ay-pulg button{background:transparent;border:1px solid rgba(255,255,255,.14);color:#9FB3C8;
+                  border-radius:7px;padding:3px 9px;cursor:pointer;font-size:13px}
+  .ay-pulg button:hover{color:#E8EEF4;border-color:rgba(255,255,255,.3)}
+  .ay-pulg .ok{color:#18A37C;border-color:#18A37C}
+  .ay-pulg .no{color:#C0303A;border-color:#C0303A}
+  .ay-pie-arriba{border-top:0 !important;border-bottom:1px solid rgba(255,255,255,.10);margin:0 0 12px;padding-bottom:9px}
+  .ay-pie{ display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-top:12px;
+           color:#7C93A3; font-size:12px; }
+  .ay-acc{ display:flex; gap:7px; margin-left:auto; flex-wrap:wrap; }
+  details.ay-sql{ margin-top:12px; background:var(--navy-card); border-radius:9px; }
+  details.ay-sql summary{ cursor:pointer; padding:9px 14px; font-size:13px; color:#9FB3C8;
+                          list-style:none; display:flex; align-items:center; gap:7px; }
+  details.ay-sql summary::-webkit-details-marker{ display:none; }
+  details.ay-sql summary::before{ content:'\25B8'; font-size:10px; }
+  details.ay-sql[open] summary::before{ content:'\25BE'; }
+  details.ay-sql summary:hover{ color:var(--off-white); }
+  details.ay-sql pre{ margin:0; padding:0 14px 14px; font-family:ui-monospace,'Cascadia Mono',Consolas,monospace;
+                      font-size:12px; line-height:1.6; color:#AFC4D6; white-space:pre-wrap; word-break:break-word; }
+
+  /* ---- el reporte, dentro de la misma pantalla ---- */
+  .ay-rep{ background:#fff; color:#16263D; border-radius:10px; padding:34px 38px; margin-top:4px;
+           font-size:13.5px; line-height:1.55; }
+  .ay-rep .emp{ font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; color:#64748B; margin:0 0 9px; }
+  .ay-rep h3{ font-size:20px; font-weight:600; margin:0 0 5px; color:#16263D; letter-spacing:-.01em; }
+  .ay-rep .fec{ color:#64748B; font-size:12px; margin:0 0 22px; padding-bottom:15px; border-bottom:2px solid #16263D; }
+  .ay-rep table{ width:100%; border-collapse:collapse; font-size:13px; }
+  .ay-rep th{ text-align:left; padding:7px 9px; color:#64748B; font-size:11.5px; font-weight:500;
+              border-bottom:1px solid #C3CCD8; }
+  .ay-rep td{ padding:6px 9px; border-bottom:1px solid #DCE2EA; }
+  .ay-rep .hero b{ display:block; font-size:46px; font-weight:600; letter-spacing:-.02em; }
+  .ay-rep .hero span{ display:block; color:#64748B; font-size:13px; margin-top:7px; }
+  .ay-rep .nota{ margin-top:24px; padding-top:14px; border-top:1px solid #DCE2EA; color:#64748B; font-size:11.5px; }
+  .ay-rep .et{ fill:#2B3F5C; } .ay-rep .val{ fill:#16263D; } .ay-rep .eje{ stroke:#C3CCD8; }
+  .ay-rep rect.b{ fill:#2a78d6; } .ay-rep g.f.neg rect.b{ fill:#eb6834; }
+  /* las zonas de hover son invisibles: sin esta línea se pintan de negro
+     y tapan el gráfico entero */
+  .ay-rep rect.z{ fill:none; }
+  .ay-rep svg{ width:100%; overflow:visible; }
+  .ay-repbar{ display:flex; gap:8px; align-items:center; margin:14px 0 0; }
+
+  .ay-cargando{ display:flex; align-items:center; gap:11px; color:#9FB3C8; font-size:13px; }
+  /* el atributo hidden tiene que ganarle al display de arriba, si no el
+     "Buscando…" queda pegado encima de la respuesta */
+  .ay-cargando[hidden], .ay-vistas[hidden], #ayResp[hidden], #ayEjemplos[hidden]{ display:none; }
+  .ay-giro{ width:14px; height:14px; border:2px solid rgba(255,255,255,.18); border-top-color:var(--s1);
+            border-radius:50%; animation:ayGiro .7s linear infinite; }
+  @keyframes ayGiro{ to{ transform:rotate(360deg); } }
+  @media (prefers-reduced-motion:reduce){ .ay-giro{ animation-duration:2.2s; } }

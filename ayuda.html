@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/app.css?v=16">
+<link rel="stylesheet" href="css/ayuda-ay.css?v=1">
 </head>
 <body>
 
@@ -61,24 +62,29 @@
         <div id="fechaHoy"></div>
       </div>
       <div id="contenido">
-      <div class="sub">Preguntale a la base en castellano. Si la sé contestar con una consulta
-        ya probada, sale <b>sin costo</b>; si no, la escribe el modelo.</div>
+<div class="ay" id="ayRaiz">
+  <div class="ay-cab">
+    <p>Escribí lo que querés saber como se lo dirías a un compañero. Busca entre las 580 tablas,
+    arma la consulta y te muestra el resultado. Después lo podés ver como tabla o como gráfico,
+    y armar un reporte para imprimir o guardar en PDF.</p>
+  </div>
 
+  <div class="ay-caja">
+    <textarea id="ayQ" rows="1" placeholder="Por ejemplo: cuáles son los 10 artículos más vendidos"></textarea>
+    <button class="ay-btn" id="ayEnviar">Preguntar</button>
+  </div>
+  <p class="ay-pista">Enter para preguntar · Shift + Enter para bajar un renglón</p>
 
-    <section class="ay-caja">
-      <textarea id="q" class="fi ay-q" rows="2" spellcheck="false"
-        placeholder="Por ejemplo: ordenes de compra contra pedido agosto 2026 · qué artículos tienen stock cero · qué partidas se vencen en los próximos 180 días"></textarea>
-      <button class="btn ay-btn" id="b-preg" onclick="preguntar()">Preguntar</button>
-    </section>
-    <div class="ay-tip">Enter pregunta · Shift+Enter hace un renglón nuevo</div>
-
-    <div id="cuerpo"></div>
+  <div id="ayEjemplos"></div>
+  <div id="ayCargando" hidden class="ay-cargando"><span class="ay-giro"></span><span id="ayCargandoTxt">Buscando…</span></div>
+  <div id="ayResp" hidden></div>
+</div>
       </div>
     </div>
   </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="js/core.js?v=7"></script>
+<script src="js/core.js?v=8"></script>
 <script src="js/ayuda.js?v=6"></script>
 </body>
 </html>

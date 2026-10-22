@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/app.css?v=16">
+<link rel="stylesheet" href="css/seguridad-seg.css?v=1">
 </head>
 <body>
 
@@ -61,30 +62,122 @@
         <div id="fechaHoy"></div>
       </div>
       <div id="contenido">
-      <div class="sub">Quién entra al panel y qué puede ver. Sólo para administradores.</div>
+<div id="reloj" class="reloj" hidden></div>
+<div class="seg-header">
+  <div>
+    <div class="seg-titulo-h">Usuarios del sistema</div>
+    <div class="seg-sub">Alta, edición y anulación de accesos. Solo visible para el rol Super.</div>
+  </div>
+  <div class="seg-buscador">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+    <input type="text" id="segBuscar" placeholder="Buscar usuario..." oninput="filtrarUsuarios()">
+  </div>
+  <button class="btn-nuevo" onclick="abrirModal('modalNuevo')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+    Nuevo usuario
+  </button>
+</div>
 
+<div class="seg-tabla-wrap">
+  <table class="seg-tabla">
+    <thead>
+      <tr><th>Usuario</th><th>Email</th><th>Rol</th><th>Estado</th><th>Acciones</th></tr>
+    </thead>
+    <tbody id="segTablaBody">
+      <tr><td colspan="5">Cargando...</td></tr>
+    </tbody>
+  </table>
+</div>
 
-    <section class="filtros tb-filtros">
-      <div class="fg">
-        <label class="fl" for="f-buscar">Buscar</label>
-        <input id="f-buscar" class="fi" autocomplete="off" spellcheck="false"
-               placeholder="nombre, email o rol…" oninput="filtrar()">
+<!-- ---- Modal: nuevo usuario ---- -->
+<div class="modal-fondo" id="modalNuevo">
+  <div class="modal-caja">
+    <div class="modal-titulo">Nuevo usuario</div>
+    <form id="formNuevoUsuario" onsubmit="return crearUsuarioForm(event)">
+      <label>Nombre</label>
+      <input type="text" id="segNombre" required>
+      <label>Email</label>
+      <input type="email" id="segEmail" required>
+      <label>Contraseña</label>
+      <input type="password" id="segPassword" required minlength="12" autocomplete="new-password">
+      <label>Rol</label>
+      <select id="segRol">
+        <option value="usuario">Usuario</option>
+        <option value="admin">Admin</option>
+        <option value="super">Super</option>
+      </select>
+      <div class="modal-botones">
+        <button type="button" class="btn-cancelar" onclick="cerrarModal('modalNuevo')">Cancelar</button>
+        <button type="submit" class="btn-confirmar">Crear usuario</button>
       </div>
-      <button class="btn tb-accion" id="b-nuevo" onclick="formaNuevo()">Nuevo usuario</button>
-      <button class="btn-s tb-accion" id="b-calc" onclick="calcular()">Actualizar</button>
-    </section>
+      <div class="modal-mensaje" id="segMensajeNuevo"></div>
+    </form>
+  </div>
+</div>
 
-    <div id="reloj" class="reloj" hidden></div>
-    <div id="aviso" class="aviso" hidden></div>
-    <div id="forma" hidden></div>
+<!-- ---- Modal: editar nombre y rol ---- -->
+<div class="modal-fondo" id="modalPerfil">
+  <div class="modal-caja">
+    <div class="modal-titulo">Editar usuario</div>
+    <form onsubmit="return guardarPerfil(event)">
+      <input type="hidden" id="perfilUsuarioId">
+      <label>Nombre</label>
+      <input type="text" id="perfilNombre" required>
+      <label>Rol</label>
+      <select id="perfilRol">
+        <option value="usuario">Usuario</option>
+        <option value="admin">Admin</option>
+        <option value="super">Super</option>
+      </select>
+      <div class="modal-botones">
+        <button type="button" class="btn-cancelar" onclick="cerrarModal('modalPerfil')">Cancelar</button>
+        <button type="submit" class="btn-confirmar">Guardar</button>
+      </div>
+      <div class="modal-mensaje" id="segMensajePerfil"></div>
+    </form>
+  </div>
+</div>
 
-    <div id="cuerpo"></div>
+<!-- ---- Modal: cambiar email ---- -->
+<div class="modal-fondo" id="modalEmail">
+  <div class="modal-caja">
+    <div class="modal-titulo">Cambiar email</div>
+    <form onsubmit="return guardarEmail(event)">
+      <input type="hidden" id="emailUsuarioId">
+      <label>Nuevo email</label>
+      <input type="email" id="emailNuevo" required>
+      <div class="modal-botones">
+        <button type="button" class="btn-cancelar" onclick="cerrarModal('modalEmail')">Cancelar</button>
+        <button type="submit" class="btn-confirmar">Guardar</button>
+      </div>
+      <div class="modal-mensaje" id="segMensajeEmail"></div>
+    </form>
+  </div>
+</div>
+
+<!-- ---- Modal: cambiar contraseña ---- -->
+<div class="modal-fondo" id="modalPassword">
+  <div class="modal-caja">
+    <div class="modal-titulo">Cambiar contraseña</div>
+    <form onsubmit="return guardarPassword(event)">
+      <input type="hidden" id="passwordUsuarioId">
+      <label>Nueva contraseña</label>
+      <input type="password" id="passwordNueva" required minlength="12" autocomplete="new-password">
+      <div class="modal-botones">
+        <button type="button" class="btn-cancelar" onclick="cerrarModal('modalPassword')">Cancelar</button>
+        <button type="submit" class="btn-confirmar">Guardar</button>
+      </div>
+      <div class="modal-mensaje" id="segMensajePassword"></div>
+    </form>
+  </div>
+</div>
+
       </div>
     </div>
   </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="js/core.js?v=7"></script>
-<script src="js/seguridad.js?v=2"></script>
+<script src="js/core.js?v=8"></script>
+<script src="js/seguridad.js?v=3"></script>
 </body>
 </html>

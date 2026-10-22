@@ -1,0 +1,89 @@
+/* ===================================================================
+   USUARIOS Y PERMISOS — la hoja del modulo de Apps Script, verbatim.
+   Lo unico agregado son las insignias de los roles que el modulo viejo
+   no tenia: su lista a mano decia «usuario», que no existe, y no decia
+   «operador», que es el rol real del usuario de DISSAN. Los roles salen
+   de api_roles_v2(), que los lee de modulos.roles.
+   =================================================================== */
+  .seg-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 22px; gap: 16px; }
+  .seg-sub { font-size: 13px; color: #7C93A3; margin-top: 3px; }
+  .seg-titulo-h { font-family: 'Sora', sans-serif; font-size: 19px; font-weight: 700; }
+
+  .seg-buscador {
+    flex: 1; max-width: 320px; display: flex; align-items: center; gap: 9px;
+    background: #123252; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 9px 13px;
+  }
+  .seg-buscador svg { width: 15px; height: 15px; color: #7C93A3; flex-shrink: 0; }
+  .seg-buscador input { border: none; background: none; outline: none; color: #F2F5F3; font-size: 13.5px; width: 100%; }
+
+  .btn-nuevo {
+    display: flex; align-items: center; gap: 7px; background: #08A57A; color: #09233A;
+    border: none; padding: 10px 16px; border-radius: 8px; font-size: 13.5px; font-weight: 700; cursor: pointer;
+    white-space: nowrap;
+  }
+  .btn-nuevo:hover { background: #0BC492; }
+  .btn-nuevo svg { width: 15px; height: 15px; }
+
+  .seg-tabla-wrap { background: #123252; border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; overflow: hidden; }
+  .seg-tabla { width: 100%; border-collapse: collapse; }
+  .seg-tabla th {
+    text-align: left; padding: 12px 18px; font-size: 11px; font-weight: 600; color: #7C93A3;
+    text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+  .seg-tabla td { padding: 13px 18px; font-size: 13.5px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+  .seg-tabla tr:last-child td { border-bottom: none; }
+  .seg-tabla tr:hover td { background: rgba(255,255,255,0.02); }
+
+  .fila-usuario { display: flex; align-items: center; gap: 10px; }
+  .mini-avatar {
+    width: 28px; height: 28px; border-radius: 50%; background: #0F3355; color: #08A57A;
+    display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 11.5px; flex-shrink: 0;
+  }
+
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; }
+  .badge-super { background: rgba(8,165,122,0.15); color: #08A57A; }
+  .badge-admin { background: rgba(122,162,247,0.15); color: #7aa2f7; }
+  .badge-usuario { background: rgba(124,147,163,0.15); color: #b6c5cf; }
+  .badge-activo { background: rgba(8,165,122,0.15); color: #08A57A; }
+  .badge-anulado { background: rgba(229,72,77,0.15); color: #ff8b8f; }
+
+  .acciones-fila { display: flex; gap: 4px; }
+  .btn-icono {
+    width: 30px; height: 30px; border-radius: 7px; border: none; background: rgba(255,255,255,0.04);
+    color: #b6c5cf; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  }
+  .btn-icono svg { width: 14.5px; height: 14.5px; }
+  .btn-icono:hover { background: rgba(255,255,255,0.09); color: #F2F5F3; }
+  .btn-icono.peligro:hover { background: rgba(229,72,77,0.15); color: #ff8b8f; }
+  .btn-icono.exito:hover { background: rgba(8,165,122,0.15); color: #08A57A; }
+
+  /* ---- Modal ---- */
+  .modal-fondo {
+    display: none; position: fixed; inset: 0; background: rgba(3,12,20,0.65);
+    align-items: center; justify-content: center; z-index: 50;
+  }
+  .modal-fondo.visible { display: flex; }
+  .modal-caja {
+    background: #123252; border: 1px solid rgba(255,255,255,0.1); border-radius: 14px;
+    padding: 26px 28px; width: 100%; max-width: 380px; box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+  .modal-titulo { font-family: 'Sora', sans-serif; font-size: 16px; font-weight: 700; margin-bottom: 18px; }
+  .modal-caja label { display: block; font-size: 12px; font-weight: 600; color: #7C93A3; margin-bottom: 5px; margin-top: 14px; }
+  .modal-caja input, .modal-caja select {
+    width: 100%; padding: 10px 12px; border: 1.5px solid rgba(255,255,255,0.1); border-radius: 7px;
+    font-size: 13.5px; background: #0B2740; color: #F2F5F3; outline: none;
+  }
+  .modal-caja input:focus, .modal-caja select:focus { border-color: #08A57A; }
+  .modal-botones { display: flex; gap: 10px; margin-top: 22px; }
+  .modal-botones button { flex: 1; padding: 10px; border-radius: 7px; font-size: 13.5px; font-weight: 600; cursor: pointer; border: none; }
+  .btn-cancelar { background: rgba(255,255,255,0.06); color: #b6c5cf; }
+  .btn-confirmar { background: #08A57A; color: #09233A; }
+  .btn-confirmar:hover { background: #0BC492; }
+  .modal-mensaje { margin-top: 12px; padding: 8px 11px; border-radius: 7px; font-size: 12.5px; display: none; }
+  .modal-mensaje.error { display: block; background: rgba(229,72,77,0.12); color: #ff8b8f; }
+  .modal-mensaje.ok { display: block; background: rgba(8,165,122,0.12); color: #08A57A; }
+
+  /* los roles de verdad (modulos.roles), con el mismo tono que las de arriba */
+  .badge-operador{ background:rgba(8,165,122,.16); color:#3DD68C; }
+  .badge-consulta{ background:rgba(57,135,229,.16); color:#8FC0F5; }
+  .badge-gerencia{ background:rgba(232,185,59,.16); color:#E8B93B; }
