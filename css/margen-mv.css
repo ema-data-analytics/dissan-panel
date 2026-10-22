@@ -1,0 +1,172 @@
+
+/* ====================================================================
+   MARGEN DE VENTAS REALES — el CSS del modulo de Apps Script, copiado
+   tal cual de MargenDeVentas.html (rev5, 14/10/2026) para que la
+   pantalla sea una REPLICA y no un parecido. Lo unico agregado son las
+   variables del armazon, que alla vivian en Indice.html.
+   ==================================================================== */
+.mv{ --navy:#09233A; --navy-content:#0B2740; --navy-card:#123252;
+     --off-white:#F2F5F3; --green:#08A57A; --green-hover:#0BC492;
+     --gray:#7C93A3; --red:#E5484D; }
+
+  /* ====================================================================
+     Margen de ventas reales — revisión 5 (14/10/2026)
+     ====================================================================
+     QUÉ CAMBIÓ EN ESTA REVISIÓN
+       · El costo sale de la ORDEN DE COMPRA que Compras asocia al pedido
+         de venta. Es el método que decidió DISSAN. Lee
+         api_margen_tablero_v3 (vista_margen_v2_oc).
+       · LA CALIDAD 'A. orden de compra del pedido' ENTRA EN LA MEDICIÓN.
+         La revisión anterior mandaba una lista fija de tres calidades que
+         la dejaba afuera: se perdían 1.927 renglones y $1.806.462.983 de
+         2026 — la mitad de lo facturado — y el margen salía 41,4% en vez
+         de 36,5%.
+       · Los filtros filtran. Cada uno se probó contra la base y mueve la
+         cifra. El encabezado dice LITERALMENTE qué filtros están puestos.
+       · Las 23 columnas de la planilla de DISSAN, con el número de pedido
+         y la OC de cada renglón.
+       · Letra más chica, filtros en rejilla alineada, gráficos chicos con
+         barras finas y colores pasteles sobrios.
+       · Los diez que ganaron, los diez que perdieron y la concentración
+         por cliente se fueron al TABLERO GENERAL. Acá va el detalle.
+     ==================================================================== */
+
+  /* pasteles sobrios, validados sobre fondo oscuro. Ninguna barra depende
+     del color: todas llevan el número escrito al lado. */
+  .mv{ --p1:#8FB8DE; --p2:#E3A987; --p3:#9ED3BC; --p4:#C9B6DC; --p5:#DCC48E;
+       --ok:#9ED3BC; --mal:#E6A3A3; --ojo:#DCC48E; --tx:#A8BACC; --tx2:#7E91A3; }
+
+  .mv-cab p{ color:var(--tx); font-size:12px; line-height:1.55; max-width:900px; margin:5px 0 0; }
+  .mv-cab b{ color:var(--off-white); font-weight:600; }
+
+  /* ---- filtros: rejilla alineada, todo del mismo alto ---- */
+  .mv-filtros{ background:var(--navy-card); border-radius:9px; padding:12px 14px; margin:14px 0 14px; }
+  /* [hidden] tiene que ir ANTES: display:grid le gana al hidden del navegador
+     y por eso "Mas filtros" cambiaba el rotulo sin esconder nada. */
+  .mv-rej[hidden]{ display:none !important; }
+  .mv-rej{ display:grid; grid-template-columns:repeat(auto-fill, minmax(168px, 1fr));
+           gap:9px 10px; align-items:end; }
+  .mv-campo{ display:flex; flex-direction:column; gap:4px; min-width:0; }
+  .mv-campo.doble{ grid-column:span 2; }
+  .mv-campo label{ font-size:10px; color:var(--tx2); text-transform:uppercase;
+                   letter-spacing:.07em; font-weight:600; white-space:nowrap;
+                   overflow:hidden; text-overflow:ellipsis; }
+  .mv-campo input{
+      background:var(--navy-content); color:var(--off-white); font:inherit; font-size:12px;
+      border:1px solid rgba(255,255,255,.13); border-radius:5px; padding:6px 8px;
+      width:100%; box-sizing:border-box; height:30px; }
+  .mv-campo input:focus{ outline:none; border-color:var(--p1); }
+  .mv-campo input::placeholder{ color:#5F7284; }
+
+  .mv-marcas{ display:flex; gap:14px; flex-wrap:wrap; margin-top:11px; padding-top:10px;
+              border-top:1px solid rgba(255,255,255,.06); }
+  .mv-chk{ display:flex; align-items:center; gap:6px; font-size:11.5px; color:var(--tx);
+           white-space:nowrap; cursor:pointer; }
+  .mv-chk input{ accent-color:var(--p1); }
+
+  .mv-acciones{ display:flex; gap:8px; align-items:center; margin-top:11px; flex-wrap:wrap; }
+  .mv-btn{ background:var(--green); color:#fff; border:0; border-radius:5px; padding:7px 16px;
+           font:inherit; font-size:12px; font-weight:600; cursor:pointer; height:30px; }
+  .mv-btn:hover:not(:disabled){ background:var(--green-hover); }
+  .mv-btn:disabled{ opacity:.45; cursor:not-allowed; }
+  .mv-btn.sec{ background:transparent; border:1px solid rgba(255,255,255,.16); color:var(--tx);
+               font-weight:400; }
+  .mv-btn.sec:hover{ background:rgba(255,255,255,.05); }
+  .mv-mas{ background:none; border:0; color:var(--p1); font:inherit; font-size:11.5px;
+           cursor:pointer; padding:0; text-decoration:underline; text-underline-offset:3px; }
+  .mv-mas:hover{ color:#A9CBEC; }
+
+  /* ---- el encabezado que dice qué se está mirando ---- */
+  .mv-titulo{ background:rgba(143,184,222,.08); border-left:3px solid var(--p1);
+              border-radius:0 7px 7px 0; padding:10px 13px; margin:0 0 13px; font-size:12px;
+              color:var(--tx); line-height:1.6; }
+  .mv-titulo .q{ display:block; font-size:13.5px; color:var(--off-white); font-weight:600;
+                 margin-bottom:3px; }
+  .mv-titulo .f{ color:var(--ojo); font-weight:600; }
+
+  /* ---- el buscador que reemplaza a las listas con scroll ---- */
+  .mv-busca{ position:relative; }
+  .mv-lista{
+      position:absolute; top:100%; left:0; z-index:40; margin-top:2px; min-width:270px;
+      background:#06182A; border:1px solid rgba(255,255,255,.18); border-radius:6px;
+      max-height:230px; overflow-y:auto; box-shadow:0 8px 22px rgba(0,0,0,.5); }
+  .mv-lista[hidden]{ display:none; }
+  .mv-op{ padding:6px 10px; font-size:12px; color:var(--tx); cursor:pointer; line-height:1.3; }
+  .mv-op:hover, .mv-op.foco{ background:rgba(143,184,222,.20); color:var(--off-white); }
+  .mv-op .coincide{ color:var(--p1); font-weight:700; }
+  .mv-op.nada{ color:var(--tx2); cursor:default; font-style:italic; }
+  .mv-op.nada:hover{ background:none; }
+  .mv-mas-op{ padding:5px 10px; font-size:11px; color:var(--tx2);
+              border-top:1px solid rgba(255,255,255,.07); }
+  .mv-chips{ display:flex; gap:4px; flex-wrap:wrap; margin-top:5px; }
+  .mv-chip{
+      display:inline-flex; align-items:center; gap:5px; font-size:11px;
+      background:rgba(143,184,222,.16); border:1px solid rgba(143,184,222,.40);
+      color:var(--off-white); border-radius:11px; padding:1px 4px 1px 8px; max-width:100%; }
+  .mv-chip span{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:150px; }
+  .mv-chip button{ background:none; border:0; color:var(--tx); cursor:pointer; font:inherit;
+                   font-size:13px; line-height:1; padding:0 2px; border-radius:50%; }
+  .mv-chip button:hover{ color:var(--mal); background:rgba(255,255,255,.09); }
+
+  /* ---- tarjetas ---- */
+  .mv-tarjetas{ display:grid; grid-template-columns:repeat(auto-fill, minmax(146px,1fr));
+                gap:9px; margin-bottom:6px; }
+  .mv-t{ background:var(--navy-card); border-radius:8px; padding:11px 13px; }
+  /* overflow-wrap: un numero cortado por el ancho de la tarjeta se lee como otro
+     numero. $3.549.541.334 se mostraba $3.549.541.33 — diez veces menos. */
+  .mv-t .n{ font-size:19px; font-weight:700; line-height:1.15; font-variant-numeric:tabular-nums;
+            overflow-wrap:anywhere; }
+  .mv-t .n.mal{ color:var(--mal); } .mv-t .n.ok{ color:var(--ok); } .mv-t .n.ojo{ color:var(--ojo); }
+  .mv-t .r{ font-size:11px; color:var(--tx); margin-top:3px; line-height:1.3; }
+  .mv-t .p{ font-size:10px; color:var(--tx2); margin-top:4px; line-height:1.3; }
+
+  /* ---- secciones y gráficos chicos ---- */
+  .mv-sec{ margin:20px 0 8px; font-size:11.5px; font-weight:700; color:var(--tx);
+           text-transform:uppercase; letter-spacing:.07em; }
+  .mv-sec small{ display:block; text-transform:none; letter-spacing:0; font-weight:400;
+                 color:var(--tx2); font-size:11px; margin-top:3px; line-height:1.45; }
+  .mv-graf{ background:var(--navy-card); border-radius:8px; padding:12px 14px 7px;
+            position:relative; max-width:660px; }
+  .mv-graf svg{ display:block; width:100%; overflow:visible; }
+  .mv-graf .et{ font-size:10px; fill:var(--tx); }
+  .mv-graf .val{ font-size:10px; fill:var(--off-white); font-weight:600;
+                 font-variant-numeric:tabular-nums; }
+  .mv-graf .eje{ stroke:rgba(255,255,255,.14); stroke-width:1; }
+  .mv-graf rect.b{ fill:var(--p1); rx:2; }
+  .mv-graf rect.b.v{ fill:var(--p3); } .mv-graf rect.b.r{ fill:var(--p2); }
+  .mv-graf g.f:hover rect.b{ opacity:.75; }
+  .mv-graf rect.z{ fill:none; }
+  .mv-tip{ position:absolute; pointer-events:none; opacity:0; transition:opacity .1s; z-index:9;
+           background:#04101C; border:1px solid rgba(255,255,255,.16); color:var(--off-white);
+           font-size:11px; padding:5px 8px; border-radius:4px; white-space:nowrap;
+           transform:translate(-50%,-100%); }
+
+  /* ---- tablas ---- */
+  table.mv-tb{ width:100%; border-collapse:collapse; font-size:11.5px; }
+  table.mv-tb th{ text-align:left; padding:6px 8px; color:var(--tx2); font-weight:600;
+                  border-bottom:1px solid rgba(255,255,255,.10); white-space:nowrap;
+                  position:sticky; top:0; background:var(--navy-content); z-index:2;
+                  font-size:10.5px; text-transform:uppercase; letter-spacing:.04em; }
+  table.mv-tb td{ padding:5px 8px; border-bottom:1px solid rgba(255,255,255,.04);
+                  vertical-align:top; }
+  table.mv-tb tr.alerta td{ background:rgba(227,169,135,.10); }
+  table.mv-tb tr.aparte td{ background:rgba(220,196,142,.07); color:var(--tx); }
+  table.mv-tb tr:hover td{ background:rgba(143,184,222,.07); }
+  .mv-num{ text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .mv-tb-caja{ overflow:auto; max-height:620px; border-radius:7px; background:var(--navy-card);
+               padding:0 2px 2px; }
+  .mv-cod{ font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; color:var(--p1); }
+  .mv-desc{ max-width:240px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .mv-obs{ max-width:200px; font-size:10.5px; color:var(--ojo); line-height:1.3;
+           white-space:normal; }
+  .mv-marca{ display:inline-block; font-size:10px; padding:0 5px; border-radius:3px;
+             background:rgba(220,196,142,.16); color:var(--ojo); white-space:nowrap; }
+
+  .mv-aviso{ background:rgba(220,196,142,.09); border:1px solid rgba(220,196,142,.30);
+             border-radius:7px; padding:10px 12px; font-size:11.5px; margin:11px 0;
+             line-height:1.55; color:var(--tx); }
+  .mv-aviso.mal{ background:rgba(230,163,163,.09); border-color:rgba(230,163,163,.32); }
+  .mv-aviso.ok{  background:rgba(158,211,188,.08); border-color:rgba(158,211,188,.28); }
+  .mv-aviso b{ color:var(--off-white); }
+  .mv-vacio{ color:var(--tx2); font-size:12px; padding:16px 2px; }
+  .mv-pie{ font-size:10.5px; color:var(--tx2); margin-top:6px; line-height:1.5; }

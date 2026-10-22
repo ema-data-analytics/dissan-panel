@@ -7,7 +7,8 @@
 <link rel="icon" href="data:,">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=15">
+<link rel="stylesheet" href="css/app.css?v=16">
+<link rel="stylesheet" href="css/margen-mv.css?v=1">
 </head>
 <body>
 
@@ -61,38 +62,118 @@
         <div id="fechaHoy"></div>
       </div>
       <div id="contenido">
-      <div class="sub" id="metodo">—</div>
+<div class="mv" id="mvRaiz">
+  <div class="mv-cab">
+    <p>El costo de cada venta sale de la <b>orden de compra que Compras asoció al pedido</b> —
+    el número de pedido va escrito en las observaciones del renglón de la OC. Cuando el pedido
+    no tiene OC, se costea con <b>el lote que realmente salió</b>, rastreado hasta la factura
+    de compra, y si tampoco, por <b>PEPS</b> limitado a compras anteriores a la venta.
+    <b>Nunca con una compra posterior a la venta.</b> Cada renglón dice con qué método se costeó.
+    En los filtros escribí y la lista se achica sola.</p>
+  </div>
 
-
-    <section class="filtros">
-      <div class="fg">
-        <label class="fl">Desde</label>
-        <input id="f-desde" class="fi" type="date" value="2026-01-01">
+  <div class="mv-filtros">
+    <div class="mv-rej">
+      <div class="mv-campo">
+        <label for="mvDesde">Desde</label>
+        <input type="date" id="mvDesde">
       </div>
-      <div class="fg">
-        <label class="fl">Hasta</label>
-        <input id="f-hasta" class="fi" type="date" value="2026-12-31">
+      <div class="mv-campo">
+        <label for="mvHasta">Hasta</label>
+        <input type="date" id="mvHasta">
       </div>
-      <div class="fg fg-chk">
-        <label class="chk"><input type="checkbox" id="f-productos" checked> Sólo productos</label>
-        <label class="chk"><input type="checkbox" id="f-bajo"> Sólo bajo costo</label>
-        <label class="chk"><input type="checkbox" id="f-180"> Incluir costo de más de 180 días</label>
+      <div class="mv-campo doble mv-busca" data-pick="Articulos">
+        <label for="mvArticulos_i">Artículo (código o descripción)</label>
+        <input type="text" id="mvArticulos_i" autocomplete="off" placeholder="COLO0170, vicryl…">
+        <div class="mv-lista" id="mvArticulos_l" hidden></div>
+        <div class="mv-chips" id="mvArticulos_c"></div>
       </div>
-      <button class="btn" id="b-calc" onclick="calcular()">Calcular</button>
-    </section>
+      <div class="mv-campo doble mv-busca" data-pick="Clientes">
+        <label for="mvClientes_i">Cliente</label>
+        <input type="text" id="mvClientes_i" autocomplete="off" placeholder="escribí un cliente…">
+        <div class="mv-lista" id="mvClientes_l" hidden></div>
+        <div class="mv-chips" id="mvClientes_c"></div>
+      </div>
+      <div class="mv-campo doble">
+        <label for="mvTexto">Buscar en todo</label>
+        <input type="text" id="mvTexto" placeholder="código, descripción, cliente, OC o pedido">
+      </div>
+    </div>
 
-    <div id="reloj" class="reloj" hidden></div>
-    <div id="aviso" class="aviso" hidden></div>
+    <div class="mv-rej" id="mvMasCampos" hidden style="margin-top:9px; padding-top:10px;
+         border-top:1px solid rgba(255,255,255,.06)">
+      <div class="mv-campo mv-busca" data-pick="Vendedores">
+        <label for="mvVendedores_i">Vendedor</label>
+        <input type="text" id="mvVendedores_i" autocomplete="off" placeholder="vendedor…">
+        <div class="mv-lista" id="mvVendedores_l" hidden></div>
+        <div class="mv-chips" id="mvVendedores_c"></div>
+      </div>
+      <div class="mv-campo mv-busca" data-pick="Zonas">
+        <label for="mvZonas_i">Zona</label>
+        <input type="text" id="mvZonas_i" autocomplete="off" placeholder="MENDOZA, SAN JUAN…">
+        <div class="mv-lista" id="mvZonas_l" hidden></div>
+        <div class="mv-chips" id="mvZonas_c"></div>
+      </div>
+      <div class="mv-campo mv-busca" data-pick="Provincias">
+        <label for="mvProvincias_i">Provincia</label>
+        <input type="text" id="mvProvincias_i" autocomplete="off" placeholder="provincia…">
+        <div class="mv-lista" id="mvProvincias_l" hidden></div>
+        <div class="mv-chips" id="mvProvincias_c"></div>
+      </div>
+      <div class="mv-campo mv-busca" data-pick="Localidades">
+        <label for="mvLocalidades_i">Localidad</label>
+        <input type="text" id="mvLocalidades_i" autocomplete="off" placeholder="localidad…">
+        <div class="mv-lista" id="mvLocalidades_l" hidden></div>
+        <div class="mv-chips" id="mvLocalidades_c"></div>
+      </div>
+      <div class="mv-campo mv-busca" data-pick="Talonarios">
+        <label for="mvTalonarios_i">Talonario</label>
+        <input type="text" id="mvTalonarios_i" autocomplete="off" placeholder="talonario…">
+        <div class="mv-lista" id="mvTalonarios_l" hidden></div>
+        <div class="mv-chips" id="mvTalonarios_c"></div>
+      </div>
+      <div class="mv-campo">
+        <label for="mvMargenMin">Margen desde %</label>
+        <input type="number" id="mvMargenMin" placeholder="-100" step="1">
+      </div>
+      <div class="mv-campo">
+        <label for="mvMargenMax">Margen hasta %</label>
+        <input type="number" id="mvMargenMax" placeholder="100" step="1">
+      </div>
+      <div class="mv-campo">
+        <label for="mvVentaMin">Venta mínima $</label>
+        <input type="number" id="mvVentaMin" placeholder="0" step="1000">
+      </div>
+    </div>
 
-    <section id="tarjetas" class="tarjetas"></section>
-    <section id="actualizado" class="nota"></section>
-    <section id="meses" class="bloque" hidden></section>
+    <div class="mv-marcas">
+      <label class="mv-chk"><input type="checkbox" id="mvSolo">
+             Sólo por debajo del costo</label>
+      <label class="mv-chk"><input type="checkbox" id="mvProductos" checked>
+             Sólo productos (sin servicios ni fletes)</label>
+      <label class="mv-chk" title="Suma tambien los renglones costeados con una compra de mas de 180 dias. En pesos nominales eso infla el margen.">
+             <input type="checkbox" id="mvAprox"> Incluir costo de más de 180 días</label>
+      <label class="mv-chk" title="Deja solo los renglones donde el costo sale del lote que realmente salio, rastreable hasta la factura de compra.">
+             <input type="checkbox" id="mvPrueba"> Sólo con prueba documental de lote</label>
+    </div>
+
+    <div class="mv-acciones">
+      <button class="mv-btn" id="mvAplicar">Calcular</button>
+      <button class="mv-btn sec" id="mvLimpiar">Limpiar</button>
+      <button class="mv-mas" id="mvVerMas">Más filtros ▾</button>
+    </div>
+  </div>
+
+  <div id="mvEstado"></div>
+  <div id="mvCuerpo" hidden></div>
+</div>
+
       </div>
     </div>
   </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="js/core.js?v=6"></script>
-<script src="js/margen.js?v=3"></script>
+<script src="js/core.js?v=7"></script>
+<script src="js/margen.js?v=4"></script>
 </body>
 </html>

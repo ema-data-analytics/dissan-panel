@@ -198,15 +198,21 @@ async function armarMenu() {
   return true;
 }
 
-/* Tapa la pantalla con un cartel y deja el menú a la vista para poder irse a otra. */
+/* Tapa la pantalla con un cartel y deja el menú a la vista para poder irse a otra.
+   Cada módulo tiene sus propios contenedores —el de Margen es el del panel viejo, con
+   mvEstado y mvCuerpo— así que se esconden los de todos y el cartel va al que exista. */
 function tapar(html) {
-  ['reloj'].forEach(id => { if ($(id)) $(id).hidden = true; });
-  document.querySelectorAll('.filtros').forEach(f => { f.hidden = true; });
-  const a = $('aviso');
-  if (a) { a.hidden = false; a.innerHTML = html; }
-  if ($('cuerpo')) $('cuerpo').innerHTML = '';
-  if ($('tarjetas')) $('tarjetas').innerHTML = '';
+  ['reloj', 'mvCuerpo'].forEach(id => { if ($(id)) $(id).hidden = true; });
+  document.querySelectorAll('.filtros, .mv-filtros, .mv-cab')
+          .forEach(f => { f.hidden = true; });
+  ['cuerpo', 'tarjetas', 'mvEstado'].forEach(id => { if ($(id)) $(id).innerHTML = ''; });
   if ($('meses')) $('meses').hidden = true;
+
+  const a = $('aviso');
+  if (a) { a.hidden = false; a.innerHTML = html; return; }
+  /* Sin #aviso el cartel iría a ningún lado y la pantalla quedaría muda. */
+  const donde = $('mvEstado') || $('cuerpo') || $('contenido');
+  if (donde) donde.innerHTML = '<div class="aviso" style="display:block">' + html + '</div>';
 }
 
 async function abrirApp() {
