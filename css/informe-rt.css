@@ -1,0 +1,119 @@
+
+/* ====================================================================
+   INFORME DE BASE VERIFICADA — el CSS de Informe.html de Apps Script,
+   copiado tal cual. Las variables del armazon quedan en el bloque .rt.
+   ==================================================================== */
+.rt{ --navy:#09233A; --navy-content:#0B2740; --navy-card:#123252;
+     --off-white:#F2F5F3; --green:#08A57A; --green-hover:#0BC492;
+     --gray:#7C93A3; --red:#E5484D; }
+
+  /* ---- Tablero de rentabilidad. Tema oscuro del sistema. ----
+     Colores de serie: tonos validados para fondo oscuro (#0B2740).
+     Ninguna barra depende del color: todas llevan el número escrito. */
+  .rt{ --s1:#3987e5; --s2:#d95926; --s3:#149d72; --ok:#3DD68C; --mal:#FF8A8A; --ojo:#E8B93B; }
+
+  .rt-cab p{ color:#9FB3C8; font-size:13px; line-height:1.6; max-width:780px; margin:6px 0 0; }
+
+  /* ---- filtros ---- */
+  .rt-filtros{ display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;
+               background:var(--navy-card); border-radius:10px; padding:14px 16px; margin:16px 0 18px; }
+  .rt-campo{ display:flex; flex-direction:column; gap:5px; }
+  .rt-campo label{ font-size:11px; color:#9FB3C8; text-transform:uppercase; letter-spacing:.06em; }
+  .rt-campo input, .rt-campo select{
+      background:var(--navy-content); color:var(--off-white); font:inherit; font-size:13px;
+      border:1px solid rgba(255,255,255,.14); border-radius:6px; padding:7px 9px; min-width:140px; }
+  .rt-campo select[multiple]{ min-height:74px; min-width:210px; }
+  .rt-campo input:focus, .rt-campo select:focus{ outline:none; border-color:var(--s1); }
+
+  /* ---- buscador de escribir-y-filtrar (06/10/2026) ---- */
+  .rt-busca{ position:relative; }
+  .rt-busca input{ min-width:200px; }
+  .rt-lista{
+      position:absolute; top:100%; left:0; z-index:40; margin-top:3px;
+      background:#06182A; border:1px solid rgba(255,255,255,.20); border-radius:7px;
+      max-height:250px; overflow-y:auto; box-shadow:0 10px 26px rgba(0,0,0,.5);
+      min-width:250px; }
+  .rt-lista[hidden]{ display:none; }
+  .rt-op{ padding:7px 11px; font-size:13px; color:#C9D8E6; cursor:pointer; line-height:1.35; }
+  .rt-op:hover, .rt-op.foco{ background:rgba(57,135,229,.26); color:var(--off-white); }
+  .rt-op .coincide{ color:var(--s1); font-weight:700; }
+  .rt-op.nada{ color:#7C93A3; cursor:default; font-style:italic; }
+  .rt-op.nada:hover{ background:none; }
+  .rt-mas-op{ padding:6px 11px; font-size:11.5px; color:#7C93A3; border-top:1px solid rgba(255,255,255,.08); }
+  .rt-chips{ display:flex; gap:5px; flex-wrap:wrap; margin-top:6px; max-width:290px; }
+  .rt-chip{
+      display:inline-flex; align-items:center; gap:6px; font-size:11.5px;
+      background:rgba(57,135,229,.20); border:1px solid rgba(57,135,229,.45);
+      color:var(--off-white); border-radius:12px; padding:2px 5px 2px 9px; }
+  .rt-chip button{
+      background:none; border:0; color:#9FB3C8; cursor:pointer; font:inherit;
+      font-size:14px; line-height:1; padding:0 3px; border-radius:50%; }
+  .rt-chip button:hover{ color:var(--mal); background:rgba(255,255,255,.1); }
+  .rt-chk{ display:flex; align-items:center; gap:7px; font-size:13px; color:#C9D8E6; padding-bottom:8px; }
+  .rt-btn{ background:var(--green); color:#fff; border:0; border-radius:6px; padding:8px 18px;
+           font:inherit; font-weight:600; cursor:pointer; }
+  .rt-btn:hover:not(:disabled){ background:var(--green-hover); }
+  .rt-btn:disabled{ opacity:.5; cursor:not-allowed; }
+  .rt-btn.sec{ background:transparent; border:1px solid rgba(255,255,255,.18); color:#C9D8E6; font-weight:400; }
+  .rt-btn.sec:hover{ background:rgba(255,255,255,.06); }
+
+  /* ---- tarjetas ---- */
+  .rt-tarjetas{ display:flex; gap:12px; flex-wrap:wrap; margin-bottom:8px; }
+  .rt-t{ background:var(--navy-card); border-radius:10px; padding:16px 20px; min-width:158px; flex:1 1 158px; }
+  .rt-t .n{ font-size:26px; font-weight:700; line-height:1.1; font-variant-numeric:tabular-nums; }
+  .rt-t .r{ font-size:12px; color:#9FB3C8; margin-top:4px; line-height:1.35; }
+  .rt-t .p{ font-size:11px; color:#7C93A3; margin-top:6px; }
+
+  /* ---- secciones y gráficos ---- */
+  .rt-sec{ margin:26px 0 10px; font-size:13px; font-weight:700; color:#9FB3C8;
+           text-transform:uppercase; letter-spacing:.06em; }
+  .rt-sec small{ display:block; text-transform:none; letter-spacing:0; font-weight:400;
+                 color:#7C93A3; font-size:12px; margin-top:4px; }
+  .rt-graf{ background:var(--navy-card); border-radius:10px; padding:16px 18px 10px; position:relative; }
+  .rt-graf svg{ display:block; width:100%; overflow:visible; }
+  .rt-graf .et{ font-size:11.5px; fill:#9FB3C8; }
+  .rt-graf .val{ font-size:11.5px; fill:var(--off-white); font-weight:600; font-variant-numeric:tabular-nums; }
+  .rt-graf .eje{ stroke:rgba(255,255,255,.18); stroke-width:1; }
+  .rt-graf .guia{ stroke:rgba(255,255,255,.07); stroke-width:1; }
+  .rt-graf rect.b{ fill:var(--s1); rx:3; }
+  .rt-graf rect.b.neg{ fill:var(--s2); }
+  .rt-graf rect.b.ok{ fill:var(--s3); }
+  .rt-graf rect.b.vacio{ fill:rgba(255,255,255,.10); }
+  .rt-graf g.f:hover rect.b{ opacity:.78; }
+  .rt-graf rect.z{ fill:transparent; }
+  .rt-tip{ position:absolute; pointer-events:none; opacity:0; transition:opacity .1s; z-index:9;
+           background:#04101C; border:1px solid rgba(255,255,255,.18); color:var(--off-white);
+           font-size:12px; padding:6px 10px; border-radius:5px; white-space:nowrap;
+           transform:translate(-50%,-100%); }
+  .rt-leyenda{ display:flex; gap:16px; flex-wrap:wrap; font-size:12px; color:#9FB3C8; margin:10px 2px 0; }
+  .rt-leyenda i{ width:10px; height:10px; border-radius:2px; display:inline-block; margin-right:6px; }
+
+  /* =====================================================================
+     ARREGLO 06/10 - ventana angosta
+     El grafico se dibuja sobre un lienzo de 760 y se estira al ancho que
+     haya. En un monitor queda bien (letra de 15,8px). En una ventana
+     angosta el lienzo se achicaba y la letra terminaba en 3,8px: ilegible.
+     Y las tablas, sin donde scrollear, empujaban la pagina entera.
+     Abajo de 900px: el grafico no baja de 620px y scrollea en su tarjeta, y
+     cada tabla scrollea adentro suyo. Arriba de 900px NO CAMBIA NADA.
+     ===================================================================== */
+  @media (max-width: 900px){
+    .rt-graf{ overflow-x:auto; overflow-y:hidden; }
+    .rt-graf svg{ min-width:620px; }
+    .rt-tip{ display:none; }
+    table.rt-tb{ display:block; overflow-x:auto; white-space:nowrap; }
+  }
+
+  /* ---- tablas ---- */
+  table.rt-tb{ width:100%; border-collapse:collapse; font-size:13px; }
+  table.rt-tb th{ text-align:left; padding:8px 10px; color:#9FB3C8; font-weight:600;
+                  border-bottom:1px solid rgba(255,255,255,.10); white-space:nowrap; }
+  table.rt-tb td{ padding:8px 10px; border-bottom:1px solid rgba(255,255,255,.05); vertical-align:top; }
+  table.rt-tb tr.alerta td{ background:rgba(255,90,90,.07); }
+  .rt-num{ text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+
+  .rt-aviso{ background:rgba(232,185,59,.10); border:1px solid rgba(232,185,59,.35);
+             border-radius:8px; padding:12px 14px; font-size:13px; margin:14px 0; line-height:1.6; }
+  .rt-aviso.mal{ background:rgba(255,90,90,.10); border-color:rgba(255,90,90,.35); }
+  .rt-aviso b{ color:var(--off-white); }
+  .rt-vacio{ color:#7C93A3; font-size:13px; padding:18px 2px; }

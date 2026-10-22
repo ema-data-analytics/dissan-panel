@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/app.css?v=16">
+<link rel="stylesheet" href="css/informe-rt.css?v=1">
 </head>
 <body>
 
@@ -61,42 +62,42 @@
         <div id="fechaHoy"></div>
       </div>
       <div id="contenido">
-      <div class="sub">Mide <b>la planilla de cotizaciones</b> — qué se cotizó, qué se ganó y con
-        qué margen mediano. No mide la facturación.</div>
+<div class="rt" id="rtRaiz">
+  <div class="rt-cab">
+    <p>Esta pantalla <strong>no muestra un informe guardado</strong>: calcula cada cifra contra la
+    base en el momento, con el filtro que elijas. Todos los márgenes son <strong>medianas</strong>,
+    no promedios — el promedio se descompone con unos pocos renglones de costo casi cero.</p>
+  </div>
 
+  <div class="rt-filtros">
+    <div class="rt-campo">
+      <label for="rtDesde">Desde</label>
+      <input type="date" id="rtDesde">
+    </div>
+    <div class="rt-campo">
+      <label for="rtHasta">Hasta</label>
+      <input type="date" id="rtHasta">
+    </div>
+    <div class="rt-campo rt-busca">
+      <label for="rtCanal_i">Canal (ninguno = todos)</label>
+      <input type="text" id="rtCanal_i" autocomplete="off" placeholder="escribí un canal...">
+      <div class="rt-lista" id="rtCanal_l" hidden></div>
+      <div class="rt-chips" id="rtCanal_c"></div>
+    </div>
+    <label class="rt-chk"><input type="checkbox" id="rtGanados"> Solo los ganados</label>
+    <button class="rt-btn" id="rtAplicar">Aplicar</button>
+    <button class="rt-btn sec" id="rtLimpiar">Limpiar</button>
+  </div>
 
-    <section class="filtros tb-filtros">
-      <div class="fg">
-        <label class="fl" for="f-desde">Desde</label>
-        <input id="f-desde" class="fi" type="date" value="2025-01-02">
-      </div>
-      <div class="fg">
-        <label class="fl" for="f-hasta">Hasta</label>
-        <input id="f-hasta" class="fi" type="date" value="2026-10-01">
-      </div>
-      <div class="fg tb-busca">
-        <label class="fl" for="f-canal">Canal</label>
-        <input id="f-canal" class="fi" autocomplete="off" placeholder="PEDIDO MAIL, CD TRAUMA…">
-        <div class="tb-lista" id="l-canal" hidden></div>
-        <div class="tb-chips" id="c-canal"></div>
-      </div>
-      <div class="fg fg-chk tb-accion">
-        <label class="chk"><input type="checkbox" id="f-ganados"> Sólo los ganados</label>
-      </div>
-      <button class="btn tb-accion" id="b-calc" onclick="calcular()">Ver</button>
-      <button class="btn-s tb-accion" id="b-limpiar" onclick="limpiar()">Todo</button>
-    </section>
-
-    <div id="reloj" class="reloj" hidden></div>
-    <div id="aviso" class="aviso" hidden></div>
-
-    <div id="cuerpo"></div>
+  <div id="rtEstado">Calculando contra la base...</div>
+  <div id="rtCuerpo"></div>
+</div>
       </div>
     </div>
   </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="js/core.js?v=7"></script>
-<script src="js/informe.js?v=1"></script>
+<script src="js/informe.js?v=2"></script>
 </body>
 </html>

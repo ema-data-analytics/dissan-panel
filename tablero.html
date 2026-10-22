@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/app.css?v=16">
+<link rel="stylesheet" href="css/tablero-db.css?v=1">
 </head>
 <body>
 
@@ -61,24 +62,25 @@
         <div id="fechaHoy"></div>
       </div>
       <div id="contenido">
-      <div class="sub" id="metodo">—</div>
+<div class="db" id="dbRaiz">
+  <div class="db-cab">
+    <p>El negocio entero en una pantalla. El costo de cada venta sale de la <b>orden de compra que
+    Compras asoció al pedido</b>; cuando el pedido no tiene OC, del <b>lote que realmente salió</b>
+    y si tampoco, por <b>PEPS</b> limitado a compras anteriores a la venta.
+    <b>Nunca con una compra posterior a la venta.</b>
+    Para ver renglón por renglón con el número de pedido y la OC, andá a
+    <b>Margen de ventas reales</b>.</p>
+  </div>
 
-
-    <section class="filtros tb-filtros">
-      <div class="fg">
-        <label class="fl" for="f-anio">Año</label>
-        <select id="f-anio" class="fi">
-          <option value="">todo el período</option>
-          <option value="2022">2022</option>
-          <option value="2023">2023</option>
-          <option value="2024">2024</option>
-          <option value="2025">2025</option>
-          <option value="2026" selected>2026</option>
-        </select>
+  <div class="db-filtros">
+    <div class="db-rej">
+      <div class="db-campo">
+        <label for="dbAnio">Año</label>
+        <select id="dbAnio"></select>
       </div>
-      <div class="fg">
-        <label class="fl" for="f-mes">Mes</label>
-        <select id="f-mes" class="fi">
+      <div class="db-campo">
+        <label for="dbMes">Mes</label>
+        <select id="dbMes">
           <option value="">todo el año</option>
           <option value="1">enero</option>
           <option value="2">febrero</option>
@@ -94,32 +96,34 @@
           <option value="12">diciembre</option>
         </select>
       </div>
-      <div class="fg tb-busca">
-        <label class="fl" for="f-clientes">Cliente</label>
-        <input id="f-clientes" class="fi" autocomplete="off" placeholder="escribí un cliente…">
-        <div class="tb-lista" id="l-clientes" hidden></div>
-        <div class="tb-chips" id="c-clientes"></div>
+      <div class="db-campo doble db-busca">
+        <label for="dbCliente_i">Cliente</label>
+        <input type="text" id="dbCliente_i" autocomplete="off" placeholder="escribí un cliente…">
+        <div class="db-lista" id="dbCliente_l" hidden></div>
+        <div class="db-chips" id="dbCliente_c"></div>
       </div>
-      <div class="fg tb-busca">
-        <label class="fl" for="f-zonas">Zona</label>
-        <input id="f-zonas" class="fi" autocomplete="off" placeholder="MENDOZA, SAN JUAN…">
-        <div class="tb-lista" id="l-zonas" hidden></div>
-        <div class="tb-chips" id="c-zonas"></div>
+      <div class="db-campo doble db-busca">
+        <label for="dbZona_i">Zona</label>
+        <input type="text" id="dbZona_i" autocomplete="off" placeholder="MENDOZA, SAN JUAN…">
+        <div class="db-lista" id="dbZona_l" hidden></div>
+        <div class="db-chips" id="dbZona_c"></div>
       </div>
-      <button class="btn tb-accion" id="b-calc" onclick="calcular()">Ver</button>
-      <button class="btn-s tb-accion" id="b-limpiar" onclick="limpiar()">Todo</button>
-    </section>
+    </div>
+    <div class="db-acciones">
+      <button class="db-btn" id="dbAplicar">Ver</button>
+      <button class="db-btn sec" id="dbLimpiar">Todo</button>
+    </div>
+  </div>
 
-    <div id="reloj" class="reloj" hidden></div>
-    <div id="aviso" class="aviso" hidden></div>
-
-    <div id="cuerpo"></div>
+  <div id="dbEstado"></div>
+  <div id="dbCuerpo" hidden></div>
+</div>
       </div>
     </div>
   </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="js/core.js?v=7"></script>
-<script src="js/tablero.js?v=3"></script>
+<script src="js/tablero.js?v=4"></script>
 </body>
 </html>

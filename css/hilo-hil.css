@@ -1,0 +1,38 @@
+
+/* ====================================================================
+   HILO CONDUCTOR — el CSS de Hilo.html de Apps Script, copiado tal cual.
+   ==================================================================== */
+
+  .hil-cab p{color:#9FB3C8;font-size:13px;line-height:1.65;max-width:840px;margin:6px 0 0}
+  .hil-tarjetas{display:flex;gap:11px;flex-wrap:wrap;margin:18px 0 22px}
+  .hil-t{background:var(--navy-card,#123252);border-radius:9px;padding:13px 17px;min-width:125px}
+  .hil-t .n{font-size:23px;font-weight:700;line-height:1.1}
+  .hil-t .r{font-size:11px;color:#9FB3C8;margin-top:4px;text-transform:uppercase;letter-spacing:.04em}
+  .hil-panel{background:var(--navy-card,#123252);border-radius:10px;padding:17px 19px;margin-bottom:16px}
+  .hil-panel h3{margin:0 0 3px;font-size:14.5px}
+  .hil-panel .ayuda{color:#9FB3C8;font-size:12px;line-height:1.55;margin:0 0 13px}
+  .hil-fila{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+  .hil-campo{display:flex;flex-direction:column;gap:4px}
+  .hil-campo label{font-size:10.5px;color:#9FB3C8;text-transform:uppercase;letter-spacing:.05em}
+  .hil-campo input{background:#09233A;border:1px solid rgba(255,255,255,.14);color:#E8EEF4;
+     border-radius:6px;padding:7px 9px;font-size:13px;min-width:135px;font-family:inherit}
+  .hil-btn{background:var(--green,#08A57A);color:#04121D;border:0;border-radius:6px;padding:8px 18px;
+     font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
+  .hil-btn:disabled{opacity:.5;cursor:default}
+  table.hil{width:100%;border-collapse:collapse;font-size:13px;margin-top:10px}
+  table.hil th{text-align:left;padding:7px 9px;color:#9FB3C8;font-weight:600;font-size:11px;
+     text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid rgba(255,255,255,.12)}
+  table.hil td{padding:7px 9px;border-bottom:1px solid rgba(255,255,255,.05)}
+  .num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .hil-paso{background:#09233A;border-radius:7px;padding:9px 12px;margin-top:7px;
+     font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;overflow-x:auto}
+  .hil-ok{background:rgba(61,214,140,.10);border:1px solid rgba(61,214,140,.30);border-radius:8px;
+     padding:11px 13px;margin-top:11px;font-size:13px}
+  .hil-no{background:rgba(255,200,90,.10);border:1px solid rgba(255,200,90,.30);border-radius:8px;
+     padding:12px 14px;margin-top:11px;font-size:13px;line-height:1.6}
+  .hil-mal{background:rgba(255,90,90,.10);border:1px solid rgba(255,90,90,.32);border-radius:8px;
+     padding:11px 13px;margin-top:11px;font-size:13px}
+  .hil-tag{display:inline-block;padding:2px 8px;border-radius:12px;font-size:10.5px;font-weight:700;
+     text-transform:uppercase;letter-spacing:.03em;margin-left:6px}
+  .tg-op{background:rgba(61,214,140,.16);color:#3DD68C}
+  .tg-fi{background:rgba(120,170,230,.16);color:#8FB8E8}

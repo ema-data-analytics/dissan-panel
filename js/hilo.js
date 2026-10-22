@@ -1,244 +1,124 @@
-/* DISSAN · Hilo conductor — sobre Supabase
-   ---------------------------------------------------------------------------
-   Tres funciones de la base, las mismas que sirve hoy el panel de Apps Script:
-     api_hilo_mapa()                       el mapa medido
-     api_hilo_vecinos(tabla)               con quién se liga esa tabla
-     api_hilo_camino(origen, destino, n)   la ruta de una tabla a otra
 
-   La lista de tablas sale de `mapa_tablas`, que se lee con el rol del panel.
-   Se muestra el NOMBRE HUMANO al lado del código: un campo que muestra sólo
-   un código no es un campo.
-   --------------------------------------------------------------------------- */
-'use strict';
+/* El puente del panel viejo llamaba a Apps Script por nombre. Aca cada nombre es su
+   funcion de la base, llamada directo por PostgREST con el JWT: son las MISMAS tres. */
+var HILO_RPC = {
+  apiHiloMapa:    function(a){ return ['api_hilo_mapa',    {}]; },
+  apiHiloVecinos: function(a){ return ['api_hilo_vecinos',
+                                       { p_tabla: a[0], p_incluir_dudosas: a[1] === true }]; },
+  apiHiloCamino:  function(a){ return ['api_hilo_camino',
+                                       { p_origen: a[0], p_destino: a[1],
+                                         p_max_saltos: a[2] || 6 }]; }
+};
 
-let TABLAS = [];
-let ULTIMO = null;
-
-async function calcular() { await cargarMapa(); }
-
-/* ---------- el mapa ---------- */
-async function cargarMapa() {
-  try {
-    const { data, ms } = await rpc('api_hilo_mapa');
-    const m = Array.isArray(data) ? data[0] : data;
-    ULTIMO = m;
-    $('reloj').hidden = false;
-    $('reloj').innerHTML = 'La base contestó en <b>' + (ms / 1000).toFixed(2) + ' s</b>';
-    $('mapa').innerHTML =
-        tarjeta(num(m.tablas_en_el_grafo), 'tablas en el mapa', 'medidas, no estimadas', 'gris')
-      + tarjeta(num(m.aristas_usables), 'relaciones usables', 'las que el hilo puede seguir')
-      + tarjeta(num(m.confirmadas), 'confirmadas', 'certeza medida')
-      + tarjeta(num(m.probables), 'probables', 'alta, pero no certeza')
-      + tarjeta(num(m.parciales), 'parciales', 'ligan sólo una parte de las filas')
-      + tarjeta(num(m.descartadas), 'descartadas', 'medidas y rechazadas', 'rojo');
-  } catch (e) {
-    $('aviso').hidden = false;
-    $('aviso').textContent = 'No se pudo leer el mapa: ' + e.message;
-    return;
-  }
-  await cargarTablas();
+function hiloPedir(fn, args, caja, boton, alLlegar){
+  if (boton) boton.disabled = true;
+  var par = HILO_RPC[fn](args || []);
+  rpc(par[0], par[1]).then(function(res){
+      if (boton) boton.disabled = false;
+      var r = res.data;
+      if (!r){
+        caja.innerHTML = '<div class="hil-mal">Sin respuesta</div>';
+        return;
+      }
+      alLlegar(r);
+    })
+    .catch(function(e){
+      if (boton) boton.disabled = false;
+      caja.innerHTML = '<div class="hil-mal">No se pudo consultar: ' +
+                       esc((e && e.message) || 'error') + '</div>';
+    });
 }
 
-/* ---------- la cobertura NO se redondea para arriba ----------
-   `pct()` usa 1 decimal, asi que 99,99 salia «100,0%»: convierte «casi todas
-   las filas ligan» en «ligan todas», que es justo lo que el Hilo existe para
-   no decir. Medido el 21/10 en sta08: la base dice 99.99 y la pantalla decia
-   100,0%. Dos decimales, y el 100 pelado solo cuando es 100 de verdad. */
-function cobertura(v) {
-  const n = Number(v || 0);
-  return (n >= 100 ? '100' : nf2.format(n)) + '%';
+/* core.js llama calcular() al entrar. */
+function calcular(){ return iniciarHilo(); }
+
+function iniciarHilo(){
+  var c = document.getElementById('hilMapa');
+  c.textContent = 'Leyendo el mapa medido...';
+  hiloPedir('apiHiloMapa', [], c, null, function(res){
+    var m = (res.filas ? res.filas[0] : res[0]) || res || {};
+    c.innerHTML = '<div class="hil-tarjetas">' +
+      hiloT(m.tablas_en_el_grafo, 'tablas en el mapa') +
+      hiloT(m.aristas_usables,    'relaciones usables') +
+      hiloT(m.confirmadas, 'integridad 100%', '#3DD68C') +
+      hiloT(m.probables,   'probables',       '#E8C468') +
+      hiloT(m.parciales,   'parciales',       '#FF8A8A') +
+      hiloT(m.descartadas, 'descartadas: el hilo NO las usa') +
+      '</div>';
+  });
 }
 
-function tarjeta(n, rotulo, detalle, clase) {
-  return '<div class="tj"><div class="n ' + (clase || '') + '">' + n + '</div>'
-       + '<div class="r">' + esc(rotulo) + '</div>'
-       + (detalle ? '<div class="d">' + esc(detalle) + '</div>' : '') + '</div>';
-}
-function sec(t, s) {
-  return '<div class="tb-sec">' + esc(t) + (s ? '<small>' + esc(s) + '</small>' : '') + '</div>';
+function hiloT(v, r, color){
+  var t = (v === null || v === undefined) ? '—' : Number(v).toLocaleString('es-AR');
+  return '<div class="hil-t"><div class="n"' + (color ? ' style="color:' + color + '"' : '') + '>' +
+         esc(t) + '</div><div class="r">' + esc(r) + '</div></div>';
 }
 
-async function cargarTablas() {
-  if (TABLAS.length) return;
-  const { data, error } = await sb.from('mapa_tablas')
-    .select('tabla,nombre_humano,modulo,filas').order('tabla');
-  if (error || !data) {
-    $('aviso').hidden = false;
-    $('aviso').textContent = 'No se pudo leer la lista de tablas: '
-      + ((error && error.message) || 'sin datos');
-    return;
-  }
-  TABLAS = data;
-  buscador('t1', elegirUna);
-  buscador('t2', () => {});
-  buscador('t3', () => {});
+function hiloVecinas(){
+  var t = document.getElementById('hilTabla').value.trim();
+  var caja = document.getElementById('hilR1'), b = document.getElementById('hilB1');
+  if (!t){ caja.innerHTML = '<div class="hil-no">Escribí el nombre de una tabla.</div>'; return; }
+  caja.innerHTML = '<p style="font-size:13px;margin-top:10px">Buscando...</p>';
+  hiloPedir('apiHiloVecinos', [t, false], caja, b, function(r){
+    var op = r.misma_operacion || [], fi = r.fichas_relacionadas || [];
+    if (!op.length && !fi.length){
+      caja.innerHTML = '<div class="hil-no"><strong>' + esc(r.tabla) +
+        '</strong> no tiene relaciones medidas con cobertura suficiente.</div>'; return; }
+
+    var h = '<div style="margin-top:12px;font-size:13px">' + esc(r.tabla) + ' — ' +
+            Number(r.filas||0).toLocaleString('es-AR') + ' filas · ' +
+            (r.clase === 'documento' ? 'comprobante' : 'ficha') + '</div>';
+
+    if (op.length){
+      h += '<div style="margin-top:14px;font-size:12.5px;color:#3DD68C;font-weight:700">' +
+           'MISMA OPERACIÓN<span class="hil-tag tg-op">el hilo camina por acá</span></div>' +
+           hiloTabla(op, true);
+    }
+    if (fi.length){
+      h += '<div style="margin-top:18px;font-size:12.5px;color:#8FB8E8;font-weight:700">' +
+           'FICHAS RELACIONADAS<span class="hil-tag tg-fi">no se cruzan</span></div>' +
+           '<p class="ayuda" style="margin:6px 0 0">Dicen a quién o a qué corresponde esta fila. ' +
+           'Cruzarlas saltaría a todas las operaciones que comparten ese valor.</p>' +
+           hiloTabla(fi, false);
+    }
+    caja.innerHTML = h;
+  });
 }
 
-const rotulo = t => t.tabla + (t.nombre_humano ? '  ·  ' + t.nombre_humano : '')
-  + (t.filas ? '  ·  ' + nf0.format(t.filas) + ' filas' : '');
-
-/* ---------- buscador de tablas ----------
-   Más de 20 opciones se escriben, no se scrollean. Enter elige la primera. */
-function buscador(id, alElegir) {
-  const inp = $('f-' + id), caja = $('l-' + id);
-  const cerrar = () => { caja.hidden = true; caja.innerHTML = ''; };
-  function elegir(t) { inp.value = t.tabla; inp.dataset.tabla = t.tabla; cerrar(); alElegir(t); }
-  inp.oninput = () => {
-    inp.dataset.tabla = '';
-    const v = inp.value.trim().toLowerCase();
-    if (!v) return cerrar();
-    const hay = TABLAS.filter(t =>
-      String(t.tabla).toLowerCase().includes(v)
-      || String(t.nombre_humano || '').toLowerCase().includes(v)).slice(0, 12);
-    if (!hay.length) return cerrar();
-    caja.innerHTML = hay.map(t => '<div class="tb-op">' + esc(rotulo(t)) + '</div>').join('');
-    caja.hidden = false;
-    caja.querySelectorAll('.tb-op').forEach((d, i) => d.onclick = () => elegir(hay[i]));
-  };
-  inp.onkeydown = e => {
-    if (e.key === 'Escape') return cerrar();
-    if (e.key !== 'Enter') return;
-    e.preventDefault();
-    const p = caja.querySelector('.tb-op');
-    if (p) { const t = TABLAS.find(x => rotulo(x) === p.textContent); if (t) elegir(t); }
-  };
-  inp.onblur = () => setTimeout(cerrar, 180);
-}
-function elegirUna() { /* elegir en la lista no dispara la consulta: la dispara el botón */ }
-
-/* ---------- vecinos ---------- */
-async function verRelaciones() {
-  const t = ($('f-t1').value || '').trim();
-  if (!t) { $('f-t1').focus(); return; }
-  const b = $('b-vec');
-  if (b.disabled) return;
-  b.disabled = true; b.textContent = 'Buscando...';
-  $('aviso').hidden = true;
-  try {
-    const { data, ms } = await rpc('api_hilo_vecinos', { p_tabla: t, p_incluir_dudosas: false });
-    if (!data || data.ok !== true) throw new Error((data && data.motivo)
-      || 'No conozco la tabla «' + t + '».');
-    pintarVecinos(data, ms);
-  } catch (e) {
-    $('cuerpo').innerHTML = '<div class="aviso" style="margin-top:18px">' + esc(e.message) + '</div>';
-  } finally {
-    b.disabled = false; b.textContent = 'Ver relaciones';
-  }
+function hiloTabla(lista, conAviso){
+  var h = '<table class="hil"><thead><tr><th>Tabla</th><th>Módulo</th><th class="num">Filas</th>' +
+          '<th>Se une por</th><th>Card.</th><th class="num">Cobertura</th>' +
+          (conAviso ? '<th>Aviso</th>' : '') + '</tr></thead><tbody>';
+  lista.forEach(function(x){
+    h += '<tr><td><strong>' + esc(x.tabla) + '</strong></td><td>' + esc(x.modulo || '') + '</td>' +
+         '<td class="num">' + Number(x.filas||0).toLocaleString('es-AR') + '</td>' +
+         '<td>' + esc(x.por) + '</td><td>' + esc(x.cardinalidad) + '</td>' +
+         '<td class="num">' + esc(x.cobertura_pct) + '%</td>' +
+         (conAviso ? '<td>' + (x.multiplica ? '<span style="color:#E8C468">multiplica</span>'
+                                            : 'seguro') + '</td>' : '') + '</tr>';
+  });
+  return h + '</tbody></table>';
 }
 
-function filaVecino(x, conMultiplica) {
-  return '<tr><td class="cod">' + esc(x.tabla) + '</td>'
-    + '<td class="desc">' + esc(x.modulo || '—') + '</td>'
-    + '<td class="desc" title="' + esc(x.por) + '">' + esc(x.por) + '</td>'
-    + '<td>' + esc(x.cardinalidad || '') + '</td>'
-    + '<td class="desc">' + esc(x.nivel || '') + '</td>'
-    + '<td class="num">' + cobertura(x.cobertura_pct) + '</td>'
-    + '<td class="num">' + num(x.filas) + '</td>'
-    + (conMultiplica ? '<td>' + (x.multiplica
-        ? '<span class="hi-ojo">multiplica filas</span>' : 'no') + '</td>' : '')
-    + '</tr>';
-}
-
-function pintarVecinos(d, ms) {
-  const h = [];
-  $('reloj').hidden = false;
-  $('reloj').innerHTML = '<b>' + esc(d.tabla) + '</b> · módulo ' + esc(d.modulo || '—')
-    + ' · clase ' + esc(d.clase || '—') + ' · <b>' + num(d.filas) + '</b> filas'
-    + ' &nbsp;·&nbsp; la base contestó en <b>' + (ms / 1000).toFixed(2) + ' s</b>';
-
-  if (d.explicacion) h.push('<div class="aviso" style="margin-top:16px">'
-    + esc(d.explicacion) + '</div>');
-
-  const mo = d.misma_operacion || [];
-  h.push(sec('Misma operación (' + num(mo.length) + ')',
-    'Seguir estos vínculos es seguir el mismo comprobante. Son los que usa el hilo para armar '
-    + 'caminos.'));
-  h.push(mo.length
-    ? '<div class="tb-caja"><table><tr><th>Tabla</th><th>Módulo</th><th>Por</th>'
-      + '<th>Card.</th><th>Nivel</th><th class="num">Cobertura</th><th class="num">Filas</th>'
-      + '<th>Ojo</th></tr>' + mo.map(x => filaVecino(x, true)).join('') + '</table></div>'
-    : '<div class="aviso">Ninguna.</div>');
-
-  const fi = d.fichas_relacionadas || [];
-  h.push(sec('Fichas relacionadas (' + num(fi.length) + ')',
-    'Catálogos: cliente, artículo, cuenta. Dicen a quién o a qué corresponde la fila, no son '
-    + 'otro paso del comprobante.'));
-  h.push(fi.length
-    ? '<div class="tb-caja"><table><tr><th>Tabla</th><th>Módulo</th><th>Por</th>'
-      + '<th>Card.</th><th>Nivel</th><th class="num">Cobertura</th><th class="num">Filas</th>'
-      + '</tr>' + fi.map(x => filaVecino(x, false)).join('') + '</table></div>'
-    : '<div class="aviso">Ninguna.</div>');
-
-  $('cuerpo').innerHTML = h.join('');
-  ULTIMO = d;
-}
-
-/* ---------- camino ---------- */
-async function buscarCamino() {
-  const a = ($('f-t2').value || '').trim(), z = ($('f-t3').value || '').trim();
-  if (!a || !z) { (!a ? $('f-t2') : $('f-t3')).focus(); return; }
-  const b = $('b-cam');
-  if (b.disabled) return;
-  b.disabled = true; b.textContent = 'Buscando...';
-  $('aviso').hidden = true;
-  try {
-    const { data, ms } = await rpc('api_hilo_camino',
-      { p_origen: a, p_destino: z, p_max_saltos: 6 });
-    pintarCamino(data, ms, a, z);
-  } catch (e) {
-    $('cuerpo').innerHTML = '<div class="aviso" style="margin-top:18px">' + esc(e.message) + '</div>';
-  } finally {
-    b.disabled = false; b.textContent = 'Buscar el camino';
-  }
-}
-
-function pintarCamino(d, ms, a, z) {
-  d = d || {};
-  const h = [];
-  $('reloj').hidden = false;
-  $('reloj').innerHTML = 'La base contestó en <b>' + (ms / 1000).toFixed(2) + ' s</b>';
-
-  if (d.ok !== true || d.encontrado !== true) {
-    h.push('<div class="aviso" style="margin-top:18px"><b>No hay camino de ' + esc(a)
-      + ' a ' + esc(z) + '</b>' + (d.motivo ? ' — ' + esc(d.motivo) : '')
-      + '. El hilo sólo cruza tablas de operación: no arma caminos a través de catálogos, '
-      + 'porque eso ligaría cosas que no tienen nada que ver.</div>');
-    $('cuerpo').innerHTML = h.join('');
-    ULTIMO = d;
-    return;
-  }
-
-  h.push(sec('De ' + esc(d.origen) + ' a ' + esc(d.destino),
-    num(d.saltos) + ' saltos · ' + esc(d.confianza || '')));
-
-  h.push('<div class="hi-ruta">' + (d.ruta || []).map((t, i) =>
-    '<span class="hi-nodo">' + esc(t) + '</span>'
-    + (i < d.ruta.length - 1 ? '<span class="hi-flecha">→</span>' : '')).join('') + '</div>');
-
-  if (d.multiplica_filas && d.aviso)
-    h.push('<div class="aviso" style="margin-top:14px"><b>Ojo.</b> ' + esc(d.aviso) + '</div>');
-
-  /* LIMITACION CONOCIDA DE api_hilo_camino, documentada desde el 08/10:
-     la guarda de catalogos mira el ORIGEN y el DESTINO, no los saltos del
-     medio. Por eso deja pasar rutas que cruzan una tabla puente — el caso
-     medido es sta_articulo_unidad_compra, 14.944 filas contra 14.987
-     articulos: una por articulo, o sea un catalogo, no un comprobante.
-     La funcion no se toca (la usa tambien el panel de Apps Script); la
-     pantalla lo DICE, que es lo que hay que hacer con un limite conocido. */
-  h.push('<div class="aviso" style="margin-top:14px"><b>Antes de usar este camino.</b> '
-    + 'El hilo controla que el origen y el destino sean comprobantes, <b>pero no controla los '
-    + 'saltos del medio</b>. Si en la ruta aparece una tabla con más o menos una fila por '
-    + 'artículo o por cliente, ese salto liga por catálogo y no por operación: el camino existe, '
-    + 'pero no significa que las dos puntas hablen de la misma operación. Mirá los eslabones de '
-    + 'abajo antes de sacar una cifra de acá.</div>');
-
-  h.push(sec('Los eslabones, uno por uno',
-    'La confianza del camino es la del eslabón más flojo: ' + cobertura(d.cobertura_minima) + '.'));
-  h.push('<div class="tb-caja"><table><tr><th class="num">#</th><th>Eslabón</th></tr>'
-    + (d.pasos || []).map((p, i) => '<tr><td class="num">' + (i + 1) + '</td>'
-      + '<td class="hi-paso">' + esc(p) + '</td></tr>').join('')
-    + '</table></div>');
-
-  $('cuerpo').innerHTML = h.join('');
-  ULTIMO = d;
+function hiloCamino(){
+  var d = document.getElementById('hilD').value.trim();
+  var h2 = document.getElementById('hilH').value.trim();
+  var caja = document.getElementById('hilR2'), b = document.getElementById('hilB2');
+  if (!d || !h2){ caja.innerHTML = '<div class="hil-no">Completá las dos tablas.</div>'; return; }
+  caja.innerHTML = '<p style="font-size:13px;margin-top:10px">Buscando el camino...</p>';
+  hiloPedir('apiHiloCamino', [d, h2, 6], caja, b, function(r){
+    if (!r.encontrado){
+      caja.innerHTML = '<div class="hil-no"><strong>No hay camino de operación entre ' +
+        esc(r.origen) + ' y ' + esc(r.destino) + '.</strong><br>' + esc(r.motivo) + '</div>';
+      return;
+    }
+    var out = '<div class="hil-ok"><strong>' + r.saltos + ' paso(s)</strong> · ' +
+      esc(r.confianza) + '<br>' + esc(r.aviso) + '</div>' +
+      '<div style="margin-top:10px;font-size:13px;color:#9FB3C8">' +
+      (r.ruta || []).map(function(x){ return esc(x); }).join(' <span style="color:#54708C">→</span> ') + '</div>';
+    (r.pasos || []).forEach(function(p, i){
+      out += '<div class="hil-paso">' + (i+1) + '. ' + esc(p) + '</div>';
+    });
+    caja.innerHTML = out;
+  });
 }
