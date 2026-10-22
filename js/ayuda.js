@@ -361,15 +361,40 @@ function ayPedirLectura(item){
         return { datos: datos, titulo: '', aviso: r.aviso || '' };
       });
 
+  /* =====================================================================
+     NADA ES MAS BARATO QUE NO LLAMAR AL MODELO.            22/10/2026
+     =====================================================================
+     Antes de pagar una lectura se mira si esa misma pregunta ya tiene la
+     suya escrita (ayuda.lectura_guardada). La clave es la pregunta
+     NORMALIZADA mas la CANTIDAD DE FILAS: si el resultado cambio de tamaño
+     el dato cambio, y una lectura vieja sobre datos nuevos seria una cifra
+     equivocada disfrazada de respuesta. Por eso no alcanza con la pregunta.
+     ===================================================================== */
   traer.then(function(x){
       if (sello !== AY.lectura) return null;
       if (!x.datos || !x.datos.length) throw new Error('No hay filas que leer.');
-      return AY_FN('leer', { pregunta: item.pregunta, datos: x.datos,
-                             titulo: x.titulo, aviso: x.aviso });
+      AY.filasDeLaLectura = x.datos.length;
+      return AY_RPC('api_lectura_memoria',
+                    { p_pregunta: item.pregunta, p_filas: x.datos.length })
+        .catch(function(){ return null; })      /* si falla la memoria, se paga */
+        .then(function(m){
+          if (m && m.lectura) return m;         /* ya estaba escrita: gratis */
+          return AY_FN('leer', { pregunta: item.pregunta, datos: x.datos,
+                                 titulo: x.titulo, aviso: x.aviso });
+        });
     })
     .then(function(j){
       if (j === null || sello !== AY.lectura) return;
-      if (j && j.ok === true && j.lectura) ayLecturaOk(j);
+      if (j && j.ok === true && j.lectura){
+        ayLecturaOk(j);
+        /* se guarda SOLO la que acaba de escribir el modelo */
+        if (j.de_memoria !== true){
+          AY_RPC('api_lectura_guardar', { p_pregunta: item.pregunta,
+                  p_filas: AY.filasDeLaLectura || (j.filas_totales || 0),
+                  p_lectura: j.lectura, p_modelo: j.modelo || null })
+            .catch(function(){});
+        }
+      }
       else ayLecturaMal((j && j.motivo) ? j.motivo : 'No salió.',
                         (j && j.detalle) ? j.detalle : '');
     })
@@ -384,6 +409,14 @@ function ayLecturaOk(j){
   var caja = document.getElementById('ayLectura');
   if (!caja) return;
   var de = [];
+  /* La que salio de la memoria se dice que salio de la memoria, y se dice
+     cuando se escribio: si no, parece que se acaba de pagar. */
+  if (j.de_memoria === true){
+    de.push('ya estaba escrita · sin costo');
+    if (j.veces) de.push('usada ' + ayNum(j.veces,0) + (j.veces === 1 ? ' vez' : ' veces'));
+    if (j.escrita_en) de.push('del ' + new Date(j.escrita_en)
+      .toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'}));
+  }
   if (j.filas_leidas) de.push(ayNum(j.filas_leidas,0) + ' de ' +
                               ayNum(j.filas_totales,0) + ' renglones');
   if (j.modelo) de.push(j.modelo);
