@@ -79,6 +79,13 @@ function mvPlano(s){
   return String(s === null || s === undefined ? '' : s)
     .toLowerCase().normalize('NFD').replace(RX_TILDES,'');
 }
+/* Vacio es NULL, no cero: Number(null) da 0 y un 0 en margen_max filtra todo. */
+function mvNumONada(v){
+  if (v === null || v === undefined || v === '') return null;
+  var n = Number(v);
+  return isNaN(n) ? null : n;
+}
+
 function mvValor(id){
   var el = document.getElementById(id);
   if (!el) return null;
@@ -347,9 +354,12 @@ function mvCargar(){
     p_localidades:     f.localidades.length ? f.localidades : null,
     p_talonarios:      f.talonarios.length  ? f.talonarios  : null,
     p_calidad:         f.calidad,
-    p_margen_min:      f.margenMin === '' ? null : Number(f.margenMin),
-    p_margen_max:      f.margenMax === '' ? null : Number(f.margenMax),
-    p_venta_min:       f.ventaMin  === '' ? null : Number(f.ventaMin),
+    /* mvValor() devuelve NULL cuando el campo esta vacio, no cadena vacia. Con un
+       === '' el null caia en Number(null) = 0, asi que se mandaba margen desde 0 y
+       margen hasta 0 y la consulta no traia NI UN renglon. */
+    p_margen_min:      mvNumONada(f.margenMin),
+    p_margen_max:      mvNumONada(f.margenMax),
+    p_venta_min:       mvNumONada(f.ventaMin),
     p_solo_productos:  f.soloProductos !== false,
     p_solo_con_prueba: f.soloConPrueba === true
   }).then(function(res){
@@ -396,9 +406,9 @@ function mvPedirDetalle(f, estado, cuerpo){
     p_provincias:       f.provincias.length  ? f.provincias  : null,
     p_localidades:      f.localidades.length ? f.localidades : null,
     p_talonarios:       f.talonarios.length  ? f.talonarios  : null,
-    p_margen_min:       f.margenMin === '' ? null : Number(f.margenMin),
-    p_margen_max:       f.margenMax === '' ? null : Number(f.margenMax),
-    p_venta_min:        f.ventaMin  === '' ? null : Number(f.ventaMin),
+    p_margen_min:       mvNumONada(f.margenMin),
+    p_margen_max:       mvNumONada(f.margenMax),
+    p_venta_min:        mvNumONada(f.ventaMin),
     p_solo_productos:   f.soloProductos !== false,
     p_solo_con_prueba:  f.soloConPrueba === true,
     p_limite:           2000
