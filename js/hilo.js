@@ -65,9 +65,18 @@ function hiloVecinas(){
       caja.innerHTML = '<div class="hil-no"><strong>' + esc(r.tabla) +
         '</strong> no tiene relaciones medidas con cobertura suficiente.</div>'; return; }
 
+    /* «filas medidas en el mapa», no «filas». El numero sale de motor.senal_tabla,
+       que se midio cuando se armo el mapa, y la carga nocturna sigue agregando
+       renglones: el 22/10 gva53 decia 52.690 y la tabla tenia 53.768. Las
+       coberturas de abajo estan calculadas sobre ESE denominador, asi que el
+       numero no esta mal — lo que estaba mal era llamarlo «filas» a secas, que
+       se lee como «lo que hay hoy». */
     var h = '<div style="margin-top:12px;font-size:13px">' + esc(r.tabla) + ' — ' +
-            Number(r.filas||0).toLocaleString('es-AR') + ' filas · ' +
-            (r.clase === 'documento' ? 'comprobante' : 'ficha') + '</div>';
+            Number(r.filas||0).toLocaleString('es-AR') + ' filas medidas en el mapa · ' +
+            (r.clase === 'documento' ? 'comprobante' : 'ficha') +
+            '<span title="Las coberturas de abajo se midieron sobre esta cantidad de ' +
+            'filas. La tabla puede tener mas hoy: la carga nocturna agrega todas las ' +
+            'mañanas." style="opacity:.55"> ⓘ</span></div>';
 
     if (op.length){
       h += '<div style="margin-top:14px;font-size:12.5px;color:#3DD68C;font-weight:700">' +

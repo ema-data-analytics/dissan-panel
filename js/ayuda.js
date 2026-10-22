@@ -110,7 +110,15 @@ function calcular(){
 }
 
 var AY = { item:null, enviando:false, gasto:0, lectura:0 };
-var AY_PRECIO = { entrada:1.00, salida:5.00, cache:0.10 };   // US$ por millón de tokens
+/* EL PRECIO NO SE SUPONE ACA.                                22/10/2026
+   Esto tenia cableado 1,00 / 5,00 / 0,10 US$ por millon, que es el precio de
+   Haiku 4.5, el modelo con el que se armo la Ayuda el 02/10. El 15/10 la
+   lectura paso a claude-opus-5-5 y este numero se quedo donde estaba: la
+   pantalla mostraba centavos mientras se consumia el credito de la cuenta.
+   Ahora el precio vive en la base (ayuda.precio_modelo) y el costo lo calcula
+   api_lectura_anotar y lo devuelve la Edge Function. Si el modelo no tiene
+   precio cargado, se muestran los TOKENS y no se inventan dolares. */
+var AY_PRECIO = null;
 
 var AY_EJEMPLOS = [
   ['Stock',   ['cuántos artículos tienen stock cero',
@@ -134,10 +142,18 @@ function ayValor(v){
   return esc(v);
 }
 function ayPlata(u){ return 'US$ ' + u.toLocaleString('es-AR',{minimumFractionDigits:4, maximumFractionDigits:4}); }
+/* Sin tabla de precios no hay dolares: devuelve 0 y el pie muestra los tokens.
+   Un costo supuesto es peor que ningun costo — hace creer que se gasto poco. */
 function ayCosto(tk){
-  if (!tk) return 0;
+  if (!tk || !AY_PRECIO) return 0;
   return ((tk.entrada||0)*AY_PRECIO.entrada + (tk.salida||0)*AY_PRECIO.salida
         + (tk.cache_lectura||0)*AY_PRECIO.cache) / 1e6;
+}
+function ayTokens(tk){
+  if (!tk) return '';
+  var e = Number(tk.entrada||0), s = Number(tk.salida||0);
+  if (!e && !s) return '';
+  return ayNum(e,0) + ' + ' + ayNum(s,0) + ' tokens';
 }
 
 /** ¿Se puede dibujar? Una columna de texto, una de números, entre 2 y 30 filas. */
@@ -372,6 +388,15 @@ function ayLecturaOk(j){
                               ayNum(j.filas_totales,0) + ' renglones');
   if (j.modelo) de.push(j.modelo);
   if (j.ms != null) de.push(ayNum(j.ms/1000,1) + ' s');
+  /* LO QUE SALIO ESTA LECTURA, A LA VISTA.                    22/10/2026
+     Hasta hoy la lectura no mostraba ni tokens ni costo y no anotaba nada:
+     el gasto no se veia por ningun lado. Los tokens los informa la API; el
+     costo lo calcula la base con ayuda.precio_modelo. Si ese modelo no tiene
+     precio cargado, van los tokens solos — no se inventa un dolar. */
+  var tk = ayTokens(j.tokens);
+  if (tk) de.push(tk);
+  if (j.tiene_precio === true && j.costo_usd != null) de.push(ayPlata(Number(j.costo_usd)));
+  else if (tk) de.push('precio no cargado');
   caja.className = 'ay-lectura';
   caja.innerHTML = '<div class="enc">La lectura<span class="de">' + esc(de.join(' · ')) +
                    '</span></div>' +
@@ -700,7 +725,12 @@ function ayPie(item, filas){
   var r = item.r, p = [];
   if (filas !== undefined) p.push(ayNum(filas,0) + (filas===1?' fila':' filas'));
   if (r.ms != null) p.push(ayNum(r.ms/1000,1) + ' s');
-  if (item.costo > 0) p.push(ayPlata(item.costo)); else if (r.ok) p.push('sin costo');
+  /* «sin costo» SOLO cuando de verdad no se toco el modelo —es decir, cuando
+     contesto una intencion. Si contesto el modelo y no hay precio cargado, van
+     los tokens: decir «sin costo» ahi es la mentira que se comio el credito. */
+  if (item.costo > 0) p.push(ayPlata(item.costo));
+  else if (r.tokens && (r.tokens.entrada || r.tokens.salida)) p.push(ayTokens(r.tokens));
+  else if (r.ok && r.origen === 'intencion') p.push('sin costo');
   if (AY.gasto > 0) p.push('acumulado ' + ayPlata(AY.gasto));
   var hay = r.ok && r.datos && r.datos.length;
   return '<div class="ay-pie"><span>' + p.join('</span><span style="opacity:.4"> · </span><span>') + '</span>' +
