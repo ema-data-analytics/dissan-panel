@@ -217,6 +217,53 @@ function tapar(html) {
   if (donde) donde.innerHTML = '<div class="aviso" style="display:block">' + html + '</div>';
 }
 
+/* ===================================================================
+   EL BOTON DE MENU DEL CELULAR                        23/10/2026
+   -------------------------------------------------------------------
+   Se arma desde acá y no en los diez HTML: un botón escrito diez veces
+   es un botón que mañana va a estar en nueve. Hasta 900 px el menú
+   lateral sale del flujo (ver css/app.css) y este botón lo abre por
+   encima; de 900 para arriba el botón no se muestra y nada cambia.
+
+   Se cierra al tocar el fondo, al elegir una pantalla, con Escape, y
+   al ensanchar la ventana: si quedara abierto al girar el teléfono, la
+   barra se montaría sobre el contenido en modo escritorio.
+   =================================================================== */
+function armarBotonMenu() {
+  if ($('btnMenu')) return;
+  const barra = $('topbar');
+  if (!barra) return;
+
+  const b = document.createElement('button');
+  b.id = 'btnMenu';
+  b.type = 'button';
+  b.setAttribute('aria-label', 'Abrir el menú');
+  b.setAttribute('aria-expanded', 'false');
+  b.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+    + 'stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>';
+  barra.insertBefore(b, barra.firstChild);
+
+  const tapa = document.createElement('div');
+  tapa.id = 'tapaMenu';
+  document.body.appendChild(tapa);
+
+  const abrir = (si) => {
+    document.body.classList.toggle('menu-abierto', si);
+    b.setAttribute('aria-expanded', si ? 'true' : 'false');
+    b.setAttribute('aria-label', si ? 'Cerrar el menú' : 'Abrir el menú');
+  };
+  b.addEventListener('click', () => abrir(!document.body.classList.contains('menu-abierto')));
+  tapa.addEventListener('click', () => abrir(false));
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') abrir(false); });
+  /* elegir una pantalla cierra el menú: en el teléfono el enlace queda
+     tapado por la barra y parecería que no pasó nada */
+  const menu = $('menuLateral');
+  if (menu) menu.addEventListener('click', e => { if (e.target.closest('a')) abrir(false); });
+  window.addEventListener('resize', () => {
+    if (window.innerWidth > 900) abrir(false);
+  });
+}
+
 async function abrirApp() {
   const { data } = await sb.auth.getUser();
   /* El email del que entró queda en el cartelito del nombre, al pie de la barra: el
@@ -224,6 +271,9 @@ async function abrirApp() {
   EMAIL_ENTRO = (data && data.user && data.user.email) || '';
   $('login-wrap').hidden = true;
   $('app').hidden = false;
+  /* antes de armarMenu(): si el portero tapa la pantalla, el botón tiene
+     que estar igual para poder irse a otro módulo desde el teléfono */
+  armarBotonMenu();
   if (!await armarMenu()) return;
   await calcular();
 }

@@ -362,3 +362,142 @@ td.num,th.num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-n
 }
 .bajar-btn:disabled{ opacity:.55; cursor:default }
 .bajar-btn svg{ width:13px; height:13px; flex:none }
+
+/* ===================================================================
+   QUE ENTRE EN EL CELULAR Y EN LA TABLET          23/10/2026
+   -------------------------------------------------------------------
+   El 23/10 DISSAN abrio el panel en el telefono y mando la foto: el
+   menu lateral es de 232 px FIJOS, se comia la pantalla, y el
+   contenido quedaba en una columna de 130 px — una letra por renglon.
+   Medido antes de tocar: #contenido 130 px de ancho en un viewport de
+   390, y el navegador alejando la pagina para que entrara.
+
+   Yo nunca lo habia abierto en un telefono. Esto es eso arreglado.
+
+   LA IDEA, EN UNA LINEA: hasta 900 px el menu deja de ocupar lugar y
+   pasa a abrirse por encima con un boton; el contenido se queda con
+   TODO el ancho. De 900 para arriba no cambia nada: la pantalla de
+   escritorio que ya esta probada queda igual.
+   =================================================================== */
+
+/* el boton de menu solo existe en pantalla angosta */
+#btnMenu{ display:none; background:transparent; border:1px solid var(--borde);
+  color:var(--texto); border-radius:8px; width:38px; height:38px; flex:none;
+  align-items:center; justify-content:center; cursor:pointer; margin-right:12px }
+#btnMenu svg{ width:19px; height:19px }
+#tapaMenu{ display:none }
+
+@media (max-width:900px){
+  #btnMenu{ display:inline-flex }
+
+  /* el menu sale del flujo: ya no le roba ancho al contenido */
+  #sidebar{
+    position:fixed; top:0; bottom:0; left:0; z-index:60;
+    width:252px; max-width:84vw;
+    transform:translateX(-100%);
+    transition:transform .22s ease;
+    box-shadow:0 0 0 rgba(0,0,0,0);
+    overflow-y:auto;
+  }
+  body.menu-abierto #sidebar{ transform:translateX(0); box-shadow:0 0 40px rgba(0,0,0,.5) }
+
+  /* el fondo oscuro que cierra el menu al tocarlo */
+  #tapaMenu{ display:block; position:fixed; inset:0; z-index:55;
+    background:rgba(4,16,27,.62); opacity:0; pointer-events:none;
+    transition:opacity .22s ease }
+  body.menu-abierto #tapaMenu{ opacity:1; pointer-events:auto }
+  body.menu-abierto{ overflow:hidden }
+
+  #areaContenido{ width:100% }
+  #topbar{ height:56px; padding:0 14px; gap:10px }
+  #tituloModulo{ font-size:15px; min-width:0; overflow:hidden;
+                 text-overflow:ellipsis; white-space:nowrap }
+  #fechaHoy{ font-size:11px; text-align:right; flex:none }
+  #contenido{ padding:16px 14px 44px }
+
+  /* LOS FILTROS, UNO DEBAJO DEL OTRO. En grilla de 168 px entraban dos
+     por renglon y los dos quedaban ilegibles. */
+  .mv-rej, .db-rej{ grid-template-columns:1fr !important }
+  .mv-campo.doble, .db-campo.doble{ grid-column:auto !important }
+  .filtros, .tb-filtros, .mv-filtros, .rt-filtros, .hil-fila{
+    flex-direction:column; align-items:stretch }
+  .filtros .fg, .filtros .fi, .filtros .btn, .filtros .btn-s,
+  .hil-campo, .hil-campo input, .hil-btn,
+  .rt-campo, .rt-campo input, .rt-campo select{ width:100%; min-width:0 }
+  .rt-btn{ width:100% }
+  .rt-chk{ align-self:flex-start }
+  .filtros .tb-accion{ margin-top:4px !important }
+  .mv-acciones{ flex-wrap:wrap }
+  .mv-acciones .mv-btn, .mv-acciones .mv-mas{ flex:1 1 auto }
+  .mv-lista, .db-lista{ min-width:0; width:100% }
+
+  /* las tarjetas: dos por renglon en vez de cinco apretadas */
+  .mv-tarjetas, .db-tarjetas{ grid-template-columns:repeat(2,1fr) !important; gap:9px }
+  .db-dos{ grid-template-columns:1fr !important }
+  .rt-t{ min-width:0; flex:1 1 44% }
+  .hil-t{ min-width:0; flex:1 1 44% }
+
+  /* TODA TABLA SE DESLIZA A LO ANCHO EN VEZ DE ESTIRAR LA PAGINA.
+     Sin esto, una tabla de 24 columnas empuja el documento entero y el
+     telefono aleja la pagina hasta que las letras no se leen. */
+  /* el !important no es pereza: estas hojas (seguridad-seg.css,
+     informe-rt.css...) se cargan DESPUES de app.css, asi que su
+     overflow:hidden le gana a cualquier regla mia de la misma fuerza.
+     Es el mismo golpe de especificidad ya anotado en el proyecto. */
+  .mv-tb-caja, .db-tb-caja, .ay-tabla, .rt-graf{
+    overflow-x:auto !important; -webkit-overflow-scrolling:touch }
+  .seg-tabla-wrap{ overflow:auto !important }
+  /* min-width:max-content SOLO para la tabla cuyo ENVOLTORIO scrollea.
+     A una tabla que es ella misma el contenedor de scroll (rt-tb, hil)
+     este min-width le anula el scroll y empuja la pagina entera: eso fue
+     lo que dejo el Informe alejado en el telefono. */
+  table.seg-tabla, .ay-tabla table{ min-width:max-content }
+  table.hil{ display:block; overflow-x:auto; white-space:nowrap }
+  #mapa, #hilMapa, #hilR1, #hilR2{ overflow-x:auto }
+
+  /* los graficos de barras llevan su propio ancho minimo */
+  .mv-graf, .db-graf, .rt-graf{ overflow-x:auto }
+  .mv-graf svg, .db-graf svg{ min-width:520px }
+
+  /* la barra de bajar: los dos botones enteros, sin apretarse */
+  .bajar-barra{ justify-content:flex-start; margin:12px 0 6px }
+  .bajar-btn{ padding:7px 13px; font-size:12px }
+
+  /* la caja de login tambien entra */
+  .login-box{ width:100%; max-width:380px; padding:26px 20px }
+
+  /* el pie de la Ayuda y sus chips */
+  /* La caja de preguntar, uno debajo del otro. El textarea arranca en
+     una linea (rows=1) y su alto lo fija ayAjustar() con scrollHeight,
+     que NO cuenta el placeholder: en pantalla angosta el placeholder se
+     parte en dos renglones y el boton le quedaba encima. Con un alto
+     minimo entra, y ayAjustar() lo sigue agrandando al escribir. */
+  .ay-caja{ flex-direction:column; gap:9px; padding:10px }
+  .ay-caja textarea, #ayQ{ width:100%; min-height:58px }
+  .ay-btn{ width:100% }
+  .ay-pie{ flex-wrap:wrap; gap:6px }
+  .ay-acc{ display:flex; flex-wrap:wrap; gap:6px }
+
+  /* los modales de Usuarios, que eran de ancho fijo */
+  .modal-caja{ width:calc(100vw - 28px); max-width:420px; max-height:86vh; overflow-y:auto }
+
+  /* El encabezado de Usuarios es una fila de tres: titulo, buscador y
+     boton. En el telefono el titulo se partia en dos renglones encima
+     del buscador y el buscador quedaba reducido a la lupa. Va uno
+     debajo del otro, cada uno con todo el ancho. */
+  .seg-header{ flex-direction:column; align-items:stretch; gap:12px }
+  .seg-buscador{ width:100% }
+  .seg-buscador input{ width:100% }
+  .btn-nuevo{ width:100%; justify-content:center }
+  .seg-sub{ max-width:none }
+  .acciones-fila{ gap:4px }
+}
+
+/* telefono angosto */
+@media (max-width:430px){
+  #contenido{ padding:14px 11px 40px }
+  .mv-tarjetas, .db-tarjetas{ grid-template-columns:1fr !important }
+  .rt-t, .hil-t{ flex:1 1 100% }
+  #fechaHoy{ display:none }           /* la fecha se come el titulo */
+  .mv-graf svg, .db-graf svg{ min-width:430px }
+}
