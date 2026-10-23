@@ -341,3 +341,24 @@ td.num,th.num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-n
 .btn-icono:hover{background:rgba(255,255,255,.09);color:#F2F5F3}
 .btn-icono.peligro:hover{background:rgba(229,72,77,.15);color:#ff8b8f}
 .btn-icono.exito:hover{background:rgba(8,165,122,.15);color:#08A57A}
+
+/* ===================================================================
+   BAJAR A EXCEL Y A PDF — la barra que js/bajar.js pone sobre toda
+   grilla de toda pantalla.  23/10/2026
+   =================================================================== */
+.bajar-barra{
+  display:flex; gap:7px; justify-content:flex-end;
+  margin:14px 0 6px;
+}
+.bajar-btn{
+  display:inline-flex; align-items:center; gap:6px;
+  background:transparent; color:var(--gris);
+  border:1px solid var(--borde); border-radius:7px;
+  padding:5px 11px; font:500 11.5px/1 Inter,sans-serif;
+  cursor:pointer; transition:border-color .12s, color .12s, background .12s;
+}
+.bajar-btn:hover:not(:disabled){
+  color:var(--texto); border-color:var(--verde); background:rgba(8,165,122,.10);
+}
+.bajar-btn:disabled{ opacity:.55; cursor:default }
+.bajar-btn svg{ width:13px; height:13px; flex:none }

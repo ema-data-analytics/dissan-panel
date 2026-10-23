@@ -20,7 +20,8 @@ function mvCelPrecio(n){
   var corto = Math.abs(v) >= 1e6
     ? '$' + (v/1e6).toLocaleString('es-AR', {maximumFractionDigits:2}) + ' M'
     : exacto;
-  return '<td class="mv-num" title="' + mvEsc(exacto) + '">' + mvEsc(corto) + '</td>';
+  return '<td class="mv-num" data-v="' + v + '" title="' + mvEsc(exacto) + '">' +
+         mvEsc(corto) + '</td>';
 }
 
 /* "Dice perder" con numero NEGATIVO se leia como perdida cuando era ganancia.
@@ -28,10 +29,45 @@ function mvCelPrecio(n){
 function mvCelPerder(n){
   if (n === null || n === undefined || n === '') return '<td class="mv-num">—</td>';
   var v = Number(n);
-  if (v <= 0) return '<td class="mv-num" title="' + mvEsc(mvPesos(-v)) +
+  if (v <= 0) return '<td class="mv-num" data-v="' + v + '" title="' + mvEsc(mvPesos(-v)) +
                      '">no pierde (gana ' + mvEsc(mvMillones(-v)) + ')</td>';
-  return '<td class="mv-num" title="' + mvEsc(mvPesos(v)) + '">' +
+  return '<td class="mv-num" data-v="' + v + '" title="' + mvEsc(mvPesos(v)) + '">' +
          mvEsc(mvMillones(v)) + '</td>';
+}
+
+/* El valor exacto, para que la descarga nunca se lleve el texto de la celda.
+   Un importe abreviado ("$2,64 M") bajado como texto es mil veces menos. */
+function mvDatoV(v){
+  return (v === null || v === undefined || v === '') ? ''
+         : ' data-v="' + mvEsc(v) + '"';
+}
+
+/* =====================================================================
+   MARKUP — la columna que pidió DISSAN el 23/10/2026
+   =====================================================================
+   Su archivo Precio_de_Costo.xlsx lo define así:
+
+        F = Px Venta      H = Px Costo
+        L = PxV/PxC  = F/H
+        M = MarkUp   = L - 1  =  (F - H) / H
+
+   O sea: el margen medido sobre el COSTO, no sobre el precio. Es la
+   misma cifra que el renglón de arriba llama «sobre el costo».
+   Control con los números del propio Excel (fila 14, que son los de
+   esta pantalla): 201.549.972 / 132.832.842 - 1 = 0,51733 -> 51,7%.
+
+   Sin costo no hay MarkUp: dividir por cero no da «cero margen», no da
+   nada, y escribir un 0 ahí sería una cifra inventada.
+   ===================================================================== */
+function mvMarkup(venta, costo){
+  var v = Number(venta), c = Number(costo);
+  if (!isFinite(v) || !isFinite(c) || c === 0) return null;
+  return 100 * (v - c) / c;
+}
+function mvCelMarkup(venta, costo){
+  var m = mvMarkup(venta, costo);
+  if (m === null) return '<td class="mv-num">—</td>';
+  return '<td class="mv-num"' + mvDatoV(m) + '>' + mvDec(m) + '%</td>';
 }
 
 /* "0×" no decia nada: con costo $1 y precio $1.145 el cociente redondea a 0.
@@ -622,7 +658,20 @@ function mvTablaDetalle(){
          '<th>Mon.</th><th class="mv-num">Cant. comp.</th>' +
          '<th class="mv-num">Venta comp.</th><th class="mv-num">Costo comp.</th>' +
          '<th class="mv-num">Margen $</th><th class="mv-num">Margen x u.</th>' +
-         '<th class="mv-num">Margen %</th><th>Comp.</th><th>Observación</th>' +
+         '<th class="mv-num" title="Margen sobre el PRECIO DE VENTA: ' +
+         '(venta − costo) ÷ venta. Es la columna «Costo Vta» del Excel de DISSAN.">' +
+         'Margen %</th>' +
+         /* LA COLUMNA QUE PIDIÓ DISSAN, 23/10/2026.
+            Su Excel la llama MarkUp y la calcula = PxV/PxC − 1, que es lo
+            mismo que (venta − costo) ÷ costo: el margen medido sobre el
+            COSTO, no sobre el precio. Con sus propios números del archivo
+            (venta 201.549.972, costo 132.832.842) da 51,7%, que es el
+            mismo «sobre el costo» que ya dice el renglón de arriba.
+            Acá va renglón por renglón, que es lo que faltaba. */
+         '<th class="mv-num" title="MarkUp, como lo calcula el Excel de DISSAN: ' +
+         'Precio de venta ÷ Precio de costo − 1. Es el margen medido sobre el COSTO.">' +
+         'MarkUp %</th>' +
+         '<th>Comp.</th><th>Observación</th>' +
          '</tr></thead><tbody>');
 
   for (var j = 0; j < filas.length; j++){
@@ -638,20 +687,23 @@ function mvTablaDetalle(){
       '<td class="mv-desc" title="' + mvEsc(x.cliente) + '">' + mvEsc(x.cliente) + '</td>' +
       '<td class="mv-cod">' + mvEsc(x.codigo_articulo) + '</td>' +
       '<td class="mv-desc" title="' + mvEsc(x.descripcion) + '">' + mvEsc(x.descripcion) + '</td>' +
-      '<td class="mv-num">' + mvNum(x.cant_pedido) + '</td>' +
-      '<td class="mv-num">' + mvPrecio(x.precio_venta_unit) + '</td>' +
-      '<td class="mv-num">' + mvNum(x.cant_oc) + '</td>' +
-      '<td class="mv-num">' + mvPrecio(x.precio_oc_unit) + '</td>' +
-      '<td class="mv-num">' + mvDec(x.porc_bonif) + '</td>' +
-      '<td class="mv-num">' + mvPrecio(x.precio_oc_neto) + '</td>' +
+      '<td class="mv-num"' + mvDatoV(x.cant_pedido) + '>' + mvNum(x.cant_pedido) + '</td>' +
+      '<td class="mv-num"' + mvDatoV(x.precio_venta_unit) + '>' + mvPrecio(x.precio_venta_unit) + '</td>' +
+      '<td class="mv-num"' + mvDatoV(x.cant_oc) + '>' + mvNum(x.cant_oc) + '</td>' +
+      '<td class="mv-num"' + mvDatoV(x.precio_oc_unit) + '>' + mvPrecio(x.precio_oc_unit) + '</td>' +
+      '<td class="mv-num"' + mvDatoV(x.porc_bonif) + '>' + mvDec(x.porc_bonif) + '</td>' +
+      '<td class="mv-num"' + mvDatoV(x.precio_oc_neto) + '>' + mvPrecio(x.precio_oc_neto) + '</td>' +
       '<td>' + mvEsc(x.moneda) + '</td>' +
-      '<td class="mv-num">' + mvNum(x.cant_comparable) + '</td>' +
-      '<td class="mv-num">' + mvPesos(x.venta_comparable) + '</td>' +
-      '<td class="mv-num">' + mvPesos(x.costo_comparable) + '</td>' +
-      '<td class="mv-num">' + mvPesos(x.margen_pesos) + '</td>' +
-      '<td class="mv-num">' + mvPrecio(x.margen_unitario) + '</td>' +
-      '<td class="mv-num">' + (x.margen_pct === null || x.margen_pct === undefined
-                                ? '—' : mvDec(x.margen_pct) + '%') + '</td>' +
+      '<td class="mv-num"' + mvDatoV(x.cant_comparable) + '>' + mvNum(x.cant_comparable) + '</td>' +
+      /* la pantalla redondea a pesos; el archivo se lleva el exacto */
+      '<td class="mv-num"' + mvDatoV(x.venta_comparable) + '>' + mvPesos(x.venta_comparable) + '</td>' +
+      '<td class="mv-num"' + mvDatoV(x.costo_comparable) + '>' + mvPesos(x.costo_comparable) + '</td>' +
+      '<td class="mv-num"' + mvDatoV(x.margen_pesos) + '>' + mvPesos(x.margen_pesos) + '</td>' +
+      '<td class="mv-num"' + mvDatoV(x.margen_unitario) + '>' + mvPrecio(x.margen_unitario) + '</td>' +
+      '<td class="mv-num"' + mvDatoV(x.margen_pct) + '>' +
+        (x.margen_pct === null || x.margen_pct === undefined
+          ? '—' : mvDec(x.margen_pct) + '%') + '</td>' +
+      mvCelMarkup(x.venta_comparable, x.costo_comparable) +
       '<td>' + (x.comparable === 'SI' ? 'sí' : '<span class="mv-marca">no</span>') + '</td>' +
       '<td class="mv-obs">' + mvEsc(x.observacion) + '</td></tr>');
   }

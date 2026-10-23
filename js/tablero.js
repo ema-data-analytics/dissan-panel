@@ -39,7 +39,9 @@ function dbCelPrecio(n){
   var corto = Math.abs(v) >= 1e6
     ? '$' + (v/1e6).toLocaleString('es-AR', {maximumFractionDigits:2}) + ' M'
     : exacto;
-  return '<td class="db-num" title="' + dbEsc(exacto) + '">' + dbEsc(corto) + '</td>';
+  /* el exacto tambien en data-v: la descarga no puede llevarse "$2,64 M" */
+  return '<td class="db-num" data-v="' + v + '" title="' + dbEsc(exacto) + '">' +
+         dbEsc(corto) + '</td>';
 }
 
 function dbMillones(n){

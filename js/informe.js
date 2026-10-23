@@ -15,6 +15,15 @@ function rtPlata(n){
   return '$' + rtNum(n);
 }
 
+/* La celda de plata lleva el valor EXACTO en data-v: el texto va abreviado
+   ("$19.459 M") y una descarga que se llevara ese texto bajaria mil veces
+   menos. 23/10/2026, para que las grillas se puedan bajar a Excel. */
+function rtCelPlata(n){
+  if (n === null || n === undefined) return '<td class="rt-num">—</td>';
+  return '<td class="rt-num" data-v="' + Number(n) + '" title="$' + rtNum(n) +
+         '">' + rtPlata(n) + '</td>';
+}
+
 /* ---------- barras horizontales, con el número siempre escrito ---------- */
 function rtBarras(filas, opts){
   opts = opts || {};
@@ -211,7 +220,7 @@ function rtDibujar(d, estado, cuerpo){
            '<td class="rt-num">' + rtNum(t.pct_ganado,1) + '%</td>' +
            '<td class="rt-num">' + rtNum(t.margen,1) + '%</td>' +
            '<td class="rt-num">' + (t.perdida ? '<span style="color:#FF8A8A">' + rtNum(t.perdida) + '</span>' : '0') + '</td>' +
-           '<td class="rt-num">' + rtPlata(t.facturado) + '</td></tr>';
+           rtCelPlata(t.facturado) + '</tr>';
     });
     h += '</tbody></table>';
   }
@@ -226,7 +235,7 @@ function rtDibujar(d, estado, cuerpo){
       h += '<tr class="alerta"><td>' + esc(p.articulo) + '</td>' +
            '<td>' + esc(p.tipo) + '</td><td>' + esc(p.cliente) + '</td><td>' + esc(p.fecha) + '</td>' +
            '<td class="rt-num" style="color:#FF8A8A">' + rtNum(p.margen,1) + '%</td>' +
-           '<td class="rt-num">' + rtPlata(p.perdio) + '</td></tr>';
+           rtCelPlata(p.perdio) + '</tr>';
     });
     h += '</tbody></table>';
   }
@@ -241,10 +250,10 @@ function rtDibujar(d, estado, cuerpo){
     mc.forEach(function(p){
       h += '<tr><td>' + esc(p.articulo) + '</td><td>' + esc(p.tipo) + '</td>' +
            '<td>' + esc(p.cliente) + '</td><td>' + esc(p.fecha) + '</td>' +
-           '<td class="rt-num">' + rtPlata(p.costo) + '</td>' +
-           '<td class="rt-num">' + rtPlata(p.tipico) + '</td>' +
+           rtCelPlata(p.costo) +
+           rtCelPlata(p.tipico) +
            '<td class="rt-num" style="color:#E8B93B">' + rtNum(p.veces,1) + 'x</td>' +
-           '<td class="rt-num">' + rtPlata(p.perdio) + '</td></tr>';
+           rtCelPlata(p.perdio) + '</tr>';
     });
     h += '</tbody></table>';
   }
