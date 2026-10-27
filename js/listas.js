@@ -3,7 +3,8 @@
    La cadena, entera desde el navegador:
 
      el archivo del laboratorio
-        -> Edge Function `listas`   lee el PDF por coordenada o el Excel por celda
+        -> si es PDF:    se lee ACA, con la pdf.js del repo (js/vendor/)
+           si es Excel:  Edge Function `listas`, que lee por celda con exceljs
         -> api_listas_armar         liga el codigo del laboratorio con el articulo
                                     de DISSAN por el SINONIMO, aplica la regla de
                                     costeo y devuelve las 12 columnas de Tango
@@ -25,7 +26,7 @@
 'use strict';
 
 var LP_PROV = [];      /* los proveedores con su regla */
-var LP_LEIDO = null;   /* lo que devolvio la Edge Function */
+var LP_LEIDO = null;   /* lo que devolvio la lectura (navegador o Edge Function) */
 var LP_ARMADO = null;  /* lo que devolvio api_listas_armar */
 
 /* Edge Function por fetch crudo, con un reintento. */
@@ -54,13 +55,414 @@ function LP_FN(nombre, cuerpo, intento) {
 }
 
 /* El archivo a base64 sin reventar la pila: String.fromCharCode(...bytes) con un
-   PDF de 1 MB tira "Maximum call stack size exceeded". Va por tandas. */
+   PDF de 1 MB tira "Maximum call stack size exceeded". Va por tandas.
+   Sigue haciendo falta para el Excel, que se lee en la Edge Function. */
 function lpBase64(buf) {
   var b = new Uint8Array(buf), s = '', i;
   for (i = 0; i < b.length; i += 8192) {
     s += String.fromCharCode.apply(null, b.subarray(i, i + 8192));
   }
   return btoa(s);
+}
+
+/* ===================================================================
+   EL LECTOR DE PDF, EN EL NAVEGADOR                      27/10/2026
+   -------------------------------------------------------------------
+   POR QUE SE MOVIO DEL SERVIDOR AL NAVEGADOR. Esta MEDIDO en los
+   registros de Supabase, no supuesto:
+
+     event loop error: ReferenceError: DOMMatrix is not defined
+        en pdfjs-dist/5.7.284/legacy/build/pdf.mjs:17006
+     Warning: Cannot polyfill `DOMMatrix`, rendering may be broken.
+     Warning: Cannot polyfill `Path2D` / `ImageData`
+     Warning: Cannot load "@napi-rs/canvas"
+
+   pdf.js CARGA en la Edge Function pero necesita APIs del navegador que
+   ese runtime no tiene y no deja poner a mano — unpdf@1.9.1 tampoco lo
+   consigue: avisa `Cannot polyfill` y falla igual. Y los import()
+   dinamicos no andan ahi: Supabase arma la lista de paquetes al
+   desplegar, asi que todo import va fijo arriba del archivo.
+   EL NAVEGADOR SI TIENE DOMMatrix: aca pdf.js es su caso de uso normal.
+
+   EL EXCEL SIGUE EN LA EDGE FUNCTION: exceljs no necesita nada del
+   navegador y ese camino esta probado. No se toca lo que anda.
+
+   LA LIBRERIA VIVE EN EL REPO (js/vendor/, pdfjs-dist 5.7.284, la misma
+   version con la que se midieron las listas), NO EN UN CDN. Dos razones:
+   el contenedor de desarrollo no llega a internet y lo que no se puede
+   correr no se puede probar; y servida desde el repo se prueba igual que
+   en produccion, sin que un CDN cambie la version abajo de la pantalla.
+
+   -------------------------------------------------------------------
+   POR QUE SE LEE POR COORDENADA Y NO POR TEXTO PLANO
+
+   Con el texto plano la lista de COLOPLAST da 179 de 251 productos: el
+   codigo y las unidades por caja vienen pegados en el mismo renglon de
+   texto y el numero no se puede separar del codigo sin adivinar.
+   Leyendo por la POSICION de cada elemento en la pagina, el codigo sale
+   de su columna, las unidades por caja de la suya y el precio de la suya.
+
+   MEDIDO con esta misma pdf.js contra las listas reales (27/10):
+     COLOPLAST  249 productos leidos -> 241 entran = los 241 del archivo
+                que armo DISSAN a mano, con la suma de Precio identica al
+                centavo.
+     SILMAG 224 · GAVAMAX 79 · CAPACCIOLI 68 · ICU 40 · BD 123 · D.MEDICA 31.
+
+   EL MAPEO NO ESTA CABLEADO ACA. Vive en cotiza.lista_proveedor.lectura
+   (jsonb), una fila por laboratorio. Agregar un proveedor nuevo es
+   cargar esa fila, no tocar este archivo.
+
+   LAS FRANJAS DE x SE SOLAPAN SI NO SE MIDEN. En COLOPLAST la franja de
+   'unidades por caja' estaba en [60,155] y la descripcion arranca en
+   x=135 en la pagina 11: el '1' quedaba pegado a 'Brava', se leia vacio,
+   y 9 articulos que Tango compra por caja se apartaban por falta de
+   unidades cuando la lista SI las trae. Va [60,132]. Antes de cargar una
+   franja, mirar donde arranca la de al lado.
+
+   LA IMAGEN SE RECHAZA. De una foto no se puede leer un precio con
+   seguridad, y un digito mal leido es una cotizacion perdida o una venta
+   bajo el costo.
+   =================================================================== */
+
+/* La ruta de la libreria se calcula UNA VEZ, al cargar este archivo, desde
+   document.currentScript, y queda ABSOLUTA. Un import() con ruta relativa
+   escrito adentro de un .then() no resuelve contra este archivo sino contra
+   el documento, porque ahi ya no hay "active script": la ruta caeria en otro
+   lugar y el error seria un 404 de un archivo que si existe. */
+var LP_PDFJS = (function () {
+  var s = document.currentScript;
+  var base = (s && s.src) ? s.src : new URL('js/listas.js', document.baseURI).href;
+  return {
+    lib: new URL('vendor/pdf.min.mjs', base).href,
+    worker: new URL('vendor/pdf.worker.min.mjs', base).href
+  };
+})();
+
+var LP_PDFMOD = null;
+
+/* Se carga una sola vez y recien cuando hay un PDF: son 485 KB + 1,2 MB que
+   el camino del Excel no necesita bajar. */
+function lpPdfjs() {
+  if (LP_PDFMOD) return Promise.resolve(LP_PDFMOD);
+  return import(LP_PDFJS.lib).then(function (m) {
+    var mod = m && m.getDocument ? m : (m && m.default ? m.default : m);
+    if (!mod || typeof mod.getDocument !== 'function') {
+      throw new Error('la libreria de PDF del repo no expone getDocument');
+    }
+    mod.GlobalWorkerOptions.workerSrc = LP_PDFJS.worker;
+    LP_PDFMOD = mod;
+    return mod;
+  });
+}
+
+function lpDef(v, d) { return (v === null || v === undefined || v === '') ? d : v; }
+
+/** '8.558,91' (castellano) o '8,558.91' (ingles), segun el fmt del laboratorio */
+function lpANumero(s, fmt) {
+  var t = String(s).trim();
+  if (!t) return null;
+  t = fmt === 'us' ? t.replace(/,/g, '') : t.replace(/\./g, '').replace(/,/g, '.');
+  var v = Number(t);
+  return isFinite(v) ? v : null;
+}
+
+var LP_HDR = {};
+['CODIGO', 'COD', 'SKU', 'ARTICULO', 'PRODUCTO', 'PRECIO', 'DESCRIPCION', 'UNITARIO',
+ 'LISTA', 'TOTAL', 'BONIF', 'CATEGORIA', 'SSKKUU', 'PAG', 'PAGINA', 'ITEM', 'CANT',
+ 'MARCA', 'MODELO', 'MEDIDAS', 'PRESENTACION', 'UNIDADES', 'CAJA', 'IVA', 'SIN', 'CON',
+ 'MINORISTA', 'INDICE', 'MATERIAL', 'COD_ARTIC'].forEach(function (x) { LP_HDR[x] = true; });
+
+function lpSinTildes(s) {
+  return String(s).normalize('NFD').replace(/[̀-ͯ]/g, '');
+}
+
+var LP_FRAG = /^[0-9.,]+$/;
+var LP_NUMTOK = /^[0-9][0-9.,]*$/;
+var LP_CUR = /^(\$|USD|U\$S|US\$)$/;
+var LP_CURNUM = /^(?:\$|USD|U\$S|US\$)\s*([0-9][0-9.,]*)$/;
+
+/**
+ * Un elemento de texto de pdf.js puede traer varias palabras juntas. Se parte
+ * por espacios y se reparte el ancho del elemento entre los caracteres: las
+ * franjas de columna son anchas, asi que la aproximacion alcanza. Tomando los
+ * elementos enteros, una linea que viene en un solo elemento rompe todas las
+ * franjas.
+ */
+function lpPalabrasDeItems(items) {
+  var out = [], k, it, s, x, y, w, n, porChar, i, j;
+  for (k = 0; k < items.length; k++) {
+    it = items[k];
+    s = (it && typeof it.str === 'string') ? it.str : '';
+    if (!s.trim()) continue;
+    x = Number((it.transform && it.transform[4]) || 0);
+    y = Number((it.transform && it.transform[5]) || 0);
+    w = Number(it.width || 0);
+    n = s.length;
+    porChar = (n > 0 && w > 0) ? w / n : 0;
+    i = 0;
+    while (i < n) {
+      if (s[i] === ' ') { i++; continue; }
+      j = i;
+      while (j < n && s[j] !== ' ') j++;
+      out.push({ text: s.slice(i, j), x0: x + i * porChar, x1: x + j * porChar, y: y });
+      i = j;
+    }
+  }
+  return out;
+}
+
+/** agrupa por renglon: la misma linea de base, con tolerancia */
+function lpRenglones(pal, tol) {
+  var ord = pal.slice().sort(function (a, b) { return (b.y - a.y) || (a.x0 - b.x0); });
+  var lineas = [], actual = [], yRef = Number.NaN, i, p;
+  for (i = 0; i < ord.length; i++) {
+    p = ord[i];
+    if (isNaN(yRef) || Math.abs(p.y - yRef) <= tol) {
+      if (isNaN(yRef)) yRef = p.y;
+      actual.push(p);
+    } else { lineas.push(actual); actual = [p]; yRef = p.y; }
+  }
+  if (actual.length) lineas.push(actual);
+  return lineas.map(function (l) {
+    return l.sort(function (a, b) { return a.x0 - b.x0; });
+  });
+}
+
+function lpEnFranja(ln, r) {
+  if (!r) return '';
+  return ln.filter(function (w) { return w.x0 >= r[0] && w.x0 < r[1]; })
+           .map(function (w) { return w.text; }).join('');
+}
+function lpTextoFranja(ln, r) {
+  if (!r) return '';
+  return ln.filter(function (w) { return w.x0 >= r[0] && w.x0 < r[1]; })
+           .map(function (w) { return w.text; }).join(' ').trim();
+}
+
+/** el precio: anclado al signo de moneda, o por franja de x */
+function lpPrecioDeLinea(ln, pcfg) {
+  var modo = (pcfg && pcfg.modo) ? pcfg.modo : 'moneda';
+  if (modo === 'rango') {
+    var t0 = lpEnFranja(ln, pcfg.x).trim();
+    return (t0 && LP_NUMTOK.test(t0)) ? t0 : null;
+  }
+  var quiero = Number(lpDef(pcfg && pcfg.ocurrencia, 1));
+  var vistos = 0, i, k, t, t2, m, piezas, prev;
+  for (i = 0; i < ln.length; i++) {
+    t = ln[i].text;
+    m = LP_CURNUM.exec(t);
+    if (m) { vistos++; if (vistos === quiero) return m[1]; continue; }
+    if (LP_CUR.test(t)) {
+      vistos++;
+      piezas = [];
+      prev = 0;
+      for (k = i + 1; k < ln.length; k++) {
+        t2 = ln[k].text;
+        if (!LP_FRAG.test(t2)) break;
+        if (piezas.length && (ln[k].x0 - prev) > 6) break;   /* salto de columna */
+        if (!piezas.length && !/[0-9]/.test(t2[0])) break;
+        piezas.push(t2); prev = ln[k].x1;
+      }
+      if (vistos === quiero) return piezas.length ? piezas.join('') : null;
+    }
+  }
+  return null;
+}
+
+/* La lectura del PDF, pagina por pagina. Identica a la que corria en la Edge
+   Function: mismas franjas, misma tolerancia de y, mismos descartes. */
+function lpLeerPdf(buf, cfg, diag) {
+  return lpPdfjs().then(function (pdfjs) {
+    var tarea = pdfjs.getDocument({
+      data: new Uint8Array(buf),
+      useSystemFonts: false,
+      isEvalSupported: false,
+      disableFontFace: true,
+      useWorkerFetch: false
+    });
+    return tarea.promise.then(function (doc) {
+      var tol = Number(lpDef(cfg.y_tol, 2));
+      var maxcod = Number(lpDef(cfg.max_cod, 22));
+      var fmt = String(lpDef(cfg.fmt, 'ar'));
+      var codRe = cfg.cod_re ? new RegExp(cfg.cod_re) : null;
+      var filas = [], descartes = [], muestra = [];
+      var paginas = doc.numPages || 0;
+      var p = 0;
+
+      function unaPagina() {
+        p++;
+        if (p > paginas) {
+          return { filas: filas, descartes: descartes, muestra: muestra,
+                   paginas: paginas,
+                   motor: 'pdf.js ' + (pdfjs.version || '?') + ' · en el navegador' };
+        }
+        return doc.getPage(p).then(function (page) {
+          return page.getTextContent();
+        }).then(function (tc) {
+          var lns = lpRenglones(lpPalabrasDeItems((tc && tc.items) || []), tol);
+          var i, ln, cod, pretxt, precio, caja, ct, c;
+          if (diag && p <= 4) {
+            lns.slice(0, 14).forEach(function (ln2) {
+              muestra.push({ pag: p, linea: ln2.map(function (w) {
+                return w.text + '@' + Math.round(w.x0);
+              }).join(' | ').substring(0, 220) });
+            });
+          }
+          for (i = 0; i < lns.length; i++) {
+            ln = lns[i];
+            cod = lpEnFranja(ln, cfg.cod).trim().replace(/\s+/g, '').replace(/\*+$/, '');
+            if (!cod) continue;
+            if (LP_HDR[lpSinTildes(cod).toUpperCase().replace(/^[.:]+|[.:]+$/g, '')]) continue;
+            if (cod.length > maxcod) continue;
+            if (codRe && !codRe.test(cod)) continue;
+
+            pretxt = lpPrecioDeLinea(ln, cfg.precio);
+            if (pretxt === null) {
+              descartes.push({ cod: cod, pag: p, porque: 'no hay precio en el renglon' });
+              continue;
+            }
+            precio = lpANumero(pretxt, fmt);
+            if (precio === null || precio <= 0) {
+              descartes.push({ cod: cod, pag: p, porque: 'precio ilegible: ' + pretxt });
+              continue;
+            }
+            caja = null;
+            if (cfg.caja) {
+              ct = lpEnFranja(ln, cfg.caja).trim();
+              if (LP_NUMTOK.test(ct)) {
+                c = lpANumero(ct, fmt);
+                caja = (c !== null && c > 0) ? c : null;
+              }
+            }
+            filas.push({ cod: cod,
+                         descripcion: lpTextoFranja(ln, cfg.desc || [cfg.cod[1], 320]) || null,
+                         precio: precio, caja: caja, pag: p });
+          }
+          return unaPagina();
+        });
+      }
+      return unaPagina();
+    });
+  });
+}
+
+/* ---- la regla de costeo del laboratorio, y la respuesta ----
+   Es la MISMA que arma la Edge Function, con los mismos textos, para que la
+   pantalla diga lo mismo venga la lista en PDF o en Excel. El Excel la sigue
+   armando el servidor; esta copia es la del camino del PDF. */
+function lpArmarLectura(prov, nombre, leido, ms, cfg, diag) {
+  var factor = (prov.factor === null || prov.factor === undefined) ? 1 : Number(prov.factor);
+  var moneda = String(prov.moneda || 'ARS').toUpperCase();
+  var avisos = [];
+
+  if (prov.tipo_regla === 'pendiente') {
+    avisos.push('La regla de costeo de ' + prov.proveedor + ' esta PENDIENTE de definir: ' +
+                'el costo va igual al precio de lista, sin descuento.');
+  }
+  if (prov.tipo_regla === 'descuento_variable') {
+    avisos.push(prov.proveedor + ': el descuento es por pago anticipado, no por renglon. ' +
+                'El costo va al precio de la columna, sin descuento.');
+  }
+  if (prov.tipo_regla === 'dolar') {
+    avisos.push('La lista esta en dolares y NO se convierte: el precio viaja en US$ y la ' +
+                'columna Moneda dice DOLAR. No se inventa una cotizacion.');
+  }
+  if (prov.tipo_regla === 'columna') {
+    avisos.push('El costo sale de la columna "' + lpDef(cfg.titulo_precio, '(sin titulo)') +
+                '" de la lista.');
+  }
+  if (!prov.codigo_lista) {
+    avisos.push(prov.proveedor + ' no tiene lista de precios de compra en Tango (cpa43): ' +
+                'la columna Cod. Lista va vacia.');
+  }
+
+  var filas = leido.filas.map(function (f) {
+    return {
+      cod_proveedor: f.cod,
+      descripcion: f.descripcion,
+      precio_lista: f.precio,
+      moneda: moneda === 'USD' ? 'USD' : 'ARS',
+      unidades_caja: f.caja,
+      costo_calculado: (f.precio === null || f.precio === undefined)
+        ? null : Math.round(f.precio * factor * 10000) / 10000
+    };
+  });
+
+  var conPrecio = filas.filter(function (f) {
+    return f.precio_lista !== null && f.precio_lista > 0;
+  }).length;
+  var conCaja = filas.filter(function (f) { return f.unidades_caja !== null; }).length;
+  if (conPrecio < filas.length) {
+    avisos.push((filas.length - conPrecio) +
+                ' renglones de la lista no traen precio y no van a entrar.');
+  }
+  if (!filas.length) {
+    avisos.push('No se leyo ningun renglon. Si el laboratorio cambio el formato de la lista, ' +
+                'hay que medir de nuevo las franjas de lectura antes de cargarla.');
+  }
+
+  var resp = {
+    ok: filas.length > 0,
+    proveedor: prov.proveedor,
+    proveedor_id: Number(prov.id),
+    archivo: nombre,
+    regla: { tipo: prov.tipo_regla, factor: factor, texto: prov.regla, moneda: moneda },
+    lectura: {
+      motor: leido.motor, tipo: 'pdf',
+      paginas: leido.paginas || null, hojas: null,
+      filas_leidas: filas.length, con_precio: conPrecio,
+      con_unidades_caja: conCaja, descartes: leido.descartes.length
+    },
+    avisos: avisos,
+    filas: filas,
+    ms: ms
+  };
+  if (diag) resp.diag = { muestra: leido.muestra, descartes: leido.descartes.slice(0, 20) };
+  return resp;
+}
+
+var LP_IMAGEN = /\.(jpe?g|png|gif|bmp|webp|tiff?|heic)$/i;
+
+/* Decide el camino: PDF en el navegador, todo lo demas en la Edge Function.
+   Los rechazos del camino del PDF dicen lo mismo que decia el servidor. */
+function lpLeer(prov, f, diag) {
+  var nombre = f.name;
+  var esPdf = /\.pdf$/i.test(nombre) && !LP_IMAGEN.test(nombre);
+  if (!esPdf) {
+    return f.arrayBuffer().then(function (buf) {
+      return LP_FN('listas', {
+        proveedor_id: Number(prov.id),
+        nombre_archivo: nombre,
+        archivo_base64: lpBase64(buf),
+        diag: diag === true
+      });
+    });
+  }
+
+  var cfg = prov.lectura || {};
+  var fuera = function (texto) {
+    return Promise.resolve({ ok: false, filas: [], proveedor: prov.proveedor,
+                             archivo: nombre, avisos: [texto] });
+  };
+  if (cfg.tipo === 'imagen') {
+    return fuera('La lista viene como imagen. Pedirla en Excel o PDF.');
+  }
+  if (!cfg.tipo) {
+    return fuera(prov.proveedor + ' no tiene cargada la configuracion de lectura ' +
+                 '(cotiza.lista_proveedor.lectura).');
+  }
+  if (cfg.tipo !== 'pdf') {
+    return fuera(prov.proveedor + ' manda la lista en ' + String(cfg.tipo).toUpperCase() +
+                 ' y este archivo es PDF. Si el laboratorio cambio el formato hay que ' +
+                 'actualizar la configuracion de lectura antes de cargarla.');
+  }
+
+  var t0 = Date.now();
+  return f.arrayBuffer().then(function (buf) {
+    return lpLeerPdf(buf, cfg, diag === true);
+  }).then(function (leido) {
+    return lpArmarLectura(prov, nombre, leido, Date.now() - t0, cfg, diag === true);
+  });
 }
 
 function lpCargando(si, texto) {
@@ -96,7 +498,8 @@ function lpPintarRegla() {
       + esc((p.lectura && p.lectura.nota) || 'falta la configuración de lectura del laboratorio')
       + '.';
   } else {
-    h += '<br>Se espera un <b>' + esc(String(p.lectura.tipo).toUpperCase()) + '</b>.';
+    h += '<br>Se espera un <b>' + esc(String(p.lectura.tipo).toUpperCase()) + '</b>'
+      + (p.lectura.tipo === 'pdf' ? ', que se lee en esta misma pantalla.' : '.');
   }
   caja.innerHTML = h;
   caja.hidden = false;
@@ -133,17 +536,13 @@ function lpProcesar() {
   LP_LEIDO = null; LP_ARMADO = null;
   if (!provId) return lpError('Elegí el proveedor antes de procesar.');
   if (!f) return lpError('Elegí el archivo de la lista.');
+  var prov = LP_PROV.filter(function (x) { return Number(x.id) === provId; })[0];
+  if (!prov) return lpError('No existe el proveedor ' + provId + '.');
 
   lpCargando(true, 'Leyendo ' + f.name + '…');
   $('cuerpo').innerHTML = '';
 
-  f.arrayBuffer().then(function (buf) {
-    return LP_FN('listas', {
-      proveedor_id: provId,
-      nombre_archivo: f.name,
-      archivo_base64: lpBase64(buf)
-    });
-  }).then(function (leido) {
+  lpLeer(prov, f).then(function (leido) {
     LP_LEIDO = leido;
     if (!leido.ok) { lpCargando(false); return lpError(null, leido); }
     lpCargando(true, 'Ligando ' + leido.lectura.filas_leidas + ' renglones con los artículos de Tango…');
