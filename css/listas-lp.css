@@ -1,0 +1,120 @@
+/* ====================================================================
+   LISTAS DE PRECIOS DE PROVEEDOR — DISSAN, 27/10/2026
+   ====================================================================
+   Se sube el PDF o el Excel del laboratorio y baja el .xlsx de la
+   planilla de precios de compra de Tango.
+
+   LOS COLORES SON LOS DEL PANEL, que es OSCURO. La primera version de
+   esta hoja estaba escrita en claro (#fff de fondo, #0f172a de texto):
+   los titulos de seccion quedaban negros sobre azul y no se leian. Si se
+   toca algo acá, los colores salen de las variables, no de un hex suelto.
+
+   [hidden]{display:none !important} ya es la PRIMERA regla de app.css.
+   No se repite ni se pisa: ninguna regla de este archivo pone `display`
+   sobre un elemento que se esconde con el atributo hidden.
+   ==================================================================== */
+
+.lp { --navy-card:#123252; --tx:#A8BACC; --tx2:#7E91A3;
+      --ok:#9ED3BC; --mal:#E6A3A3; --ojo:#DCC48E;
+      max-width:1180px; }
+
+.lp-cab p { color:var(--tx); font-size:12.5px; line-height:1.6; max-width:900px; margin:5px 0 0; }
+.lp-cab b { color:var(--texto); font-weight:600; }
+
+/* El botón se alinea ARRIBA, no al pie de la columna: si un cartel estira un
+   campo, el botón se corre y el clic cae en el vacío. Es el golpe del 20/10 con
+   los chips del Tablero, donde casi reporto roto un filtro que andaba. */
+.lp-form {
+  display:flex; flex-wrap:wrap; gap:14px 18px; align-items:flex-start;
+  background:var(--navy-card); border-radius:9px; padding:13px 15px; margin:14px 0 0;
+}
+.lp-campo { display:flex; flex-direction:column; gap:6px; min-width:220px; }
+.lp-campo.lp-accion { min-width:0; }
+.lp-rot { font-size:10px; font-weight:600; letter-spacing:.07em; text-transform:uppercase;
+          color:var(--tx2); }
+.lp-sel, .lp-file {
+  font:inherit; font-size:13.5px; padding:9px 11px; border:1px solid var(--borde);
+  border-radius:8px; background:var(--contenido); color:var(--texto); min-width:260px;
+}
+.lp-file { padding:7px 11px; }
+.lp-sel:focus, .lp-file:focus { outline:none; border-color:var(--verde); }
+.lp-btn {
+  align-self:flex-start; margin-top:21px;
+  font:inherit; font-size:13.5px; font-weight:600; padding:10px 20px;
+  border:0; border-radius:8px; background:var(--verde); color:#06201A; cursor:pointer;
+}
+.lp-btn:hover:not(:disabled) { background:var(--verde2); }
+.lp-btn:disabled { background:#2C4A63; color:var(--tx2); cursor:default; }
+
+.lp-regla {
+  margin-top:12px; padding:11px 14px; border-radius:9px;
+  background:var(--navy-card); border:1px solid var(--borde);
+  font-size:12.5px; color:var(--tx); line-height:1.6;
+}
+.lp-regla b { color:var(--texto); font-weight:600; }
+
+.lp-cargando { margin-top:16px; display:flex; align-items:center; gap:10px;
+               font-size:13px; color:var(--tx); }
+.lp-giro { width:15px; height:15px; border:2px solid rgba(255,255,255,.18);
+           border-top-color:var(--verde); border-radius:50%;
+           animation:lpGiro .8s linear infinite; }
+@keyframes lpGiro { to { transform:rotate(360deg); } }
+
+/* ---- el resultado ---- */
+.lp-sec { margin:22px 0 2px; font-size:11.5px; font-weight:700; color:var(--texto);
+          letter-spacing:.07em; text-transform:uppercase; }
+.lp-sec-pie { margin:0 0 10px; font-size:11.5px; color:var(--tx2); line-height:1.5;
+              max-width:900px; }
+.lp-sec-pie b { color:var(--tx); font-weight:600; }
+
+.lp-tarjetas { display:grid; grid-template-columns:repeat(auto-fill, minmax(150px,1fr));
+               gap:9px; margin-top:10px; }
+.lp-t { background:var(--navy-card); border-radius:8px; padding:11px 13px; }
+.lp-t .n { font-size:20px; font-weight:700; line-height:1.15; color:var(--texto);
+           font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+.lp-t .r { font-size:11px; color:var(--tx); margin-top:3px; line-height:1.3; }
+.lp-t.lp-mal .n { color:var(--mal); }
+.lp-t.lp-bien .n { color:var(--ok); }
+
+.lp-aviso {
+  margin-top:12px; padding:11px 14px; border-radius:9px; font-size:12.5px; line-height:1.6;
+  background:rgba(233,185,73,.08); border:1px solid rgba(233,185,73,.3); color:var(--tx);
+}
+.lp-aviso b { color:var(--ojo); font-weight:600; }
+.lp-aviso ul { margin:6px 0 0; padding-left:20px; }
+.lp-aviso li { margin:3px 0; }
+
+/* La caja es la que desliza; la tabla lleva min-width:max-content para que las
+   columnas no se aplasten contra el ancho del teléfono. En el Informe esto NO
+   va, porque allá la tabla es su propio contenedor de scroll. */
+.lp-wrap { margin-top:10px; overflow-x:auto; border-radius:9px; background:var(--navy-card); }
+table.lp-tb { border-collapse:collapse; width:100%; min-width:max-content; font-size:12px; }
+
+/* app.css pone text-transform:uppercase en th. Acá NO: esta grilla muestra la
+   planilla de Tango y su encabezado se lee «Cód. Artículo», no «CÓD. ARTÍCULO».
+   El archivo que se baja toma textContent y sale bien de las dos formas, pero la
+   pantalla tiene que mostrar lo mismo que va a salir. */
+table.lp-tb th {
+  position:sticky; top:0; z-index:1; background:#0E2A46; color:var(--texto);
+  font-weight:600; font-size:11.5px; text-align:left; padding:8px 10px;
+  white-space:nowrap; text-transform:none; letter-spacing:0;
+  border-bottom:1px solid var(--borde);
+}
+table.lp-tb td { padding:6px 10px; border-top:1px solid var(--borde); white-space:nowrap;
+                 color:var(--tx); }
+table.lp-tb td.num { text-align:right; font-variant-numeric:tabular-nums; color:var(--texto); }
+table.lp-tb tbody tr:hover td { background:rgba(255,255,255,.03); }
+
+.lp-barra { display:flex; flex-wrap:wrap; align-items:center; gap:12px; margin-top:8px; }
+.lp-btn-bajar { margin-top:0; }
+.lp-bajado { font-size:12px; color:var(--ok); }
+
+.lp-chip { display:inline-block; padding:1px 7px; border-radius:999px; font-size:10.5px;
+           font-weight:700; background:rgba(158,211,188,.14); color:var(--ok); }
+.lp-chip.lp-chip-caja { background:rgba(220,196,142,.16); color:var(--ojo); }
+
+@media (max-width: 900px) {
+  .lp-campo { min-width:0; width:100%; }
+  .lp-sel, .lp-file { min-width:0; width:100%; }
+  .lp-btn { margin-top:4px; width:100%; }
+}

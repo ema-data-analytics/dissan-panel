@@ -138,6 +138,7 @@ const PANTALLAS = {
   MargenDeVentas: { archivo: 'index.html',     rotulo: 'Margen' },
   Hilo:           { archivo: 'hilo.html',      rotulo: 'Hilo' },
   Ayuda:          { archivo: 'ayuda.html',     rotulo: 'Ayuda' },
+  Listas:         { archivo: 'listas.html',    rotulo: 'Listas de precios' },
   Seguridad:      { archivo: 'seguridad.html', rotulo: 'Seguridad' },
   Stock:          { archivo: 'stock.html',     rotulo: 'Stock' },
   Compras:        { archivo: 'compras.html',   rotulo: 'Compras' },

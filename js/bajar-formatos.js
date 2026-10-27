@@ -143,8 +143,13 @@ function bajarCol(n){                /* 0 -> A, 26 -> AA */
 function bajarXlsx(hoja){
   /* Los formatos que se usan, en el orden en que se declaran abajo.
      El 0 es el General de Excel; los nuestros empiezan en 164. */
-  var FMT = ['#,##0.00', '#,##0', '0.0"%"', 'dd/mm/yyyy'];
-  var IDX = { num:1, ent:2, pct:3, fecha:4, texto:0, titulo:5, enc:6 };
+  /* 'num4' se agregó el 27/10 para la planilla de precios de compra de Tango:
+     ahí el precio viene con CUATRO decimales (6162,4152) y mostrarlo con dos
+     haría creer que el archivo perdió los decimales. El valor guardado es el
+     mismo; lo que cambia es lo que se ve al abrirlo.
+     Los índices 0..6 NO se mueven: el nuevo va al final. */
+  var FMT = ['#,##0.00', '#,##0', '0.0"%"', 'dd/mm/yyyy', '#,##0.0000'];
+  var IDX = { num:1, ent:2, pct:3, fecha:4, texto:0, titulo:5, enc:6, num4:7 };
 
   var numFmts = FMT.map(function(f, i){
     return '<numFmt numFmtId="' + (164 + i) + '" formatCode="' + bajarXmlEsc(f) + '"/>';
@@ -167,7 +172,7 @@ function bajarXlsx(hoja){
     '</fills>' +
     '<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>' +
     '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>' +
-    '<cellXfs count="7">' +
+    '<cellXfs count="8">' +
       '<xf numFmtId="0"   fontId="0" fillId="0" borderId="0" xfId="0"/>' +            /* 0 texto  */
       '<xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>' +
       '<xf numFmtId="165" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>' +
@@ -176,6 +181,7 @@ function bajarXlsx(hoja){
       '<xf numFmtId="0"   fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1"/>' + /* 5 titulo */
       '<xf numFmtId="0"   fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" ' +
           'applyFill="1" applyAlignment="1"><alignment vertical="center" wrapText="1"/></xf>' +
+      '<xf numFmtId="168" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>' +
     '</cellXfs>' +
     '<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>' +
     '</styleSheet>';
@@ -188,7 +194,11 @@ function bajarXlsx(hoja){
                '</t></is></c></row>');
     nf++;
   });
-  if ((hoja.titulo || []).length) nf++;          /* un renglon en blanco */
+  /* `sinBlanco` existe por la planilla de importacion de Tango, que es un
+     formato FIJO: CUIT en A1, titulos en la fila 2 y los datos desde la 3. Un
+     renglon en blanco de cortesia ahi corre todo una fila y Tango no lo lee.
+     Por defecto queda como estaba, asi que ninguna otra pantalla cambia. */
+  if ((hoja.titulo || []).length && !hoja.sinBlanco) nf++;   /* un renglon en blanco */
 
   var filaEnc = nf;
   var celdasEnc = hoja.encabezados.map(function(e, i){
@@ -207,7 +217,8 @@ function bajarXlsx(hoja){
       var ref = bajarCol(i) + nf;
       if (cel.t === 'num'){
         var fmt = hoja.formatos[i] === 'pct' ? IDX.pct
-                : (hoja.formatos[i] === 'ent' ? IDX.ent : IDX.num);
+                : (hoja.formatos[i] === 'ent' ? IDX.ent
+                : (hoja.formatos[i] === 'num4' ? IDX.num4 : IDX.num));
         cs += '<c r="' + ref + '" s="' + fmt + '"><v>' + cel.v + '</v></c>';
       } else if (cel.t === 'fecha'){
         cs += '<c r="' + ref + '" s="' + IDX.fecha + '"><v>' +
