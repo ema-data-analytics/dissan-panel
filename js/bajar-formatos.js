@@ -408,6 +408,27 @@ function bajarPdf(doc){
   }
   altoFila = ptFila + 5;
 
+  /* ---- SI LAS COLUMNAS DE TEXTO SALIERON RECORTADAS, SE DICE ---- 28/10/2026
+     Medido con la grilla de 27 columnas de Ventas: en A4 apaisado los numeros,
+     fechas y codigos entran enteros (eso ya estaba resuelto el 23/10), pero las
+     columnas de texto llegan al piso de 26 pt y salen como "C..." o "Se c...".
+     El numero no miente, pero la hoja no se puede leer y NO HAY NADA que lo
+     avise: el que la abre cree que la Observacion dice "Se c...".
+     Asi que el subtitulo lo declara y manda al Excel, que las trae completas.
+     PENDIENTE de fondo: partir el PDF en bloques de columnas, que es el arreglo
+     que no pierde nada. Esto es la declaracion del hueco, no el arreglo. */
+  var necFinal = necesario(ptFila);
+  var textoRecortado = 0;
+  for (var ri = 0; ri < anchos.length; ri++){
+    if (!esNum[ri] && anchos[ri] < necFinal[ri] - 1) textoRecortado++;
+  }
+  if (textoRecortado > 0){
+    doc.subtitulo = (doc.subtitulo ? doc.subtitulo + '  ·  ' : '') +
+      'ATENCION: ' + textoRecortado + ' de las ' + anchos.length + ' columnas son de texto y no ' +
+      'entran en la hoja, asi que salen recortadas con puntos suspensivos. Los numeros, las ' +
+      'fechas y los codigos estan enteros. Para el texto completo, el Excel.';
+  }
+
   var paginas = [], actual = null, y = 0;
   function nuevaPagina(){
     actual = { texto: [], lineas: [], cajas: [] };
