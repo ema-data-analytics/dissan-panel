@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DISSAN · Pruebas</title>
+<link rel="icon" href="data:,">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/app.css?v=18">
+<link rel="stylesheet" href="../css/tablero-db.css?v=1">
+<link rel="stylesheet" href="../css/pruebas.css?v=1">
+</head>
+<body>
+
+<!-- ================== LOGIN ================== -->
+<div id="login-wrap">
+  <div class="login-box">
+    <div class="marca">EMA DATA ANALYTIC</div>
+    <h1 class="login-tit">Ingresar al panel DISSAN</h1>
+
+    <label class="fl">Usuario</label>
+    <input id="l-user" class="fi" autocomplete="username" spellcheck="false">
+
+    <label class="fl">Contraseña</label>
+    <div class="clave">
+      <input id="l-pass" class="fi" type="password" autocomplete="current-password">
+      <button type="button" class="ojo" id="l-ojo" onclick="verClave()"
+              aria-label="Mostrar la contraseña" aria-pressed="false"></button>
+    </div>
+
+    <button id="l-btn" class="btn" onclick="entrar()">Entrar</button>
+    <div id="l-err" class="err"></div>
+    <div class="pie">Mismo usuario y contraseña que el panel de siempre</div>
+  </div>
+</div>
+
+<!-- ================== APP ================== -->
+<div id="app" hidden data-modulo="Pruebas">
+  <div id="shell">
+    <div id="sidebar">
+      <div class="marca">
+        <img class="marca-logo" src="../img/ema.png" alt="EMA Data Analytics">
+        <div class="marca-pie">Panel DISSAN</div>
+      </div>
+      <div class="marca-socio">
+        <img src="../img/macromanager.png" alt="MACROmanager Consultora">
+      </div>
+      <nav id="menuLateral"></nav>
+      <div id="panelUsuario">
+        <div class="avatar" id="avatarInicial">?</div>
+        <div class="datos">
+          <div class="nombre" id="nombreUsuario">&mdash;</div>
+          <div class="rol" id="rolUsuario">&mdash;</div>
+        </div>
+        <button id="btnSalir" onclick="salir()" title="Cerrar sesion"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/></svg></button>
+      </div>
+    </div>
+
+    <div id="areaContenido">
+      <div id="topbar">
+        <div id="tituloModulo">Pruebas</div>
+        <div id="fechaHoy"></div>
+      </div>
+      <div id="contenido">
+<div class="db" id="prRaiz">
+
+  <div class="pr-cab">
+    <h1>Pantallas en prueba</h1>
+    <p class="pr-bajada">Esto lo ve <b>únicamente el usuario con rol <code>pruebas</code></b> &mdash; o sea vos. El <code>super</code> que tiene DISSAN <b>no ve nada de esto</b>. Los módulos de
+    acá <b>no están en el menú de DISSAN</b> y el portero no los deja abrir con otro usuario, ni
+    siquiera escribiendo la dirección a mano. Cuando una pantalla se cierra, se le agregan los
+    roles en la tabla <code>modulos</code> y pasa al menú de todos.</p>
+  </div>
+
+  <div id="prEstado"></div>
+
+  <div class="pr-grilla">
+
+    <div class="pr-ficha">
+      <div class="pr-et">Pantalla nueva</div>
+      <h2>Ventas facturadas</h2>
+      <p>Lo que se facturó de 2024 a hoy, renglón por renglón, con <b>costo, margen y MarkUp</b>,
+      los resúmenes por cliente, provincia y proveedor, y el detalle de <b>27 columnas</b>.</p>
+      <a class="pr-btn" href="ventas.html">Abrir Ventas</a>
+      <div class="pr-mirar">
+        <b>Qué hay que mirar:</b>
+        <ul>
+          <li>Los <b>11 filtros</b>. Fecha, provincia, cliente y proveedor consultan la base;
+            vendedor, artículo, factura/pedido/OC, con o sin costo, y observación filtran al
+            instante sobre lo que ya está en la pantalla.</li>
+          <li>Que el <b>Margen %</b> y el <b>MarkUp %</b> no se confundan: uno mide sobre la venta
+            y el otro sobre el costo. La fórmula de cada uno está en el bloque de arriba.</li>
+          <li>Las filas en <b>amarillo</b> no tienen costo y el motivo está escrito al final de la
+            fila. Las filas en <b>rojo</b> vendieron por debajo del costo.</li>
+          <li><b>Bajar a Excel y abrir el archivo.</b> La grilla muestra 30 filas y el archivo trae
+            todas: eso dice la barra de abajo de la tabla, y hay que comprobarlo.</li>
+          <li>El <b>PDF</b> del detalle avisa que las columnas de texto salen recortadas. Las de
+            números, fechas y códigos tienen que estar enteras.</li>
+          <li>El botón <b>Correr el control ahora</b>, que cruza factura por factura contra los
+            asientos contables de DISSAN en vivo.</li>
+        </ul>
+      </div>
+      <div class="pr-ojo">Lo que todavía no vi yo: esta pantalla publicada. Si algo no anda, es
+      acá donde va a aparecer.</div>
+    </div>
+
+    <div class="pr-ficha">
+      <div class="pr-et">Circuito más barato</div>
+      <h2>Preguntar, con el circuito <code>preguntar3</code></h2>
+      <p>La misma pantalla de Preguntar, pero contestando con el circuito que tiene los
+      <b>tres cambios de costo</b>: el caché sobre toda la conversación, el resumen recortado que
+      se le devuelve al modelo, y el gasto cobrado separando lo que se lee del caché.</p>
+      <a class="pr-btn" href="pregunta.html?v=3">Abrir Preguntar &mdash; circuito barato</a>
+      <a class="pr-btn sec" href="pregunta.html">Abrir Preguntar &mdash; el de siempre</a>
+      <div class="pr-mirar">
+        <b>Qué hay que mirar, y es importante cómo:</b>
+        <ul>
+          <li>Hacer una pregunta <b>corta</b>, no la larga. La larga ya se midió y costó
+            <b>US$ 1,0566</b> en 5 llamadas y 226.141 tokens: ésa es la línea de base.</li>
+          <li>Hacer <b>la misma pregunta dos veces</b>. La segunda es la que lee del caché, y es la
+            que dice si el ahorro existe.</li>
+          <li>Abrir <b>«Cómo lo hizo»</b> al final: ahí dice qué circuito contestó y
+            <b>cuántos tokens se leyeron del caché</b>.</li>
+        </ul>
+      </div>
+      <div class="pr-ojo">El ahorro <b>no está medido</b>. Hasta que estas dos corridas existan, no
+      hay ningún número que publicar.</div>
+    </div>
+
+  </div>
+
+  <div class="pr-pie">
+    <b>Cómo se cierra una pantalla:</b> cuando lo de arriba se probó y anda, en la tabla
+    <code>modulos</code> se le agregan los roles <code>admin</code>, <code>gerencia</code>,
+    <code>operador</code> y pasa al menú de DISSAN, en el orden que corresponda. No hay que tocar
+    nada de código para eso.
+  </div>
+</div>
+      </div>
+    </div>
+  </div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="../js/core.js?v=10"></script>
+<script src="../js/pruebas.js?v=1"></script>
+</body>
+</html>
