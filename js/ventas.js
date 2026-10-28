@@ -445,7 +445,14 @@ function vtDibujar(res, det, msTotal, msPartes){
   if (baj){
     baj.innerHTML = 'DISSAN S.R.L. &middot; <b>' + vtNum(tot.renglones) + ' renglones</b> de <b>' +
       vtNum(tot.comprobantes) + ' facturas</b> &middot; del ' + vtFecha(res.desde) + ' al ' +
-      vtFecha(res.hasta) + ' &middot; ' + vtRotuloFiltros(res).replace(/<[^>]*>/g, '') +
+      vtFecha(res.hasta) +
+      /* vtRotuloFiltros ya empieza por el periodo, y arriba ya se escribio: se
+         saca esa parte y queda solo lo que el usuario eligio ademas */
+      (function(){
+        var r = vtRotuloFiltros(res).replace(/<[^>]*>/g, '')
+                 .replace(/^del .*? al [^ ]+\s*(·\s*)?/, '');
+        return r ? ' &middot; ' + r : '';
+      })() +
       ' &middot; medido en ' + vtNum(msTotal) + ' ms contra la base';
   }
 

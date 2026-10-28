@@ -14,12 +14,31 @@
    golpe del 14/10 y del 20/10.
    ===================================================================== */
 
+/* LOS COLORES SALEN DEL PANEL, NO DE MI.                   28/10/2026
+   ERROR REAL: la primera version copiaba la paleta CLARA del informe que
+   mando el usuario (#ffffff de tarjeta, #17201f de texto) y la metia
+   dentro del panel, que es OSCURO (--fondo #09233A, --texto #F2F5F3).
+   Resultado: tarjetas blancas con texto negro al lado de tablas oscuras
+   con texto oscuro. No se leia nada, y mis controles no lo agarraron
+   porque median errores de consola y scroll, no SI SE VE.
+   Ahora cada color apunta a la variable del panel: si manana el panel
+   cambia de tema, esto cambia con el. */
 #vtInforme{
-  --vi-papel:#f6f7f8; --vi-panel:#ffffff; --vi-tinta:#17201f; --vi-tinta2:#5b6a6d;
-  --vi-linea:#dde3e5; --vi-petroleo:#1f4e5f; --vi-petroleo2:#2d6c80;
-  --vi-aviso:#8a5a00; --vi-aviso-f:#fff8e8;
-  --vi-perdida:#9c1f1f; --vi-perdida-f:#fdf0f0;
-  --vi-ok:#17633f; --vi-zebra:#fafbfc;
+  --vi-papel:    var(--contenido);
+  --vi-panel:    var(--caja);
+  --vi-tinta:    var(--texto);
+  --vi-tinta2:   var(--gris);
+  --vi-linea:    var(--borde);
+  --vi-petroleo: #11405c;        /* la banda del encabezado: es FONDO, va oscura */
+  --vi-petroleo2:#1d6a8f;
+  /* ERROR REAL: usaba --vi-petroleo tambien para el TEXTO de los titulos del
+     bloque "Como leer", y es un azul oscuro sobre fondo oscuro: no se leia
+     nada. Un color de fondo y un color de texto no son el mismo color. */
+  --vi-acento:   #6fd3e8;
+  --vi-aviso:    var(--ambar);   --vi-aviso-f:  rgba(233,185,73,.12);
+  --vi-perdida:  var(--rojo);    --vi-perdida-f:rgba(255,139,143,.12);
+  --vi-ok:       var(--verde2);
+  --vi-zebra:    rgba(255,255,255,.03);
   --vi-dato: ui-monospace, "Cascadia Mono", "Segoe UI Mono", "Roboto Mono", Menlo, Consolas, monospace;
   color:var(--vi-tinta);
 }
@@ -39,7 +58,7 @@
   border-left:4px solid var(--vi-petroleo2); border-radius:6px; margin-bottom:16px;
 }
 #vtInforme details.vi-ayuda summary{
-  cursor:pointer; padding:11px 14px; font-weight:650; color:var(--vi-petroleo);
+  cursor:pointer; padding:11px 14px; font-weight:650; color:var(--vi-acento);
   list-style:none;
 }
 #vtInforme details.vi-ayuda summary::-webkit-details-marker{ display:none }
@@ -49,7 +68,7 @@
 #vtInforme details.vi-ayuda[open] summary::before{ transform:rotate(90deg) }
 #vtInforme .vi-ayuda-cuerpo{ padding:0 16px 14px; columns:4 300px; column-gap:22px }
 #vtInforme .vi-ayuda-cuerpo > div{ break-inside:avoid; margin-bottom:13px }
-#vtInforme .vi-ayuda-cuerpo h3{ margin:0 0 3px; font-size:13px; color:var(--vi-petroleo) }
+#vtInforme .vi-ayuda-cuerpo h3{ margin:0 0 3px; font-size:13px; color:var(--vi-acento) }
 #vtInforme .vi-ayuda-cuerpo p{ margin:0; font-size:13px; color:var(--vi-tinta2) }
 #vtInforme .vi-formula{
   font-family:var(--vi-dato); background:var(--vi-zebra); border:1px solid var(--vi-linea);
@@ -103,7 +122,7 @@
 #vtInforme .vi-tb-caja td.der{ font-family:var(--vi-dato); font-variant-numeric:tabular-nums }
 #vtInforme .vi-tb-caja td.cod{ font-family:var(--vi-dato); font-size:11.5px }
 #vtInforme .vi-tb-caja tbody tr:nth-child(even){ background:var(--vi-zebra) }
-#vtInforme .vi-tb-caja tbody tr:hover{ background:#e9f2f5 }
+#vtInforme .vi-tb-caja tbody tr:hover{ background:rgba(255,255,255,.07) }
 /* el renglon sin costo: el aviso se lee, no se esconde */
 #vtInforme .vi-tb-caja tr.vi-sincosto td.vi-obs{
   color:var(--vi-aviso); background:var(--vi-aviso-f); white-space:normal; min-width:230px;
@@ -134,15 +153,15 @@
   border:1px solid var(--vi-linea); background:var(--vi-zebra); color:var(--vi-tinta2);
   white-space:nowrap;
 }
-#vtInforme .bt-pedido  { background:#eef4f7; color:#1f4e5f; border-color:#cfe0e7 }
-#vtInforme .bt-respuesta{ background:#f2f4f5; color:#5b6a6d }
-#vtInforme .bt-accion  { background:#eaf5ef; color:#17633f; border-color:#cfe6da }
-#vtInforme .bt-medicion{ background:#eef2fb; color:#2b3f7a; border-color:#d4ddf2 }
-#vtInforme .bt-entrega { background:#eaf5ef; color:#17633f; border-color:#cfe6da }
-#vtInforme .bt-decision{ background:#f6f0fb; color:#5a3080; border-color:#e2d4ef }
-#vtInforme .bt-error   { background:var(--vi-aviso-f); color:var(--vi-aviso); border-color:#efdfb8 }
+#vtInforme .bt-pedido  { background:rgba(109,197,232,.14); color:#8fd4f0; border-color:rgba(109,197,232,.3) }
+#vtInforme .bt-respuesta{ background:rgba(255,255,255,.06); color:var(--gris); border-color:var(--borde) }
+#vtInforme .bt-accion  { background:rgba(11,196,146,.14); color:var(--verde2); border-color:rgba(11,196,146,.32) }
+#vtInforme .bt-medicion{ background:rgba(140,170,255,.14); color:#a9bdff; border-color:rgba(140,170,255,.3) }
+#vtInforme .bt-entrega { background:rgba(11,196,146,.14); color:var(--verde2); border-color:rgba(11,196,146,.32) }
+#vtInforme .bt-decision{ background:rgba(198,150,255,.14); color:#cfa6ff; border-color:rgba(198,150,255,.3) }
+#vtInforme .bt-error   { background:var(--vi-aviso-f); color:var(--vi-aviso); border-color:rgba(233,185,73,.35) }
 /* una cagada propia se nombra asi, no se disimula con el color de un aviso */
-#vtInforme .bt-error.bt-mio{ background:var(--vi-perdida-f); color:var(--vi-perdida); border-color:#f0cfcf }
+#vtInforme .bt-error.bt-mio{ background:var(--vi-perdida-f); color:var(--vi-perdida); border-color:rgba(255,139,143,.4) }
 #vtInforme tr.bt-fila-mia td{ background:var(--vi-perdida-f) }
 
 #vtInforme .bt-tipos{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:4px }
