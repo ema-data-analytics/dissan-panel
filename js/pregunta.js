@@ -405,14 +405,21 @@ function pgGrafico(datos, g){
 
   var s, j;
   if (g.tipo === 'columnas'){
-    var aCol = Math.max(10, Math.min(28, Math.floor(620 / filas.length)));
-    var alto = 130, pad = 8, ancho = aCol * filas.length + pad * 2;
+    /* EL LIENZO VA FIJO. Antes el ancho del viewBox se armaba con el ancho de
+       las columnas: con 3 columnas daba un lienzo de 100 px que el navegador
+       estiraba a 900 y agrandaba TODO nueve veces — las barras y los rotulos.
+       Ahora el lienzo mide siempre lo mismo, la columna tiene un ancho maximo
+       y el conjunto queda centrado. Encontrado en pantalla el 28/10. */
+    var ancho = 660, pad = 10, util = ancho - pad * 2;
+    var aCol = Math.max(8, Math.min(72, Math.floor(util / filas.length)));
+    var x0 = pad + Math.max(0, Math.round((util - aCol * filas.length) / 2));
+    var alto = 150;
     s = ['<div class="db-graf"><div class="db-tip"></div>',
          '<svg viewBox="0 0 ' + ancho + ' ' + (alto + 30) + '" role="img" aria-label="gráfico">'];
     for (j = 0; j < filas.length; j++){
       var v = Number(filas[j][g.valor] || 0);
       var hc = Math.max(1, Math.round((alto - 10) * Math.abs(v) / max));
-      var x = pad + j * aCol;
+      var x = x0 + j * aCol;
       var et = String(filas[j][g.etiqueta] === null || filas[j][g.etiqueta] === undefined
                       ? '' : filas[j][g.etiqueta]);
       s.push('<g class="f" data-tip="' + pgEsc(et + ': ' + pgExacto(v)) + '">');
@@ -425,8 +432,8 @@ function pgGrafico(datos, g){
       s.push('<rect class="z" x="' + x + '" y="0" width="' + aCol + '" height="' + alto + '"></rect>');
       s.push('</g>');
     }
-    s.push('<line class="eje" x1="' + pad + '" y1="' + alto + '" x2="' + (ancho - pad) +
-           '" y2="' + alto + '"></line></svg></div>');
+    s.push('<line class="eje" x1="' + x0 + '" y1="' + alto + '" x2="' +
+           (x0 + aCol * filas.length) + '" y2="' + alto + '"></line></svg></div>');
     return s.join('');
   }
 
