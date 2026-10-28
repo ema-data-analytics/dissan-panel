@@ -510,3 +510,47 @@ td.num,th.num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-n
    --------------------------------------------------------------------- */
 #contenido a{ color:#6fd3e8 }
 #contenido a:hover{ color:#9ee6f5 }
+
+/* ---------------------------------------------------------------------
+   LAS DOS BARRAS DE ABAJO DE CADA GRILLA                   28/10/2026
+   El paginado (filas.js) y la descarga (bajar.js). Las dos se armaban por
+   JavaScript y NINGUNA tenia una linea de CSS: salian con el boton gris
+   del navegador. Van global, porque las dos se ponen solas en cualquier
+   tabla de cualquier pantalla, incluida la que se escriba manana.
+   --------------------------------------------------------------------- */
+.fl-barra, .bajar-barra{
+  display:flex; flex-wrap:wrap; gap:7px; align-items:center;
+  margin:9px 0 2px; font-size:12px;
+}
+.fl-barra .fl-b, .bajar-barra .bajar-btn{
+  font:inherit; line-height:1.1; cursor:pointer;
+  padding:6px 11px; border-radius:7px;
+  border:1px solid var(--borde); background:var(--caja); color:var(--texto);
+}
+.fl-barra .fl-b:hover:not(:disabled){ background:#17405f; border-color:#2c5a7d }
+.fl-barra .fl-b:disabled{ color:var(--gris); cursor:default }
+.fl-barra .fl-pg{ color:var(--gris); font-variant-numeric:tabular-nums }
+.fl-barra .fl-pg b{ color:var(--texto); font-weight:600 }
+.fl-barra .fl-sep{ flex:1 1 0; min-width:0 }
+.fl-barra .fl-lab{ color:var(--gris); display:inline-flex; align-items:center; gap:6px }
+.fl-barra .fl-sel{
+  font:inherit; padding:5px 8px; border-radius:7px;
+  border:1px solid var(--borde); background:var(--caja); color:var(--texto);
+}
+.fl-barra .fl-baj{ color:var(--gris) }
+.fl-barra .fl-baj b{ color:var(--texto); font-weight:600 }
+
+/* la descarga es la accion, asi que se ve como accion. Texto oscuro sobre
+   el verde: el blanco sobre ese verde da 3,15 y el oscuro 5,24. */
+.bajar-barra .bajar-btn{
+  background:var(--verde); border-color:var(--verde); color:#06222b; font-weight:600;
+  display:inline-flex; align-items:center; gap:6px;
+}
+.bajar-barra .bajar-btn:hover:not(:disabled){ background:var(--verde2); border-color:var(--verde2) }
+.bajar-barra .bajar-btn:disabled{ background:var(--caja); border-color:var(--borde); color:var(--gris) }
+.bajar-barra .bajar-btn svg{ width:14px; height:14px }
+
+@media (max-width:900px){
+  .fl-barra .fl-sep{ display:none }
+  .fl-barra, .bajar-barra{ font-size:11.5px }
+}

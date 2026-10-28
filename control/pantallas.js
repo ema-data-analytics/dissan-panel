@@ -20,6 +20,21 @@
         commit, todos los HTML que lo usan tienen que apuntar al ?v=
         nuevo.
 
+     6. FILAS QUE NO SE PUEDEN ALCANZAR. El 28/10 la grilla pintaba 30
+        filas y escondia el resto: con un mes filtrado se veia SOLO EL
+        ULTIMO DIA y no habia forma de llegar al renglon 31. No alcanza
+        con que exista un control: se aprieta «ultima» y se exige que el
+        ULTIMO renglon se vea. Y se comprueba que el Excel siga bajando
+        TODAS las filas y no la pagina de arriba.
+     7. BOTONES QUE NO HACEN NADA. Se aprieta cada boton visible y se
+        exige que cambie algo: el contenido, un campo o el foco. Un boton
+        que no se puede apretar porque algo lo tapa tambien falla: es el
+        golpe del 20/10, donde apretaba el vacio y la pantalla mostraba
+        las cifras sin filtrar.
+
+   EL CONTROL DICE QUE MIDIO, no solo que paso. "0 fallas" es tambien lo
+   que imprime un control que no llego a mirar nada.
+
    Se corre con:  node control/pantallas.js
    Devuelve 0 si pasa todo, 1 si algo falla. El hook de pre-push lo usa.
    ===================================================================== */
@@ -38,6 +53,9 @@ const TIPOS = { '.html':'text/html', '.js':'text/javascript', '.css':'text/css',
 const JUGUETE = path.join(__dirname, 'supabase-de-juguete.js');
 
 const fallas = [];
+/* lo que el control MIDIO. Sin esto, "0 fallas" tambien es lo que
+   imprime un control que no llego a mirar nada. */
+const medido = { grillas:0, paginas:0, botones:0, descargas:0 };
 function falla(pantalla, clase, que){ fallas.push({ pantalla, clase, que }); }
 
 /* --------------------------------------------------------------- */
@@ -191,6 +209,145 @@ async function main(){
         '"' + m.texto + '" · ' + m.color + ' sobre ' + m.fondo + ' = ' + m.ratio +
         ' a 1 (minimo ' + MINIMO_CONTRASTE + ') · .' + m.clase);
 
+      /* ---- 6. FILAS QUE NO SE PUEDEN ALCANZAR ----
+         Una grilla que tiene 72 renglones y muestra 30 TIENE que tener un
+         control que lleve al 72. No alcanza con que el control exista: se
+         aprieta «ultima» y se exige que el ULTIMO renglon se vea. */
+      const controlarGrillas = async () => {
+      const grillas = await pg.evaluate(() => {
+        const ts = [...document.querySelectorAll('#contenido table')];
+        return ts.map((t, i) => {
+          t.dataset.ctrl = i;
+          const caja = t.closest('.vi-tb-caja,.db-tb-caja,.rt-tb,.marco') || t;
+          const sig = caja.nextElementSibling;
+          if (sig && /fl-barra/.test(sig.className || '')) sig.dataset.ctrl = i;
+          const trs = [...t.querySelectorAll('tbody tr')];
+          const datos = trs.filter(tr => !/tot\b|\btot/.test(tr.className || '') &&
+                                         !(tr.children.length === 1 && trs.length > 1));
+          return {
+            i, total: datos.length,
+            visibles: datos.filter(tr => tr.offsetParent !== null).length,
+            paginado: !!(sig && /fl-barra/.test(sig.className || '')),
+            titulo: (t.querySelector('thead th') || {}).textContent || ('tabla ' + (i + 1))
+          };
+        });
+      });
+      for (const g of grillas){
+        if (g.visibles >= g.total) continue;
+        const que = '«' + String(g.titulo).trim().slice(0, 24) + '…» muestra ' + g.visibles +
+                    ' de ' + g.total + ' renglones';
+        if (!g.paginado){
+          falla(quien, 'filas_inalcanzables',
+            que + ' y NO hay ningun control para llegar al resto. Esconder sin salida es recortar.');
+          continue;
+        }
+        await pg.click('.fl-barra[data-ctrl="' + g.i + '"] [data-ir="u"]').catch(() => {});
+        await pg.waitForTimeout(150);
+        const llego = await pg.evaluate((i) => {
+          const t = document.querySelector('#contenido table[data-ctrl="' + i + '"]');
+          const trs = [...t.querySelectorAll('tbody tr')]
+            .filter(tr => !/tot\b|\btot/.test(tr.className || ''));
+          const ult = trs[trs.length - 1];
+          return !!(ult && ult.offsetParent !== null);
+        }, g.i);
+        if (!llego) falla(quien, 'filas_inalcanzables',
+          que + ' y apretando «ultima» el ultimo renglon SIGUE sin verse.');
+        else { medido.grillas++; medido.paginas += Math.ceil(g.total / Math.max(1, g.visibles)); }
+
+        /* 6b. Y QUE EL ARCHIVO SIGA BAJANDO TODO.
+           Esta es LA trampa del paginado: si alguna vez se deja de pintar
+           las filas de las otras paginas, el Excel y el PDF bajarian solo
+           la pagina de arriba y dirian que son todas. Es el recorte
+           informado como total, que ya aparecio dos veces este mes. Asi
+           que se le pregunta al mismo lector que arma el archivo. */
+        const bajan = await pg.evaluate((i) => {
+          if (typeof bajarLeerTabla !== 'function') return -1;
+          const t = document.querySelector('#contenido table[data-ctrl="' + i + '"]');
+          try { return bajarLeerTabla(t).filas.length; } catch(e){ return -2; }
+        }, g.i);
+        if (bajan === -1) falla(quien, 'descarga_sin_lector',
+          que + ': no se pudo comprobar que el archivo baje todo (falta bajarLeerTabla).');
+        else if (bajan < g.total) falla(quien, 'descarga_recortada',
+          que + ', y el Excel bajaria ' + bajan + ' de ' + g.total +
+          ': el archivo se lleva la pagina, no la grilla.');
+        else medido.descargas++;
+      }
+      };
+      await controlarGrillas();
+
+      /* ---- 7. BOTONES QUE NO HACEN NADA ----
+         Se aprieta cada boton de la pantalla y se exige que algo cambie. Un
+         boton que no mueve una sola cosa del DOM es un boton muerto, y el
+         usuario lo aprieta creyendo que filtro. Es el golpe del 20/10, donde
+         el boton se corria 27 px y yo apretaba el vacio: la pantalla mostraba
+         las cifras sin filtrar y casi reporto roto el filtro.
+         No se aprietan: salir (cierra la sesion) ni las descargas (arman un
+         archivo y tardan). Si un boton legitimo aparece muerto, la excepcion
+         se DECLARA aca, no se saltea en silencio. */
+      const NO_APRETAR = ['btnSalir'];
+      const bots = await pg.$$('#contenido button:not([disabled])');
+      for (const bt of bots){
+        const info = await bt.evaluate(el => ({
+          id: el.id || '', cl: el.className || '',
+          rot: (el.textContent || '').trim().slice(0, 28)
+        }));
+        if (NO_APRETAR.includes(info.id) || /bajar-btn/.test(info.cl)) continue;
+        /* SE VUELVE A MIRAR SI SE VE, JUSTO ANTES DE APRETARLO. Un boton que
+           una accion anterior escondio no es un defecto: al apretar la primera
+           sugerencia la Ayuda esconde las otras ocho, que es lo correcto, y la
+           primera version de este control las reportaba a las ocho como
+           "no se puede apretar". El estado de la pantalla cambia mientras se
+           la recorre; una foto tomada al principio miente. */
+        const sigueVivo = await bt.evaluate(el => !!el.offsetParent && !el.disabled);
+        if (!sigueVivo) continue;
+        /* QUE CUENTA COMO "hizo algo". La primera version miraba SOLO las
+           mutaciones del DOM y dio 26 falsos positivos: los botones de
+           sugerencia de la Ayuda ESCRIBEN EN UN CAMPO, y cambiar el `value`
+           de un input no es una mutacion; y Preguntar con la caja vacia PONE
+           EL FOCO en la caja, que tampoco lo es. Las dos cosas son correctas.
+           Asi que la huella son las tres: mutaciones + los valores de todos
+           los campos + quien tiene el foco. */
+        const huella = () => pg.evaluate(() => {
+          const v = [...document.querySelectorAll('#contenido input, #contenido select, #contenido textarea')]
+            .map(e => e.type === 'checkbox' || e.type === 'radio' ? (e.checked ? '1' : '0') : e.value).join('\u0001');
+          const a = document.activeElement;
+          return v + '\u0002' + (a ? (a.id || a.tagName) + ':' + (a.className || '') : '');
+        });
+        await pg.evaluate(() => {
+          window.__mut = 0;
+          if (window.__obs) window.__obs.disconnect();
+          window.__obs = new MutationObserver(() => { window.__mut++; });
+          window.__obs.observe(document.getElementById('contenido'),
+            { childList:true, subtree:true, attributes:true, characterData:true });
+        });
+        /* se suelta el foco antes de medir: la Ayuda arranca con el cursor ya
+           puesto en la caja de la pregunta, asi que «Preguntar» con la caja
+           vacia la volvia a enfocar y el foco quedaba igual que antes. El
+           boton hacia lo correcto y mi medidor lo llamaba muerto. */
+        await pg.evaluate(() => { if (document.activeElement) document.activeElement.blur(); });
+        const antes = await huella();
+        /* el error del clic NO se tapa: un boton que no se puede apretar
+           porque algo lo cubre es el defecto del 20/10, donde apretaba el
+           vacio y la pantalla mostraba las cifras sin filtrar. */
+        let porque = '';
+        await bt.click({ timeout: 1500 }).catch(e => { porque = String(e.message).split('\n')[0]; });
+        await pg.waitForTimeout(320);
+        const mut = await pg.evaluate(() => { if (window.__obs) window.__obs.disconnect(); return window.__mut; });
+        const despues = await huella();
+        if (porque) falla(quien, 'boton_tapado',
+          '«' + info.rot + '» no se puede apretar: ' + porque.slice(0, 120));
+        else medido.botones++;
+        if (!porque && mut === 0 && antes === despues) falla(quien, 'boton_muerto',
+          '«' + info.rot + '» se aprieta y no cambia una sola cosa de la pantalla: ' +
+          'ni el contenido, ni un campo, ni el foco.');
+      }
+
+      /* y las grillas OTRA VEZ. La primera pasada corrio con la pantalla
+         recien cargada, donde la grilla de Ventas todavia no existe: la
+         pinta el boton «Ver», que recien se apreto arriba. Un control que
+         mira antes de que el dato llegue no controla nada. */
+      await controlarGrillas();
+
       await ctx.close();
     }
   }
@@ -200,6 +357,10 @@ async function main(){
   if (!fallas.length){
     console.log('CONTROL DE PANTALLAS: ' + pantallas.length +
                 ' pantallas x 2 tamanos, 0 fallas.');
+    console.log('  midio: ' + medido.botones + ' botones apretados · ' +
+                medido.grillas + ' grillas paginadas recorridas hasta la ultima pagina (' +
+                medido.paginas + ' paginas) · ' + medido.descargas +
+                ' con el archivo comprobado que baja TODAS las filas.');
     process.exit(0);
   }
   console.log('CONTROL DE PANTALLAS: ' + fallas.length + ' falla(s)\n');
