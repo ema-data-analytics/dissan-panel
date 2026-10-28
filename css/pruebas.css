@@ -1,0 +1,62 @@
+/* =====================================================================
+   MENU DE PRUEBAS — solo lo ve el usuario super              28/10/2026
+   =====================================================================
+   Todo encerrado en #prRaiz, para no tocar ninguna de las pantallas que
+   ya andan. No define `display` sobre nada que se esconda con `hidden`:
+   la regla [hidden]{display:none !important} de app.css manda.
+   ===================================================================== */
+#prRaiz{
+  --pr-papel:#f6f7f8; --pr-panel:#ffffff; --pr-tinta:#17201f; --pr-tinta2:#5b6a6d;
+  --pr-linea:#dde3e5; --pr-petroleo:#1f4e5f; --pr-petroleo2:#2d6c80;
+  --pr-aviso:#8a5a00; --pr-aviso-f:#fff8e8;
+  color:var(--pr-tinta);
+}
+#prRaiz .pr-cab{
+  background:var(--pr-petroleo); color:#fff; border-radius:8px;
+  padding:16px 18px; margin-bottom:18px;
+}
+#prRaiz .pr-cab h1{ margin:0; font-size:21px; font-weight:650; letter-spacing:-.01em }
+#prRaiz .pr-bajada{ margin:7px 0 0; font-size:13px; color:#cfe6ec; max-width:92ch }
+#prRaiz .pr-bajada b{ color:#fff; font-weight:600 }
+#prRaiz .pr-bajada code,
+#prRaiz .pr-pie code{ background:rgba(255,255,255,.14); padding:1px 5px; border-radius:3px }
+#prRaiz .pr-pie code{ background:#eef2f4; color:var(--pr-petroleo) }
+
+#prRaiz .pr-grilla{ display:grid; gap:14px; grid-template-columns:1fr }
+@media (min-width:1020px){ #prRaiz .pr-grilla{ grid-template-columns:1fr 1fr } }
+
+#prRaiz .pr-ficha{
+  background:var(--pr-panel); border:1px solid var(--pr-linea);
+  border-left:4px solid var(--pr-petroleo2); border-radius:7px;
+  padding:14px 16px 16px; min-width:0;
+}
+#prRaiz .pr-et{
+  font-size:10.5px; text-transform:uppercase; letter-spacing:.06em;
+  color:var(--pr-tinta2); font-weight:650;
+}
+#prRaiz .pr-ficha h2{ margin:4px 0 7px; font-size:17px; font-weight:650 }
+#prRaiz .pr-ficha h2 code{ font-size:14px; background:#eef2f4; padding:1px 5px; border-radius:3px }
+#prRaiz .pr-ficha > p{ margin:0 0 12px; font-size:13.5px; color:var(--pr-tinta2); max-width:70ch }
+
+#prRaiz .pr-btn{
+  display:inline-block; text-decoration:none; font-size:13.5px; font-weight:600;
+  background:var(--pr-petroleo); color:#fff; border:1px solid var(--pr-petroleo);
+  border-radius:5px; padding:8px 14px; margin:0 7px 10px 0;
+}
+#prRaiz .pr-btn:hover{ background:var(--pr-petroleo2); border-color:var(--pr-petroleo2) }
+#prRaiz .pr-btn.sec{ background:var(--pr-panel); color:var(--pr-petroleo) }
+#prRaiz .pr-btn.sec:hover{ background:#eef2f4 }
+
+#prRaiz .pr-mirar{ font-size:13px; color:var(--pr-tinta2); margin-top:4px }
+#prRaiz .pr-mirar b{ color:var(--pr-tinta) }
+#prRaiz .pr-mirar ul{ margin:6px 0 0; padding-left:20px }
+#prRaiz .pr-mirar li{ margin-bottom:5px }
+
+#prRaiz .pr-ojo{
+  margin-top:12px; font-size:12.5px; color:var(--pr-aviso);
+  background:var(--pr-aviso-f); border:1px solid #efdfb8; border-radius:5px; padding:8px 10px;
+}
+#prRaiz .pr-pie{
+  margin-top:18px; padding-top:13px; border-top:1px solid var(--pr-linea);
+  font-size:12.5px; color:var(--pr-tinta2); max-width:95ch;
+}
