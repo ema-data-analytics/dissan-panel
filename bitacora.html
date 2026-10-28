@@ -9,7 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/app.css?v=20">
 <link rel="stylesheet" href="css/tablero-db.css?v=1">
-<link rel="stylesheet" href="css/ventas-informe.css?v=2">
+<link rel="stylesheet" href="css/ventas-informe.css?v=3">
 </head>
 <body>
 
@@ -81,10 +81,18 @@
       </div>
       <div>
         <h3>Los tipos</h3>
-        <p><b>pedido</b> lo que pediste · <b>respuesta</b> lo que contesté ·
+        <p><b>actualización</b> lo que le pasa a la base sola ·
+        <b>pedido</b> lo que pediste · <b>respuesta</b> lo que contesté ·
         <b>acción</b> lo que se tocó en el sistema · <b>medición</b> una cifra contra la base ·
         <b>error</b> una falla, y si es mía dice <b>ERROR REAL</b> ·
         <b>entrega</b> algo que se entregó · <b>decisión</b> un criterio que se fijó.</p>
+      </div>
+      <div>
+        <h3>La carga de Tango entra sola acá</h3>
+        <p>Una línea por noche, con <b>cuántas filas nuevas</b> entraron contra la noche anterior
+        y qué tablas no entraron; una línea por cada <b>refresco del margen</b>; y una por cada
+        corrida del <b>control de defectos</b>. <b>No se copia nada</b>: se leen los registros que
+        la propia carga escribe, así que no puede desactualizarse ni contradecirlos.</p>
       </div>
       <div>
         <h3>Lo que acá no entra</h3>
@@ -122,6 +130,7 @@
         <label for="btTipo">Tipo</label>
         <select id="btTipo">
           <option value="">todos</option>
+          <option value="actualizacion">actualización de la base</option>
           <option value="pedido">pedido</option>
           <option value="respuesta">respuesta</option>
           <option value="accion">acción</option>
@@ -164,6 +173,6 @@
 <script src="js/bajar-formatos.js?v=2"></script>
 <script src="js/bajar.js?v=1"></script>
 <script src="js/filas.js?v=2"></script>
-<script src="js/bitacora.js?v=2"></script>
+<script src="js/bitacora.js?v=3"></script>
 </body>
 </html>

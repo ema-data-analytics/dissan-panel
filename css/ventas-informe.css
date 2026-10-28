@@ -160,7 +160,9 @@
 #vtInforme .bt-entrega { background:rgba(11,196,146,.14); color:var(--verde2); border-color:rgba(11,196,146,.32) }
 #vtInforme .bt-decision{ background:rgba(198,150,255,.14); color:#cfa6ff; border-color:rgba(198,150,255,.3) }
 #vtInforme .bt-error   { background:var(--vi-aviso-f); color:var(--vi-aviso); border-color:rgba(233,185,73,.35) }
-/* una cagada propia se nombra asi, no se disimula con el color de un aviso */
+/* lo que le pasa a la base: la carga nocturna y los refrescos */
+#vtInforme .bt-actualizacion{ background:rgba(127,224,200,.13); color:#7fe0c8; border-color:rgba(127,224,200,.3) }
+/* un error propio se nombra asi, no se disimula con el color de un aviso */
 #vtInforme .bt-error.bt-mio{ background:var(--vi-perdida-f); color:var(--vi-perdida); border-color:rgba(255,139,143,.4) }
 #vtInforme tr.bt-fila-mia td{ background:var(--vi-perdida-f) }
 

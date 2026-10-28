@@ -40,7 +40,8 @@ function btChip(tipo, titulo){
   var cl = 'bt-chip bt-' + btEsc(tipo);
   if (tipo === 'error' && /ERROR REAL/.test(titulo || '')) cl += ' bt-mio';
   var rot = tipo === 'accion' ? 'acción' : (tipo === 'medicion' ? 'medición' :
-            (tipo === 'decision' ? 'decisión' : tipo));
+            (tipo === 'decision' ? 'decisión' :
+            (tipo === 'actualizacion' ? 'actualización' : tipo)));
   return '<span class="' + cl + '">' + btEsc(rot) + '</span>';
 }
 
@@ -107,6 +108,10 @@ function btDibujar(filas, res, ms, f){
   h.push('<div class="vi-kpis">');
   h.push(btKpi('Anotaciones', btNum(res.anotaciones), 'en todo el período elegido'));
   h.push(btKpi('Días con movimiento', btNum(res.dias), 'días distintos con alguna anotación'));
+  /* las dos fuentes por separado, y las dos suman el total de arriba: si
+     alguna vez no suman, es un defecto aunque cada una este bien */
+  h.push(btKpi('De la base', btNum(res.de_la_base), 'carga de Tango, refrescos y controles'));
+  h.push(btKpi('Escritas a mano', btNum(res.a_mano), 'lo que pediste, contesté o se tocó'));
   h.push(btKpi('En pantalla', btNum(filas.length),
                filas.length >= f.p_limite
                  ? 'ES EL TOPE que elegiste: puede haber más'
