@@ -211,13 +211,27 @@ function pgPreguntar(forzarCircuito){
     });
 }
 
-/* la Edge Function preguntar2, con fetch crudo y el codigo HTTP a la vista:
+/* QUE CIRCUITO SE USA.                                           28/10/2026
+   Por defecto `preguntar2`, que es el que esta PROBADO en pantalla. Con
+   `?v=3` en la direccion se usa `preguntar3`, que es el mismo circuito con
+   los tres cambios de costo (cache sobre toda la conversacion, resumen
+   recortado y el gasto cobrado separando el cache).
+   Va con interruptor y no reemplazando, porque el barato todavia NO se probo
+   en pantalla: mientras no este medido, el que atiende es el probado. */
+function pgQueCircuito(){
+  try {
+    var v = new URLSearchParams(location.search).get('v');
+    return (v === '3') ? 'preguntar3' : 'preguntar2';
+  } catch (e) { return 'preguntar2'; }
+}
+
+/* la Edge Function del circuito, con fetch crudo y el codigo HTTP a la vista:
    sb.functions.invoke miente con payloads grandes (medido el 20/10). */
 function pgCircuito(texto, deIntencion, t0){
   return sb.auth.getSession().then(function(s){
     var tok = s && s.data && s.data.session ? s.data.session.access_token : null;
     if (!tok) throw new Error('La sesión venció. Volvé a entrar.');
-    return fetch(SB_URL + '/functions/v1/preguntar2', {
+    return fetch(SB_URL + '/functions/v1/' + pgQueCircuito(), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json',
                  'Authorization': 'Bearer ' + tok, 'apikey': SB_KEY },
@@ -479,13 +493,18 @@ function pgComoLoHizo(j){
     }
   }
   var t = j.tokens || {};
-  h.push('<div style="margin-top:8px">Modelo <b>' + pgEsc(j.modelo || '—') + '</b> &middot; ' +
+  h.push('<div style="margin-top:8px">Circuito <b>' + pgEsc(pgQueCircuito()) + '</b> &middot; ' +
+         'modelo <b>' + pgEsc(j.modelo || '—') + '</b> &middot; ' +
          pgNum(j.llamadas || 0) + ' llamada(s) &middot; ' + pgNum(t.entrada || 0) +
          ' tokens de entrada y ' + pgNum(t.salida || 0) + ' de salida' +
+         /* los leidos del cache se dicen aparte: cuestan la decima parte, asi
+            que sin separarlos no se puede ver de donde sale el ahorro */
+         (t.leidos_del_cache ? ', de los cuales <b>' + pgNum(t.leidos_del_cache) +
+                               '</b> se leyeron del caché' : '') +
          (j.presupuesto ? ' &middot; gastado hoy ' + pgExacto(j.presupuesto.usado_usd) +
                           ' de ' + pgExacto(j.presupuesto.tope_usd) : '') + '.</div>');
   h.push('<div>Las cifras de las tarjetas no las escribe el modelo: salen del resumen que ' +
-         'calcula la base en SQL sobre todas las filas.</div>');
+         'calcula la base en SQL sobre todas las filas de esa consulta.</div>');
   h.push('</details>');
   return h.join('');
 }
