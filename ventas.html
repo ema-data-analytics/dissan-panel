@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DISSAN · Ventas comparativo</title>
+<link rel="icon" href="data:,">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/app.css?v=18">
+<link rel="stylesheet" href="css/tablero-db.css?v=1">
+</head>
+<body>
+
+<!-- ================== LOGIN ================== -->
+<div id="login-wrap">
+  <div class="login-box">
+    <div class="marca">EMA DATA ANALYTIC</div>
+    <h1 class="login-tit">Ingresar al panel DISSAN</h1>
+
+    <label class="fl">Usuario</label>
+    <input id="l-user" class="fi" autocomplete="username" spellcheck="false">
+
+    <label class="fl">Contraseña</label>
+    <div class="clave">
+      <input id="l-pass" class="fi" type="password" autocomplete="current-password">
+      <button type="button" class="ojo" id="l-ojo" onclick="verClave()"
+              aria-label="Mostrar la contraseña" aria-pressed="false"></button>
+    </div>
+
+    <button id="l-btn" class="btn" onclick="entrar()">Entrar</button>
+    <div id="l-err" class="err"></div>
+    <div class="pie">Mismo usuario y contraseña que el panel de siempre</div>
+  </div>
+</div>
+
+<!-- ================== APP ================== -->
+<div id="app" hidden data-modulo="Ventas">
+    <div id="shell">
+    <div id="sidebar">
+      <div class="marca">
+        <img class="marca-logo" src="img/ema.png" alt="EMA Data Analytics">
+        <div class="marca-pie">Panel DISSAN</div>
+      </div>
+      <div class="marca-socio">
+        <img src="img/macromanager.png" alt="MACROmanager Consultora">
+      </div>
+      <nav id="menuLateral"></nav>
+      <div id="panelUsuario">
+        <div class="avatar" id="avatarInicial">?</div>
+        <div class="datos">
+          <div class="nombre" id="nombreUsuario">&mdash;</div>
+          <div class="rol" id="rolUsuario">&mdash;</div>
+        </div>
+        <button id="btnSalir" onclick="salir()" title="Cerrar sesion"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/></svg></button>
+      </div>
+    </div>
+
+    <div id="areaContenido">
+      <div id="topbar">
+        <div id="tituloModulo">Ventas comparativo</div>
+        <div id="fechaHoy"></div>
+      </div>
+      <div id="contenido">
+<div class="db" id="vtRaiz">
+  <div class="db-cab">
+    <p><b>Lo que se facturó</b>, renglón por renglón de factura de venta, neto sin IVA. Esta
+    pantalla <b>no mide margen ni costo</b>: mide facturación, y está controlada contra la
+    contabilidad de DISSAN — las cuentas <b>411001 Ventas Gravadas</b> y <b>411002 Ventas
+    Exentas</b>. La provincia sale del <b>prefijo del código de cliente</b> (MZ Mendoza,
+    SJ San Juan, SL San Luis). El proveedor sale del <b>sinónimo del artículo</b>.</p>
+  </div>
+
+  <div class="db-filtros">
+    <div class="db-rej">
+      <div class="db-campo">
+        <label for="vtDesde">Desde</label>
+        <input type="date" id="vtDesde" value="2024-01-01">
+      </div>
+      <div class="db-campo">
+        <label for="vtHasta">Hasta</label>
+        <input type="date" id="vtHasta">
+      </div>
+      <div class="db-campo">
+        <label for="vtProv">Provincia (por código)</label>
+        <select id="vtProv">
+          <option value="">las tres</option>
+          <option value="MENDOZA">MENDOZA (MZ)</option>
+          <option value="SAN JUAN">SAN JUAN (SJ)</option>
+          <option value="SAN LUIS">SAN LUIS (SL)</option>
+        </select>
+      </div>
+      <div class="db-campo doble db-busca">
+        <label for="vtCliente_i">Cliente</label>
+        <input type="text" id="vtCliente_i" autocomplete="off" placeholder="escribí un cliente…">
+        <div class="db-lista" id="vtCliente_l" hidden></div>
+        <div class="db-chips" id="vtCliente_c"></div>
+      </div>
+      <div class="db-campo doble db-busca">
+        <label for="vtProveedor_i">Proveedor</label>
+        <input type="text" id="vtProveedor_i" autocomplete="off" placeholder="JOHNSON, COLOPLAST…">
+        <div class="db-lista" id="vtProveedor_l" hidden></div>
+        <div class="db-chips" id="vtProveedor_c"></div>
+      </div>
+      <div class="db-campo">
+        <label for="vtDetalle">Renglones del detalle</label>
+        <select id="vtDetalle">
+          <option value="500">500</option>
+          <option value="2000" selected>2.000</option>
+          <option value="8000">8.000</option>
+          <option value="25000">todos</option>
+        </select>
+      </div>
+    </div>
+    <div class="db-acciones">
+      <button class="db-btn" id="vtAplicar">Ver</button>
+      <button class="db-btn sec" id="vt2024">2024</button>
+      <button class="db-btn sec" id="vt2025">2025</button>
+      <button class="db-btn sec" id="vt2026">2026</button>
+      <button class="db-btn sec" id="vtLimpiar">Desde 2024 a hoy</button>
+    </div>
+  </div>
+
+  <div id="vtEstado"></div>
+  <div id="vtCuerpo" hidden></div>
+</div>
+      </div>
+    </div>
+  </div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="js/core.js?v=10"></script>
+<script src="js/bajar-formatos.js?v=1"></script>
+<script src="js/bajar.js?v=1"></script>
+<script src="js/ventas.js?v=1"></script>
+</body>
+</html>
