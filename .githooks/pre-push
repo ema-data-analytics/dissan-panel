@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+# =====================================================================
+# NO SE SUBE UNA PANTALLA QUE NO SE VE                      28/10/2026
+# =====================================================================
+# Corre control/pantallas.js antes de cada push. Si falla, el push NO
+# sale. Esto existe porque una regla escrita en las notas no frena nada:
+# el 28/10 subi una pantalla con texto de 1,09 a 1 de contraste y mis
+# controles no lo agarraron porque median errores y scroll, no SI SE VE.
+#
+# Se prende una sola vez por copia del repositorio:
+#     git config core.hooksPath .githooks
+#
+# Si alguna vez hay que subir con el control en rojo (una urgencia real),
+# es con `git push --no-verify`, a conciencia y diciendolo.
+# =====================================================================
+set -u
+cd "$(git rev-parse --show-toplevel)" || exit 1
+
+if [ ! -f control/pantallas.js ]; then
+  echo "pre-push: no esta control/pantallas.js. No se controla nada: se corta."
+  exit 1
+fi
+
+echo "pre-push: corriendo el control de pantallas…"
+if node control/pantallas.js; then
+  echo "pre-push: pasa. Sube."
+  exit 0
+else
+  echo ""
+  echo "pre-push: EL PUSH SE CORTA. Arreglá lo de arriba y volvé a intentar."
+  echo "          (si de verdad hay que subir igual: git push --no-verify)"
+  exit 1
+fi

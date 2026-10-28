@@ -501,3 +501,12 @@ td.num,th.num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-n
   #fechaHoy{ display:none }           /* la fecha se come el titulo */
   .mv-graf svg, .db-graf svg{ min-width:430px }
 }
+
+/* ---------------------------------------------------------------------
+   UN ENLACE SIN ESTILO USA EL AZUL DEL NAVEGADOR            28/10/2026
+   rgb(0,0,238) sobre el fondo del panel da 1,39 a 1: no se lee. Lo agarro
+   control/pantallas.js en pregunta.html. Va global, porque el defecto no
+   es de una pantalla: es de cualquier <a> que alguien escriba manana.
+   --------------------------------------------------------------------- */
+#contenido a{ color:#6fd3e8 }
+#contenido a:hover{ color:#9ee6f5 }

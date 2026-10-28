@@ -5,10 +5,22 @@
    ya andan. No define `display` sobre nada que se esconda con `hidden`:
    la regla [hidden]{display:none !important} de app.css manda.
    ===================================================================== */
+/* LOS COLORES SALEN DEL PANEL, NO DE MI.                   28/10/2026
+   ERROR REAL, el mismo del mismo dia en ventas-informe.css: esta hoja
+   copiaba la paleta CLARA (#17201f de texto) y la metia en el panel, que
+   es OSCURO. Medido por control/pantallas.js: 1,09 a 1. Lo arregle en una
+   hoja y no en la otra porque mire una pantalla y no la otra. El control
+   las mira todas. */
 #prRaiz{
-  --pr-papel:#f6f7f8; --pr-panel:#ffffff; --pr-tinta:#17201f; --pr-tinta2:#5b6a6d;
-  --pr-linea:#dde3e5; --pr-petroleo:#1f4e5f; --pr-petroleo2:#2d6c80;
-  --pr-aviso:#8a5a00; --pr-aviso-f:#fff8e8;
+  --pr-papel:    var(--contenido);
+  --pr-panel:    var(--caja);
+  --pr-tinta:    var(--texto);
+  --pr-tinta2:   var(--gris);
+  --pr-linea:    var(--borde);
+  --pr-petroleo: #11405c;        /* FONDO de la banda */
+  --pr-petroleo2:#1d6a8f;
+  --pr-acento:   #6fd3e8;        /* TEXTO: no es el mismo color que el fondo */
+  --pr-aviso:    var(--ambar);  --pr-aviso-f: rgba(233,185,73,.12);
   color:var(--pr-tinta);
 }
 #prRaiz .pr-cab{
@@ -20,7 +32,7 @@
 #prRaiz .pr-bajada b{ color:#fff; font-weight:600 }
 #prRaiz .pr-bajada code,
 #prRaiz .pr-pie code{ background:rgba(255,255,255,.14); padding:1px 5px; border-radius:3px }
-#prRaiz .pr-pie code{ background:#eef2f4; color:var(--pr-petroleo) }
+#prRaiz .pr-pie code{ background:rgba(255,255,255,.08); color:var(--pr-acento) }
 
 #prRaiz .pr-grilla{ display:grid; gap:14px; grid-template-columns:1fr }
 @media (min-width:1020px){ #prRaiz .pr-grilla{ grid-template-columns:1fr 1fr } }
@@ -34,9 +46,9 @@
   font-size:10.5px; text-transform:uppercase; letter-spacing:.06em;
   color:var(--pr-tinta2); font-weight:650;
 }
-#prRaiz .pr-ficha h2{ margin:4px 0 7px; font-size:17px; font-weight:650 }
-#prRaiz .pr-ficha h2 code{ font-size:14px; background:#eef2f4; padding:1px 5px; border-radius:3px }
-#prRaiz .pr-ficha > p{ margin:0 0 12px; font-size:13.5px; color:var(--pr-tinta2); max-width:70ch }
+#prRaiz .pr-ficha h2{ margin:4px 0 7px; font-size:17px; font-weight:650; color:var(--pr-acento) }
+#prRaiz .pr-ficha h2 code{ font-size:14px; background:rgba(255,255,255,.08); padding:1px 5px; border-radius:3px }
+#prRaiz .pr-ficha > p{ margin:0 0 12px; font-size:13.5px; color:var(--pr-tinta); max-width:70ch }
 
 #prRaiz .pr-btn{
   display:inline-block; text-decoration:none; font-size:13.5px; font-weight:600;
@@ -44,19 +56,19 @@
   border-radius:5px; padding:8px 14px; margin:0 7px 10px 0;
 }
 #prRaiz .pr-btn:hover{ background:var(--pr-petroleo2); border-color:var(--pr-petroleo2) }
-#prRaiz .pr-btn.sec{ background:var(--pr-panel); color:var(--pr-petroleo) }
-#prRaiz .pr-btn.sec:hover{ background:#eef2f4 }
+#prRaiz .pr-btn.sec{ background:var(--pr-panel); color:var(--pr-acento) }
+#prRaiz .pr-btn.sec:hover{ background:rgba(255,255,255,.08) }
 
-#prRaiz .pr-mirar{ font-size:13px; color:var(--pr-tinta2); margin-top:4px }
+#prRaiz .pr-mirar{ font-size:13px; color:var(--pr-tinta); margin-top:4px }
 #prRaiz .pr-mirar b{ color:var(--pr-tinta) }
 #prRaiz .pr-mirar ul{ margin:6px 0 0; padding-left:20px }
 #prRaiz .pr-mirar li{ margin-bottom:5px }
 
 #prRaiz .pr-ojo{
   margin-top:12px; font-size:12.5px; color:var(--pr-aviso);
-  background:var(--pr-aviso-f); border:1px solid #efdfb8; border-radius:5px; padding:8px 10px;
+  background:var(--pr-aviso-f); border:1px solid rgba(233,185,73,.35); border-radius:5px; padding:8px 10px;
 }
 #prRaiz .pr-pie{
   margin-top:18px; padding-top:13px; border-top:1px solid var(--pr-linea);
-  font-size:12.5px; color:var(--pr-tinta2); max-width:95ch;
+  font-size:12.5px; color:var(--pr-tinta); max-width:95ch;
 }
