@@ -96,6 +96,34 @@ function pgCelda(valor, formato){
     return '<td class="db-num" data-v="' + Number(valor) + '">' + pgEsc(pgPct(valor)) + '</td>';
   return '<td>' + pgEsc(valor) + '</td>';
 }
+/* EL ROTULO de una columna cuando no viene declarado (es el caso de la via
+   gratis: las intenciones devuelven los nombres crudos de la funcion). Sin
+   esto la tabla muestra ANIO y VARIACION PCT, que es el nombre de la columna,
+   no el de la cosa. */
+var PG_ROTULOS = {
+  anio:'Año', mes:'Mes', mes_nro:'Mes', fecha:'Fecha', fecha_venta:'Fecha',
+  facturado:'Facturado', venta:'Venta', venta_total:'Venta', venta_renglon:'Venta',
+  renglones:'Renglones', comprobantes:'Facturas', clientes:'Clientes',
+  articulos:'Artículos', unidades:'Unidades', cantidad:'Cantidad',
+  variacion_pct:'Variación', participacion_pct:'Participación',
+  margen_pct:'Margen', markup_pct:'MarkUp', cobertura_pct:'Cobertura',
+  cod_client:'Código', cliente:'Cliente', provincia:'Provincia',
+  provincia_fiscal:'Provincia fiscal', zona:'Zona', localidad:'Localidad',
+  cod_vended:'Código', vendedor:'Vendedor',
+  cod_proveedor:'Código', proveedor:'Proveedor',
+  cod_articu:'Artículo', articulo:'Descripción', detalle:'Descripción',
+  comprobante:'Comprobante', n_comp:'Comprobante', t_comp:'Tipo',
+  precio_unitario:'Precio unitario', costo:'Costo', costo_unitario:'Costo unitario',
+  primera:'Primera', ultima:'Última', metodo:'Método', total:'Total',
+  f2024:'2024', f2025:'2025', f2026:'2026'
+};
+function pgRotulo(col){
+  var c = String(col || '');
+  if (PG_ROTULOS[c]) return PG_ROTULOS[c];
+  var t = c.replace(/_pct$/, ' %').replace(/_/g, ' ');
+  return t.charAt(0).toUpperCase() + t.slice(1);
+}
+
 /* el formato de una columna cuando el circuito no lo declaro */
 function pgAdivinarFormato(col, muestra){
   var c = String(col || '').toLowerCase();
@@ -339,7 +367,7 @@ function pgTabla(datos, columnas, titulo, sinTitulo){
   }
   if (!cols.length){
     for (var k in datos[0]){
-      cols.push({ columna:k, rotulo:k.replace(/_/g,' '),
+      cols.push({ columna:k, rotulo: pgRotulo(k),
                   formato: pgAdivinarFormato(k, datos[0][k]) });
     }
   }
