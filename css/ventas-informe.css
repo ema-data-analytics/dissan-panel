@@ -122,3 +122,36 @@
   #vtInforme .vi-tb-caja{ max-height:60vh }
   #vtInforme .vi-cab h1{ font-size:18px }
 }
+
+/* ---------------------------------------------------------------------
+   BITACORA — reusa el mismo lenguaje visual                 28/10/2026
+   Las clases van bajo #vtInforme, que es el contenedor que la bitacora
+   tambien usa, asi que no hace falta una hoja aparte.
+   --------------------------------------------------------------------- */
+#vtInforme .bt-chip{
+  display:inline-block; font-size:10.5px; font-weight:650; letter-spacing:.03em;
+  text-transform:uppercase; padding:2px 7px; border-radius:11px;
+  border:1px solid var(--vi-linea); background:var(--vi-zebra); color:var(--vi-tinta2);
+  white-space:nowrap;
+}
+#vtInforme .bt-pedido  { background:#eef4f7; color:#1f4e5f; border-color:#cfe0e7 }
+#vtInforme .bt-respuesta{ background:#f2f4f5; color:#5b6a6d }
+#vtInforme .bt-accion  { background:#eaf5ef; color:#17633f; border-color:#cfe6da }
+#vtInforme .bt-medicion{ background:#eef2fb; color:#2b3f7a; border-color:#d4ddf2 }
+#vtInforme .bt-entrega { background:#eaf5ef; color:#17633f; border-color:#cfe6da }
+#vtInforme .bt-decision{ background:#f6f0fb; color:#5a3080; border-color:#e2d4ef }
+#vtInforme .bt-error   { background:var(--vi-aviso-f); color:var(--vi-aviso); border-color:#efdfb8 }
+/* una cagada propia se nombra asi, no se disimula con el color de un aviso */
+#vtInforme .bt-error.bt-mio{ background:var(--vi-perdida-f); color:var(--vi-perdida); border-color:#f0cfcf }
+#vtInforme tr.bt-fila-mia td{ background:var(--vi-perdida-f) }
+
+#vtInforme .bt-tipos{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:4px }
+#vtInforme .bt-tipo-r{
+  display:inline-flex; align-items:center; gap:6px;
+  background:var(--vi-panel); border:1px solid var(--vi-linea);
+  border-radius:6px; padding:5px 9px; font-size:13px;
+}
+/* el texto largo se lee: estas dos columnas NO van en una sola linea */
+#vtInforme .vi-tb-caja td.bt-que{ white-space:normal; min-width:260px; max-width:460px }
+#vtInforme .vi-tb-caja td.bt-det{ white-space:normal; min-width:300px; max-width:620px;
+                                  color:var(--vi-tinta2) }

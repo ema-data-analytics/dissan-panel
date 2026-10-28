@@ -140,6 +140,8 @@ const PANTALLAS = {
   Ayuda:          { archivo: 'ayuda.html',     rotulo: 'Ayuda' },
   Ventas:         { archivo: 'ventas.html',    rotulo: 'Ventas' },
   Pruebas:        { archivo: 'pruebas.html',   rotulo: 'Pruebas' },
+  Bitacora:       { archivo: 'bitacora.html',  rotulo: 'Bitácora' },
+  Agenda:         { archivo: 'agenda/',        rotulo: 'Agenda' },
   Listas:         { archivo: 'listas.html',    rotulo: 'Listas de precios' },
   Seguridad:      { archivo: 'seguridad.html', rotulo: 'Seguridad' },
   Stock:          { archivo: 'stock.html',     rotulo: 'Stock' },
