@@ -252,30 +252,23 @@ function pgDibujarCircuito(texto, j, ms, deIntencion){
   PG.ultima = j;
   if (j.presupuesto) pgMostrarPresupuesto(j.presupuesto);
 
+  /* UN BLOQUE POR CADA COSA QUE SE PREGUNTO. Si la pregunta pedia el
+     comparativo, por cliente, por provincia, por proveedor y el detalle, acá
+     vienen cinco, cada uno con sus tarjetas, su gráfico y su tabla — y cada
+     tabla con sus botones de Excel y PDF, que se los cuelga bajar.js. */
+  var bl = (j.bloques && j.bloques.length) ? j.bloques
+         : [{ titulo:j.titulo, tarjetas:j.tarjetas, grafico:j.grafico, tabla:j.tabla,
+              datos:j.datos, filas:j.filas, filas_que_viajan:j.filas_que_viajan,
+              sin_datos: !(j.datos || []).length }];
+  var conDatos = 0, i, k;
+  for (i = 0; i < bl.length; i++) if (!bl[i].sin_datos) conDatos++;
+
   h.push('<div class="db-titulo"><span class="q">' + pgEsc(j.titulo || texto) + '</span>' +
          'La armó el circuito en <b>' + pgNum(ms) + ' ms</b> con <b>' + pgNum(j.llamadas || 0) +
-         '</b> llamada(s) al modelo &middot; ' + pgNum(j.filas || 0) + ' filas medidas' +
-         (Number(j.filas || 0) > Number(j.filas_que_viajan || 0)
-            ? ', ' + pgNum(j.filas_que_viajan) + ' en pantalla' : '') + '</div>');
+         '</b> llamada(s) al modelo y <b>' + pgNum((j.consultas || []).length) +
+         '</b> consulta(s) a la base &middot; <b>' + pgNum(conDatos) + '</b> bloque(s)</div>');
 
-  /* las tarjetas: el numero lo calculo la base, no el modelo */
-  var tj = j.tarjetas || [];
-  if (tj.length){
-    h.push('<div class="db-tarjetas">');
-    for (var i = 0; i < tj.length; i++){
-      var t = tj[i];
-      var txt = t.formato === 'pesos' ? pgMillones(t.valor)
-              : t.formato === 'porcentaje' ? pgPct(t.valor) : pgNum(t.valor);
-      var sub = t.formato === 'pesos' ? pgExacto(t.valor) : '';
-      h.push('<div class="db-t" title="' + pgEsc(t.de_donde || '') + '">' +
-             '<div class="n">' + pgEsc(txt) + '</div>' +
-             '<div class="r">' + pgEsc(t.etiqueta || '') + '</div>' +
-             (sub ? '<div class="p">' + pgEsc(sub) + '</div>' : '') + '</div>');
-    }
-    h.push('</div>');
-  }
-
-  /* la lectura */
+  /* la lectura, arriba de todo: es lo que hay que mirar */
   if (j.lectura){
     h.push('<div class="db-sec">Lo que hay que mirar</div>');
     h.push('<div class="db-titulo">' + pgTexto(j.lectura) + '</div>');
@@ -285,22 +278,56 @@ function pgDibujarCircuito(texto, j, ms, deIntencion){
            pgEsc(j.reparo) + '</div>');
   }
 
-  /* el grafico */
-  var g = j.grafico, datos = j.datos || [];
-  if (g && g.etiqueta && g.valor && datos.length > 1){
-    h.push('<div class="db-sec">' + pgEsc(g.titulo || 'El gráfico') + '</div>');
-    h.push(pgGrafico(datos, g));
-  }
+  for (k = 0; k < bl.length; k++){
+    var b = bl[k];
+    var datos = b.datos || [];
 
-  /* la tabla */
-  h.push(pgTabla(datos, j.tabla, j.titulo || 'Resultado'));
+    if (b.sin_datos || !datos.length){
+      h.push('<div class="db-sec">' + pgEsc(b.titulo || ('Bloque ' + (k+1))) + '</div>');
+      h.push('<div class="db-aviso mal">Este bloque quedó sin datos: la consulta que lo tenía ' +
+             'que traer no corrió o volvió vacía. No se muestra una tabla vacía como si fuera ' +
+             'una respuesta.</div>');
+      continue;
+    }
+
+    h.push('<div class="db-sec">' + pgEsc(b.titulo || ('Bloque ' + (k+1))) +
+           '<small>' + pgNum(b.filas || datos.length) + ' filas medidas' +
+           (Number(b.filas || 0) > Number(b.filas_que_viajan || 0)
+              ? ', ' + pgNum(b.filas_que_viajan) + ' en pantalla' : '') +
+           (b.ms ? ' &middot; ' + pgNum(b.ms) + ' ms de base' : '') + '</small></div>');
+
+    var tj = b.tarjetas || [];
+    if (tj.length){
+      h.push('<div class="db-tarjetas">');
+      for (i = 0; i < tj.length; i++){
+        var t = tj[i];
+        var txt = t.formato === 'pesos' ? pgMillones(t.valor)
+                : t.formato === 'porcentaje' ? pgPct(t.valor) : pgNum(t.valor);
+        var sub = t.formato === 'pesos' ? pgExacto(t.valor) : '';
+        h.push('<div class="db-t" title="' + pgEsc(t.de_donde || '') + '">' +
+               '<div class="n">' + pgEsc(txt) + '</div>' +
+               '<div class="r">' + pgEsc(t.etiqueta || '') + '</div>' +
+               (sub ? '<div class="p">' + pgEsc(sub) + '</div>' : '') + '</div>');
+      }
+      h.push('</div>');
+    }
+
+    var g = b.grafico;
+    if (g && g.etiqueta && g.valor && datos.length > 1) h.push(pgGrafico(datos, g));
+
+    h.push(pgTabla(datos, b.tabla, b.titulo || 'Resultado', true));
+  }
 
   h.push(pgComoLoHizo(j));
   pgPintar(h.join(''));
 }
 
 /* ---------- la tabla, con los botones de bajar que le cuelga bajar.js ---------- */
-function pgTabla(datos, columnas, titulo){
+/* sinTitulo: cuando el bloque ya escribio su rotulo .db-sec. bajar.js toma el
+   titulo del archivo del .db-sec anterior a la tabla, asi que SIEMPRE tiene que
+   haber uno antes — si no, el nombre del archivo trepa el DOM y termina en el
+   h1 del login, que es el defecto del 23/10. */
+function pgTabla(datos, columnas, titulo, sinTitulo){
   datos = datos || [];
   if (!datos.length) return '<div class="db-vacio">No hay filas para mostrar.</div>';
 
@@ -317,9 +344,12 @@ function pgTabla(datos, columnas, titulo){
     }
   }
 
-  var h = ['<div class="db-sec">' + pgEsc(titulo || 'Resultado') +
+  var h = [];
+  if (!sinTitulo){
+    h.push('<div class="db-sec">' + pgEsc(titulo || 'Resultado') +
            '<small>' + pgNum(datos.length) + ' filas &middot; los dos botones de arriba bajan ' +
-           'exactamente esto, sin volver a consultar la base.</small></div>'];
+           'exactamente esto, sin volver a consultar la base.</small></div>');
+  }
   h.push('<div class="db-tb-caja"><table class="db-tb"><thead><tr>');
   for (var c = 0; c < cols.length; c++){
     h.push('<th' + (cols[c].formato === 'pesos' || cols[c].formato === 'numero' ||
