@@ -9,6 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/app.css?v=18">
 <link rel="stylesheet" href="css/tablero-db.css?v=1">
+<link rel="stylesheet" href="css/ventas-informe.css?v=1">
 </head>
 <body>
 
@@ -62,19 +63,74 @@
         <div id="fechaHoy"></div>
       </div>
       <div id="contenido">
-<div class="db" id="vtRaiz">
-  <div class="db-cab">
-    <p><b>Lo que se facturó</b>, renglón por renglón de factura de venta, neto sin IVA. Esta
-    pantalla <b>no mide margen ni costo</b>: mide facturación, y está controlada contra la
-    contabilidad de DISSAN — las cuentas <b>411001 Ventas Gravadas</b> y <b>411002 Ventas
-    Exentas</b>. La provincia sale del <b>prefijo del código de cliente</b> (MZ Mendoza,
-    SJ San Juan, SL San Luis). El proveedor sale del <b>sinónimo del artículo</b>.</p>
+<div class="db" id="vtInforme">
+
+  <div class="vi-cab">
+    <h1>Facturas de venta — detalle con costo, margen y MarkUp</h1>
+    <p class="vi-bajada" id="vtBajada">DISSAN S.R.L. &middot; apretá <b>Ver</b> para medir contra la base</p>
   </div>
+
+  <details class="vi-ayuda" id="vtAyuda" open>
+    <summary>Cómo leer este informe (abrir / cerrar)</summary>
+    <div class="vi-ayuda-cuerpo">
+      <div>
+        <h3>Cada fila es un renglón de una factura</h3>
+        <p>No una factura: una factura con cinco artículos son cinco filas. Por eso
+        <b>renglones</b> y <b>facturas</b> son dos cifras distintas y las dos están arriba.</p>
+      </div>
+      <div>
+        <h3>De dónde sale el precio</h3>
+        <p>Del renglón de la factura de venta, <b>neto sin IVA</b>. El total de esta pantalla está
+        cruzado factura por factura contra las cuentas <b>411001</b> y <b>411002</b> de la
+        contabilidad de DISSAN, que no miran a este sistema. El botón del control lo vuelve a
+        correr en vivo.</p>
+      </div>
+      <div>
+        <h3>De dónde sale el costo</h3>
+        <p>De la mejor fuente que exista para ese renglón, en este orden: el <b>lote</b> de la
+        factura del proveedor, la <b>orden de compra</b> que Compras asoció al pedido,
+        <b>PEPS</b> con restricción de fecha, o el último costo reciente. Nunca de
+        <code>sta12</code>, el maestro de costos de Tango, que está abandonado.</p>
+      </div>
+      <div>
+        <h3>Margen % y MarkUp % no son lo mismo</h3>
+        <p>Miden sobre denominadores distintos. Juntas se confunden, así que van las dos con su
+        fórmula:</p>
+        <div class="vi-formula">Margen % = (venta − costo) / <b>venta</b></div>
+        <div class="vi-formula">MarkUp % = (venta − costo) / <b>costo</b></div>
+        <p>El MarkUp es el que usa el archivo <b>Precio_de_Costo.xlsx</b> de DISSAN.</p>
+      </div>
+      <div>
+        <h3>Por qué una fila puede no tener costo</h3>
+        <p>Porque es un <b>implante de consignación</b>, que entra a $0 y el proveedor nunca lo
+        factura; porque el artículo se vendió <b>antes de su primera compra migrada</b> (la base no
+        tiene stock inicial); o porque el costo que había es de <b>más de 180 días</b> y no es el
+        costo de esa venta. La columna <b>Observación</b> lo dice fila por fila.</p>
+      </div>
+      <div>
+        <h3>Lo que se aparta a propósito</h3>
+        <p>Un costo <b>mayor a 4 veces</b> el precio, un costo <b>menor al 5%</b> del precio, y los
+        artículos que <b>se compran por caja</b> sin el factor de envase cargado. No son costos:
+        son errores de carga, y publicarlos daría un margen del 100%.</p>
+      </div>
+      <div>
+        <h3>Las filas marcadas</h3>
+        <p>En <b>amarillo</b> las que no tienen costo, con el motivo escrito al final de la fila.
+        En <b>rojo</b> las que se vendieron por debajo del costo.</p>
+      </div>
+      <div>
+        <h3>Por qué no coincide con el Tablero</h3>
+        <p>Esta pantalla mide <b>todo lo facturado</b>. El Tablero general mide, por defecto, sólo
+        los artículos <b>que llevan stock</b>, así que deja afuera los implantes de consignación.
+        Con los mismos parámetros las dos dan lo mismo: está controlado.</p>
+      </div>
+    </div>
+  </details>
 
   <div class="db-filtros">
     <div class="db-rej">
       <div class="db-campo">
-        <label for="vtDesde">Desde</label>
+        <label for="vtDesde">Desde (fecha de la factura)</label>
         <input type="date" id="vtDesde" value="2024-01-01">
       </div>
       <div class="db-campo">
@@ -103,12 +159,37 @@
         <div class="db-chips" id="vtProveedor_c"></div>
       </div>
       <div class="db-campo">
-        <label for="vtDetalle">Renglones del detalle</label>
+        <label for="vtVend">Vendedor</label>
+        <select id="vtVend"><option value="">todos</option></select>
+      </div>
+      <div class="db-campo">
+        <label for="vtArt">Artículo (código o descripción)</label>
+        <input type="text" id="vtArt" autocomplete="off" placeholder="por ej. COLO0088 o Sensura">
+      </div>
+      <div class="db-campo">
+        <label for="vtDoc">Factura, pedido u orden de compra</label>
+        <input type="text" id="vtDoc" autocomplete="off" placeholder="por ej. 14709 o 5367">
+      </div>
+      <div class="db-campo">
+        <label for="vtEstadoF">Renglones</label>
+        <select id="vtEstadoF">
+          <option value="">todos</option>
+          <option value="con">sólo los que tienen costo</option>
+          <option value="sin">sólo los que no tienen costo</option>
+          <option value="perdida">sólo los que vendieron bajo costo</option>
+        </select>
+      </div>
+      <div class="db-campo doble">
+        <label for="vtMotivo">Observación</label>
+        <select id="vtMotivo"><option value="">todas</option></select>
+      </div>
+      <div class="db-campo">
+        <label for="vtDetalle">Renglones que se traen</label>
         <select id="vtDetalle">
           <option value="500">500</option>
           <option value="2000" selected>2.000</option>
           <option value="8000">8.000</option>
-          <option value="25000">todos</option>
+          <option value="30000">todos</option>
         </select>
       </div>
     </div>
@@ -118,6 +199,7 @@
       <button class="db-btn sec" id="vt2025">2025</button>
       <button class="db-btn sec" id="vt2026">2026</button>
       <button class="db-btn sec" id="vtLimpiar">Desde 2024 a hoy</button>
+      <span id="vtLeyenda" class="db-pie" style="margin:0"></span>
     </div>
   </div>
 
@@ -132,6 +214,7 @@
 <script src="js/core.js?v=10"></script>
 <script src="js/bajar-formatos.js?v=1"></script>
 <script src="js/bajar.js?v=1"></script>
-<script src="js/ventas.js?v=1"></script>
+<script src="js/filas.js?v=1"></script>
+<script src="js/ventas.js?v=2"></script>
 </body>
 </html>

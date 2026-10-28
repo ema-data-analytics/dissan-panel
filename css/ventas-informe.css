@@ -1,0 +1,124 @@
+/* =====================================================================
+   VENTAS — EL INFORME, CON EL DISENO QUE PIDIO EL USUARIO   28/10/2026
+   =====================================================================
+   Copia el lenguaje visual del informe `Facturas-de-venta-2026-DISSAN.html`
+   que mando el usuario: neutros con sesgo petroleo, encabezado lleno,
+   bloque de "como leer", tira de cifras, y la grilla con el encabezado
+   pegado arriba y la primera columna fija.
+
+   TODO VA ENCERRADO EN `#vtInforme`. Ni una regla suelta, porque un
+   cambio global de CSS rompe las otras seis pantallas que ya andan, y
+   esa es la regla del 21/10: lo que anda no se toca.
+   No define `display` sobre nada que se esconda con `hidden`: la regla
+   `[hidden]{display:none !important}` de app.css manda, y pisarla es el
+   golpe del 14/10 y del 20/10.
+   ===================================================================== */
+
+#vtInforme{
+  --vi-papel:#f6f7f8; --vi-panel:#ffffff; --vi-tinta:#17201f; --vi-tinta2:#5b6a6d;
+  --vi-linea:#dde3e5; --vi-petroleo:#1f4e5f; --vi-petroleo2:#2d6c80;
+  --vi-aviso:#8a5a00; --vi-aviso-f:#fff8e8;
+  --vi-perdida:#9c1f1f; --vi-perdida-f:#fdf0f0;
+  --vi-ok:#17633f; --vi-zebra:#fafbfc;
+  --vi-dato: ui-monospace, "Cascadia Mono", "Segoe UI Mono", "Roboto Mono", Menlo, Consolas, monospace;
+  color:var(--vi-tinta);
+}
+
+/* ---------- encabezado lleno ---------- */
+#vtInforme .vi-cab{
+  background:var(--vi-petroleo); color:#fff; border-radius:8px;
+  padding:16px 18px; margin-bottom:16px;
+}
+#vtInforme .vi-cab h1{ margin:0; font-size:21px; font-weight:650; letter-spacing:-.01em; }
+#vtInforme .vi-bajada{ margin:6px 0 0; font-size:13px; color:#cfe6ec; }
+#vtInforme .vi-bajada b{ color:#fff; font-weight:600; }
+
+/* ---------- como leer ---------- */
+#vtInforme details.vi-ayuda{
+  background:var(--vi-panel); border:1px solid var(--vi-linea);
+  border-left:4px solid var(--vi-petroleo2); border-radius:6px; margin-bottom:16px;
+}
+#vtInforme details.vi-ayuda summary{
+  cursor:pointer; padding:11px 14px; font-weight:650; color:var(--vi-petroleo);
+  list-style:none;
+}
+#vtInforme details.vi-ayuda summary::-webkit-details-marker{ display:none }
+#vtInforme details.vi-ayuda summary::before{
+  content:"\25B8 "; display:inline-block; transition:transform .15s;
+}
+#vtInforme details.vi-ayuda[open] summary::before{ transform:rotate(90deg) }
+#vtInforme .vi-ayuda-cuerpo{ padding:0 16px 14px; columns:4 300px; column-gap:22px }
+#vtInforme .vi-ayuda-cuerpo > div{ break-inside:avoid; margin-bottom:13px }
+#vtInforme .vi-ayuda-cuerpo h3{ margin:0 0 3px; font-size:13px; color:var(--vi-petroleo) }
+#vtInforme .vi-ayuda-cuerpo p{ margin:0; font-size:13px; color:var(--vi-tinta2) }
+#vtInforme .vi-formula{
+  font-family:var(--vi-dato); background:var(--vi-zebra); border:1px solid var(--vi-linea);
+  border-radius:4px; padding:7px 9px; margin-top:5px; font-size:12.5px;
+  color:var(--vi-tinta); overflow-wrap:anywhere;
+}
+
+/* ---------- la tira de cifras ---------- */
+#vtInforme .vi-kpis{
+  display:grid; gap:10px; grid-template-columns:repeat(2,1fr); margin-bottom:16px;
+}
+@media (min-width:760px){ #vtInforme .vi-kpis{ grid-template-columns:repeat(4,1fr) } }
+#vtInforme .vi-kpi{
+  background:var(--vi-panel); border:1px solid var(--vi-linea); border-radius:6px;
+  padding:11px 13px; min-width:0;
+}
+#vtInforme .vi-kpi-t{
+  font-size:10.5px; text-transform:uppercase; letter-spacing:.06em;
+  color:var(--vi-tinta2); font-weight:650;
+}
+#vtInforme .vi-kpi-v{
+  font-family:var(--vi-dato); font-variant-numeric:tabular-nums; font-size:19px;
+  font-weight:600; margin-top:4px; overflow-wrap:anywhere;
+}
+#vtInforme .vi-kpi-n{ font-size:11px; color:var(--vi-tinta2); margin-top:3px }
+
+/* ---------- secciones ---------- */
+#vtInforme .vi-sec{
+  display:flex; flex-wrap:wrap; gap:9px; align-items:baseline;
+  justify-content:space-between; margin:22px 0 9px;
+}
+#vtInforme .vi-sec h2{ margin:0; font-size:15px; font-weight:650 }
+#vtInforme .vi-sec small{ font-weight:400; color:var(--vi-tinta2); font-size:12.5px }
+#vtInforme .vi-nota{ font-size:11.5px; color:var(--vi-tinta2); margin:5px 0 0 }
+
+/* ---------- las grillas ---------- */
+#vtInforme .vi-tb-caja{
+  background:var(--vi-panel); border:1px solid var(--vi-linea); border-radius:6px;
+  overflow:auto; min-width:0; max-height:70vh;
+}
+#vtInforme .vi-tb-caja table{ border-collapse:collapse; width:100%; font-size:12.5px }
+#vtInforme .vi-tb-caja th,
+#vtInforme .vi-tb-caja td{
+  padding:5px 8px; border-bottom:1px solid var(--vi-linea); text-align:left; white-space:nowrap;
+}
+#vtInforme .vi-tb-caja th{
+  position:sticky; top:0; z-index:2; background:var(--vi-petroleo); color:#fff;
+  font-size:10.5px; text-transform:uppercase; letter-spacing:.04em;
+}
+#vtInforme .vi-tb-caja td.der, #vtInforme .vi-tb-caja th.der{ text-align:right }
+#vtInforme .vi-tb-caja td.der{ font-family:var(--vi-dato); font-variant-numeric:tabular-nums }
+#vtInforme .vi-tb-caja td.cod{ font-family:var(--vi-dato); font-size:11.5px }
+#vtInforme .vi-tb-caja tbody tr:nth-child(even){ background:var(--vi-zebra) }
+#vtInforme .vi-tb-caja tbody tr:hover{ background:#e9f2f5 }
+/* el renglon sin costo: el aviso se lee, no se esconde */
+#vtInforme .vi-tb-caja tr.vi-sincosto td.vi-obs{
+  color:var(--vi-aviso); background:var(--vi-aviso-f); white-space:normal; min-width:230px;
+}
+/* el renglon que perdio */
+#vtInforme .vi-tb-caja tr.vi-perdida{ background:var(--vi-perdida-f) }
+#vtInforme .vi-tb-caja tr.vi-perdida td.der{ color:var(--vi-perdida) }
+#vtInforme .vi-tb-caja tr.vi-tot td{
+  font-weight:700; border-top:2px solid var(--vi-petroleo);
+  background:var(--vi-panel); position:sticky; bottom:0;
+}
+
+/* en el telefono la grilla desliza adentro de su caja, sin mover la pagina */
+@media (max-width:760px){
+  #vtInforme .vi-ayuda-cuerpo{ columns:1 }
+  #vtInforme .vi-tb-caja{ max-height:60vh }
+  #vtInforme .vi-cab h1{ font-size:18px }
+}

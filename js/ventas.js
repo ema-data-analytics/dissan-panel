@@ -263,14 +263,23 @@ function vtCargar(){
               p_provincias:f.p_provincias, p_proveedores:f.p_proveedores, p_limite:lim };
 
   var t0 = Date.now();
-  var pedidos = [ rpc('api_ventas_fact_resumen', f), rpc('api_ventas_fact_detalle', det) ];
+  /* `api_ventas_fact_informe` trae las 27 columnas con costo, margen y MarkUp;
+     `api_ventas_fact_por_mes_v2` el mes a mes con las mismas cifras. Las dos
+     salen de vista_margen_v2_oc y aplican la MISMA cuarentena que
+     api_margen_tablero_v3, asi que esta pantalla y el Tablero no pueden decir
+     numeros distintos. */
+  var pedidos = [ rpc('api_ventas_fact_resumen', f),
+                  rpc('api_ventas_fact_informe', det),
+                  rpc('api_ventas_fact_por_mes_v2',
+                      { p_desde:f.p_desde, p_hasta:f.p_hasta, p_clientes:f.p_clientes,
+                        p_provincias:f.p_provincias, p_proveedores:f.p_proveedores }) ];
   if (!VT.opciones){
     pedidos.push(rpc('api_ventas_fact_opciones', { p_desde:null, p_hasta:null }));
   }
 
   Promise.all(pedidos).then(function(r){
-    if (r[2]){
-      VT.opciones = r[2].data || {};
+    if (r[3]){
+      VT.opciones = r[3].data || {};
       var cl = VT.opciones.clientes || [];
       for (var i = 0; i < cl.length; i++){
         VT.mapa.Cliente[cl[i].cod + ' — ' + (cl[i].nombre || '')] = cl[i].cod;
@@ -280,8 +289,17 @@ function vtCargar(){
         VT.mapa.Proveedor[(pr[j].nombre || '') + ' (' + pr[j].cod + ')'] = pr[j].cod;
       }
     }
-    vtDibujar(r[0].data || {}, r[1].data || [], Date.now() - t0,
-              (r[0].ms || 0) + '/' + (r[1].ms || 0));
+    /* el detalle queda guardado ENTERO: los filtros de vendedor, articulo,
+       documento, estado y observacion se aplican sobre esto sin volver a la
+       base, igual que en el informe que mando el usuario */
+    VT.det  = r[1].data || [];
+    VT.res  = r[0].data || {};
+    VT.mes  = r[2].data || [];
+    VT.tope = lim;
+    VT.ms   = { total: Date.now() - t0,
+                partes: (r[0].ms || 0) + '/' + (r[1].ms || 0) + '/' + (r[2].ms || 0) };
+    vtLlenarSelectsLocales();
+    vtDibujar(VT.res, vtFiltrarLocal(VT.det), VT.ms.total, VT.ms.partes);
   }).catch(function(e){
     estado.innerHTML = '<div class="db-aviso mal"><b>No se pudo medir.</b> ' +
                        vtEsc(e && e.message ? e.message : e) + '</div>';
@@ -289,6 +307,76 @@ function vtCargar(){
     VT.cargando = false;
     document.getElementById('vtAplicar').disabled = false;
   });
+}
+
+/* ---------- LOS FILTROS QUE SE APLICAN SOBRE LO TRAIDO ----------
+   Vendedor, articulo, documento, estado y observacion no vuelven a la base: se
+   aplican sobre `VT.det`, que es lo que ya esta en la pantalla. Es como trabaja
+   el informe que mando el usuario, y tiene una ventaja: lo que se baja a Excel
+   es exactamente lo que se ve, porque es el mismo arreglo.
+   EL LIMITE SE DECLARA: si la base corto en el tope, filtrar aca filtra un
+   recorte, y eso se dice con letras arriba de la tabla. Es el defecto del
+   `limit` informado como total, que hoy aparecio dos veces. */
+function vtFiltrarLocal(det){
+  if (!det) return [];
+  var vend = document.getElementById('vtVend').value || '';
+  var art  = vtPlano(document.getElementById('vtArt').value || '');
+  var doc  = vtPlano(document.getElementById('vtDoc').value || '');
+  var est  = document.getElementById('vtEstadoF').value || '';
+  var mot  = document.getElementById('vtMotivo').value || '';
+  if (!vend && !art && !doc && !est && !mot) return det;
+
+  return det.filter(function(d){
+    if (vend && (d.vendedor || '') !== vend) return false;
+    if (art){
+      var enArt = vtPlano(d.cod_articu).indexOf(art) >= 0 ||
+                  vtPlano(d.articulo).indexOf(art) >= 0;
+      if (!enArt) return false;
+    }
+    if (doc){
+      var enDoc = vtPlano(d.comprobante).indexOf(doc) >= 0 ||
+                  vtPlano(d.nro_pedido).indexOf(doc) >= 0 ||
+                  vtPlano(d.n_orden_compra).indexOf(doc) >= 0;
+      if (!enDoc) return false;
+    }
+    if (est === 'con' && d.costo_unitario === null) return false;
+    if (est === 'sin' && d.costo_unitario !== null) return false;
+    if (est === 'perdida' && !(d.margen_pesos !== null && Number(d.margen_pesos) < 0)) return false;
+    if (mot && (d.por_que_sin_costo || '') !== mot) return false;
+    return true;
+  });
+}
+
+/* los dos desplegables que se llenan con lo que de verdad vino, no con una
+   lista escrita a mano que se queda corta sin avisar */
+function vtLlenarSelectsLocales(){
+  var det = VT.det || [];
+  var vend = {}, mot = {};
+  for (var i = 0; i < det.length; i++){
+    if (det[i].vendedor) vend[det[i].vendedor] = 1;
+    if (det[i].por_que_sin_costo) mot[det[i].por_que_sin_costo] = 1;
+  }
+  vtLlenarUno('vtVend', Object.keys(vend).sort(), 'todos', 0);
+  vtLlenarUno('vtMotivo', Object.keys(mot).sort(), 'todas', 74);
+}
+function vtLlenarUno(id, valores, rotuloVacio, corte){
+  var s = document.getElementById(id);
+  if (!s) return;
+  var antes = s.value;
+  var h = ['<option value="">' + rotuloVacio + '</option>'];
+  for (var i = 0; i < valores.length; i++){
+    var v = valores[i];
+    var rot = (corte && v.length > corte) ? v.substring(0, corte) + '…' : v;
+    h.push('<option value="' + vtEsc(v) + '" title="' + vtEsc(v) + '">' + vtEsc(rot) + '</option>');
+  }
+  s.innerHTML = h.join('');
+  if (antes && valores.indexOf(antes) >= 0) s.value = antes;
+}
+
+/* repintar SIN consultar la base */
+function vtRepintarLocal(){
+  if (!VT.det) return;
+  vtDibujar(VT.res, vtFiltrarLocal(VT.det), VT.ms.total, VT.ms.partes);
 }
 
 /* ---------- el control contra la contabilidad, a pedido ---------- */
@@ -352,30 +440,38 @@ function vtDibujar(res, det, msTotal, msPartes){
     return;
   }
 
-  /* ---- titulo ---- */
-  h.push('<div class="db-titulo"><span class="q">Facturación</span>' +
-         vtRotuloFiltros(res) + ' · <b>' + vtNum(tot.renglones) + '</b> renglones de <b>' +
-         vtNum(tot.comprobantes) + '</b> facturas · medido en ' + vtNum(msTotal) + ' ms</div>');
-
-  /* ---- tarjetas ---- */
-  h.push('<div class="db-tarjetas">');
-  h.push(vtTarjeta(vtMillones(tot.facturado), 'facturado, neto sin IVA', vtExacto(tot.facturado)));
-  h.push(vtTarjeta(vtNum(tot.comprobantes), 'facturas', vtNum(tot.renglones) + ' renglones'));
-  h.push(vtTarjeta(vtNum(tot.clientes), 'clientes distintos',
-                   'de ' + vtNum(res.clientes_distintos) + ' en el período'));
-  h.push(vtTarjeta(vtNum(tot.articulos), 'artículos distintos',
-                   vtNum(tot.unidades) + ' unidades'));
-  var pa = res.por_anio || [];
-  for (var i = 0; i < pa.length; i++){
-    var ant = i > 0 ? Number(pa[i-1].facturado || 0) : 0;
-    var act = Number(pa[i].facturado || 0);
-    var sub = ant ? ((act-ant)/Math.abs(ant)*100 >= 0 ? '+' : '') +
-                    vtDec((act-ant)/Math.abs(ant)*100) + '% contra ' + pa[i-1].anio
-                  : vtNum(pa[i].comprobantes) + ' facturas';
-    h.push(vtTarjeta(vtMillones(act), 'facturado en ' + pa[i].anio, sub,
-                     ant && act < ant ? 'mal' : (ant ? 'ok' : '')));
+  /* ---- la bajada del encabezado, con las cifras de verdad ---- */
+  var baj = document.getElementById('vtBajada');
+  if (baj){
+    baj.innerHTML = 'DISSAN S.R.L. &middot; <b>' + vtNum(tot.renglones) + ' renglones</b> de <b>' +
+      vtNum(tot.comprobantes) + ' facturas</b> &middot; del ' + vtFecha(res.desde) + ' al ' +
+      vtFecha(res.hasta) + ' &middot; ' + vtRotuloFiltros(res).replace(/<[^>]*>/g, '') +
+      ' &middot; medido en ' + vtNum(msTotal) + ' ms contra la base';
   }
+
+  /* ---- la tira de cifras, en el estilo del informe ----
+     Van el costo, el margen y el MarkUp, cada uno CON SU DENOMINADOR al lado:
+     un margen del 36,9% sin decir que es sobre la venta medible se lee como si
+     fuera sobre todo lo facturado, y no lo es. */
+  var mesS = vtSumarMeses(VT.mes || []);
+  h.push('<div class="vi-kpis">');
+  h.push(vtKpi('Renglones', vtNum(tot.renglones), 'cada fila es un renglón de una factura'));
+  h.push(vtKpi('Facturas', vtNum(tot.comprobantes), 'facturas de venta distintas'));
+  h.push(vtKpi('Venta facturada', vtMillones(tot.facturado), vtExacto(tot.facturado) + ' neto sin IVA'));
+  h.push(vtKpi('Renglones con costo', vtNum(mesS.cc) +
+               (Number(tot.renglones) ? ' (' + vtDec(mesS.cc / Number(tot.renglones) * 100) + '%)' : ''),
+               'los que se pueden medir'));
+  h.push(vtKpi('Venta con costo', vtMillones(mesS.vc),
+               Number(tot.facturado) ? vtDec(mesS.vc / Number(tot.facturado) * 100) +
+               '% de lo facturado' : ''));
+  h.push(vtKpi('Costo', vtMillones(mesS.co), vtExacto(mesS.co)));
+  h.push(vtKpi('Margen', vtMillones(mesS.mg),
+               mesS.vc ? vtDec(mesS.mg / mesS.vc * 100) + '% sobre la venta con costo' : ''));
+  h.push(vtKpi('MarkUp', mesS.co ? vtDec(mesS.mg / mesS.co * 100) + '%' : '—',
+               'el margen sobre el COSTO'));
   h.push('</div>');
+
+  var pa = res.por_anio || [];
 
   /* ---- comparativo por anio ---- */
   h.push('<div class="db-sec">Comparativo por año' +
@@ -413,6 +509,48 @@ function vtDibujar(res, det, msTotal, msPartes){
     h.push('<div class="db-sec">Mes a mes<small>' + pm.length +
            ' meses con facturación. Pasá el puntero por una columna para ver el mes.</small></div>');
     h.push(vtGrafColumnas(pm));
+  }
+
+  /* ---- mes a mes con costo, margen y MarkUp ----
+     Es la segunda tabla del informe. La VENTA CON COSTO va al lado del margen a
+     proposito: sin ese denominador, el porcentaje parece ser de todo lo
+     facturado. Y la cobertura dice que parte del mes se pudo costear. */
+  var mv = VT.mes || [];
+  if (mv.length){
+    h.push('<div class="vi-sec"><h2>Resumen mes a mes, con costo y MarkUp' +
+           '<small> &middot; los mismos filtros de arriba</small></h2>' +
+           '<p class="vi-nota">El <b>margen %</b> se mide sobre la <b>venta con costo</b>, no sobre ' +
+           'lo facturado. El <b>MarkUp %</b> se mide sobre el <b>costo</b>. La <b>cobertura</b> es ' +
+           'qué parte de lo facturado del mes se pudo costear.</p></div>');
+    h.push('<div class="vi-tb-caja"><table><thead><tr>' +
+           '<th>Mes</th><th class="der">Renglones</th><th class="der">Venta facturada</th>' +
+           '<th class="der">Renglones con costo</th><th class="der">Venta con costo</th>' +
+           '<th class="der">Costo</th><th class="der">Margen $</th>' +
+           '<th class="der">Margen %</th><th class="der">MarkUp %</th>' +
+           '<th class="der">Cobertura</th></tr></thead><tbody>');
+    for (var mi = 0; mi < mv.length; mi++){
+      var m2 = mv[mi];
+      h.push('<tr><td class="cod">' + vtEsc(m2.mes) + '</td>');
+      h.push(vtCelNum(m2.renglones));
+      h.push(vtCelPesos(m2.facturado));
+      h.push(vtCelNum(m2.renglones_con_costo));
+      h.push(vtCelPesos(m2.venta_con_costo));
+      h.push(vtCelPesos(m2.costo));
+      h.push(vtCelPesos(m2.margen_pesos));
+      h.push(vtCelPct(m2.margen_pct));
+      h.push(vtCelPct(m2.markup_pct));
+      h.push(vtCelPct(m2.cobertura_pct));
+      h.push('</tr>');
+    }
+    var ms2 = vtSumarMeses(mv);
+    h.push('<tr class="vi-tot"><td><b>Total</b></td>');
+    h.push(vtCelNum(ms2.rg)); h.push(vtCelPesos(ms2.fa));
+    h.push(vtCelNum(ms2.cc)); h.push(vtCelPesos(ms2.vc));
+    h.push(vtCelPesos(ms2.co)); h.push(vtCelPesos(ms2.mg));
+    h.push(vtCelPct(ms2.vc ? ms2.mg / ms2.vc * 100 : null));
+    h.push(vtCelPct(ms2.co ? ms2.mg / ms2.co * 100 : null));
+    h.push(vtCelPct(ms2.fa ? ms2.vc / ms2.fa * 100 : null));
+    h.push('</tr></tbody></table></div>');
   }
 
   /* ---- por provincia ---- */
@@ -565,39 +703,67 @@ function vtDibujar(res, det, msTotal, msPartes){
   h.push('<div class="db-acciones"><button class="db-btn sec" id="vtCtrlBtn">Correr el control ' +
          'ahora</button></div><div id="vtCtrl"></div>');
 
-  /* ---- el detalle ---- */
-  h.push('<div class="db-sec">Detalle de facturación, renglón por renglón' +
-         '<small>' + vtNum(det.length) + ' renglones' +
-         (det.length >= Number(document.getElementById('vtDetalle').value || 2000)
-            ? ' — es el tope que elegiste arriba, puede haber más. Subilo para traerlos todos.'
-            : ' — son todos los que entran en los filtros.') +
-         ' Los dos botones de arriba de la tabla bajan <b>exactamente esto</b>, sin volver a ' +
-         'consultar la base.</small></div>');
-  h.push('<div class="db-tb-caja"><table class="db-tb"><thead><tr>' +
-         '<th>Fecha</th><th>Comprobante</th><th>Código</th><th>Cliente</th><th>Provincia</th>' +
-         '<th>Provincia fiscal</th><th>Localidad</th><th>Vendedor</th><th>Artículo</th>' +
-         '<th>Descripción</th><th>Cód. prov.</th><th>Proveedor</th>' +
-         '<th class="db-num">Cantidad</th><th class="db-num">Precio unitario</th>' +
-         '<th class="db-num">Facturado</th></tr></thead><tbody>');
+  /* ---- el detalle, renglon por renglon ---- */
+  var cortado = (VT.det || []).length >= Number(VT.tope || 2000);
+  var filtrado = det.length !== (VT.det || []).length;
+  h.push('<div class="vi-sec"><h2>Detalle renglón por renglón' +
+         '<small> &middot; 27 columnas</small></h2></div>');
+  h.push('<p class="vi-nota"><b>' + vtNum(det.length) + '</b> renglones' +
+         (filtrado ? ' de los <b>' + vtNum((VT.det || []).length) +
+                     '</b> que trajo la base (filtrados acá, sin volver a consultar)' : '') +
+         '. ' +
+         (cortado
+           ? '<b>OJO: la base cortó en el tope de ' + vtNum(VT.tope) + '. Puede haber más ' +
+             'renglones y esta cifra NO es el total. Subí «Renglones que se traen» para traerlos ' +
+             'todos.</b>'
+           : 'Son todos los que entran en los filtros de fecha, provincia, cliente y proveedor.') +
+         ' El Excel y el PDF bajan <b>exactamente esto</b>, sin volver a consultar la base.</p>');
+  h.push('<div class="vi-tb-caja"><table><thead><tr>' +
+         '<th>Fecha</th><th>Comprobante</th><th class="der">Reng.</th>' +
+         '<th class="der">Pedido</th><th>Orden de compra</th>' +
+         '<th>Cód. cliente</th><th>Cliente</th><th>Provincia</th><th>Prov. fiscal</th>' +
+         '<th>Localidad</th><th>Cód. vend.</th><th>Vendedor</th>' +
+         '<th>Cód. artículo</th><th>Descripción</th><th>Cód. prov.</th><th>Proveedor</th>' +
+         '<th class="der">Cantidad</th><th class="der">Precio unitario</th>' +
+         '<th class="der">Total del renglón</th>' +
+         '<th class="der">Costo unitario</th><th class="der">Costo total</th>' +
+         '<th class="der">Margen $</th>' +
+         '<th class="der" title="(venta − costo) / venta">Margen %</th>' +
+         '<th class="der" title="(venta − costo) / costo">MarkUp %</th>' +
+         '<th>Método del costo</th><th>Partida</th><th>Observación</th>' +
+         '</tr></thead><tbody>');
   for (var di = 0; di < det.length; di++){
     var d = det[di];
-    h.push('<tr>');
+    var sinCosto = d.costo_unitario === null || d.costo_unitario === undefined;
+    var perdio   = !sinCosto && Number(d.margen_pesos) < 0;
+    h.push('<tr' + (perdio ? ' class="vi-perdida"' : (sinCosto ? ' class="vi-sincosto"' : '')) + '>');
     h.push(vtCelFecha(d.fecha));
-    h.push('<td class="db-cod">' + vtEsc(d.comprobante) + '</td>');
-    h.push('<td class="db-cod">' + vtEsc(d.cod_client) + '</td>');
-    h.push('<td class="db-desc" title="' + vtEsc(d.cliente) + '">' + vtEsc(d.cliente) + '</td>');
+    h.push('<td class="cod">' + vtEsc(d.comprobante) + '</td>');
+    h.push(vtCelCod(d.renglon));
+    h.push(vtCelCod(d.nro_pedido));
+    h.push('<td class="cod">' + vtEsc(d.n_orden_compra || '') + '</td>');
+    h.push('<td class="cod">' + vtEsc(d.cod_client) + '</td>');
+    h.push('<td title="' + vtEsc(d.cliente) + '">' + vtEsc(d.cliente) + '</td>');
     h.push('<td>' + vtEsc(d.provincia) + '</td>');
     h.push('<td>' + vtEsc(d.provincia_fiscal || '') + '</td>');
     h.push('<td>' + vtEsc(d.localidad || '') + '</td>');
+    h.push('<td class="cod">' + vtEsc(d.cod_vended || '') + '</td>');
     h.push('<td>' + vtEsc(d.vendedor || '') + '</td>');
-    h.push('<td class="db-cod">' + vtEsc(d.cod_articu) + '</td>');
-    h.push('<td class="db-desc" title="' + vtEsc(d.articulo) + '">' + vtEsc(d.articulo) + '</td>');
-    h.push('<td class="db-cod">' + vtEsc(d.cod_proveedor || '') + '</td>');
-    h.push('<td class="db-desc" title="' + vtEsc(d.proveedor || '') + '">' +
-           vtEsc(d.proveedor || '') + '</td>');
+    h.push('<td class="cod">' + vtEsc(d.cod_articu) + '</td>');
+    h.push('<td title="' + vtEsc(d.articulo) + '">' + vtEsc(d.articulo) + '</td>');
+    h.push('<td class="cod">' + vtEsc(d.cod_proveedor || '') + '</td>');
+    h.push('<td title="' + vtEsc(d.proveedor || '') + '">' + vtEsc(d.proveedor || '') + '</td>');
     h.push(vtCelNum(d.cantidad));
     h.push(vtCelPesos(d.precio_unitario));
     h.push(vtCelPesos(d.facturado));
+    h.push(vtCelPesos(d.costo_unitario));
+    h.push(vtCelPesos(d.costo_total));
+    h.push(vtCelPesos(d.margen_pesos));
+    h.push(vtCelPct(d.margen_pct));
+    h.push(vtCelPct(d.markup_pct));
+    h.push('<td>' + vtEsc(d.metodo_costo || '') + '</td>');
+    h.push('<td class="cod">' + vtEsc(d.n_partida || '') + '</td>');
+    h.push('<td class="vi-obs">' + vtEsc(d.por_que_sin_costo || '') + '</td>');
     h.push('</tr>');
   }
   h.push('</tbody></table></div>');
@@ -620,6 +786,44 @@ function vtTarjeta(n, r, p, clase){
   return '<div class="db-t"><div class="n ' + (clase || '') + '">' + n + '</div>' +
          '<div class="r">' + vtEsc(r) + '</div>' +
          (p ? '<div class="p">' + vtEsc(p) + '</div>' : '') + '</div>';
+}
+
+/* la tarjeta del informe: rotulo arriba, cifra grande, y la nota que dice
+   SOBRE QUE esta medida */
+function vtKpi(rotulo, valor, nota){
+  return '<div class="vi-kpi"><div class="vi-kpi-t">' + vtEsc(rotulo) + '</div>' +
+         '<div class="vi-kpi-v">' + vtEsc(valor) + '</div>' +
+         (nota ? '<div class="vi-kpi-n">' + vtEsc(nota) + '</div>' : '') + '</div>';
+}
+
+/* un porcentaje. Sin valor va VACIA, no cero: un cero ahi seria una cifra
+   inventada, y es la regla del MarkUp sin costo. */
+function vtCelPct(n){
+  if (n === null || n === undefined || n === '') return '<td class="der"></td>';
+  var v = Number(n);
+  return '<td class="der" data-v="' + v + '">' + vtDec(v) + '%</td>';
+}
+
+/* UN CODIGO NO ES UN NUMERO. La OC 5245 escrita como numero sale "5.245" y el
+   pedido 14709 sale "14.709". Van como texto, y con la clase que `bajar.js`
+   reconoce para bajarlos como texto tambien. */
+function vtCelCod(v){
+  if (v === null || v === undefined || v === '') return '<td class="cod der"></td>';
+  return '<td class="cod der vt-cod">' + vtEsc(v) + '</td>';
+}
+
+/* los totales del mes a mes, sumados UNA sola vez */
+function vtSumarMeses(mv){
+  var s = { rg:0, fa:0, cc:0, vc:0, co:0, mg:0 };
+  for (var i = 0; i < (mv || []).length; i++){
+    s.rg += Number(mv[i].renglones || 0);
+    s.fa += Number(mv[i].facturado || 0);
+    s.cc += Number(mv[i].renglones_con_costo || 0);
+    s.vc += Number(mv[i].venta_con_costo || 0);
+    s.co += Number(mv[i].costo || 0);
+    s.mg += Number(mv[i].margen_pesos || 0);
+  }
+  return s;
 }
 
 /* barras horizontales, con el numero escrito al lado */
@@ -732,6 +936,17 @@ function calcular(){
   document.getElementById('vtAplicar').addEventListener('click', vtCargar);
   document.getElementById('vtProv').addEventListener('change', vtCargar);
   document.getElementById('vtDetalle').addEventListener('change', vtCargar);
+
+  /* LOS CINCO FILTROS QUE NO VUELVEN A LA BASE. Repintan sobre lo que ya esta
+     traido, asi que contestan al instante y el Excel sigue bajando lo que se
+     ve. El de texto espera a que pare de escribir. */
+  var espera = null;
+  function alTipear(){ clearTimeout(espera); espera = setTimeout(vtRepintarLocal, 250); }
+  document.getElementById('vtVend').addEventListener('change', vtRepintarLocal);
+  document.getElementById('vtEstadoF').addEventListener('change', vtRepintarLocal);
+  document.getElementById('vtMotivo').addEventListener('change', vtRepintarLocal);
+  document.getElementById('vtArt').addEventListener('input', alTipear);
+  document.getElementById('vtDoc').addEventListener('input', alTipear);
   document.getElementById('vt2024').addEventListener('click', function(){ anio(2024); });
   document.getElementById('vt2025').addEventListener('click', function(){ anio(2025); });
   document.getElementById('vt2026').addEventListener('click', function(){ anio(2026); });
@@ -739,6 +954,11 @@ function calcular(){
     document.getElementById('vtDesde').value = '2024-01-01';
     document.getElementById('vtHasta').value = '';
     document.getElementById('vtProv').value = '';
+    document.getElementById('vtVend').value = '';
+    document.getElementById('vtArt').value = '';
+    document.getElementById('vtDoc').value = '';
+    document.getElementById('vtEstadoF').value = '';
+    document.getElementById('vtMotivo').value = '';
     if (VT.limpiarCliente)   VT.limpiarCliente();
     if (VT.limpiarProveedor) VT.limpiarProveedor();
     vtCargar();
