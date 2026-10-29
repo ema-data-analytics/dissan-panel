@@ -516,13 +516,29 @@ function lpFechaCorta(iso) {
 function lpCargarProveedores() {
   return rpc('api_listas_proveedores', {}).then(function (r) {
     LP_PROV = r.data || [];
+    /* DOS FILAS CON EL MISMO NOMBRE NO SON UN DUPLICADO.      29/10/2026
+       JOHNSON & JOHNSON tiene DOS listas: la de Distribuidores (lista L025
+       de Tango, columna "Precio EA Julio Distribuidor") y la de Payers (sin
+       lista en Tango, columna "Precio Payer Julio"). El desplegable las
+       mostraba con el MISMO texto, asi que no habia forma de saber cual se
+       estaba eligiendo, y elegir la equivocada da precios que no son los de
+       esa lista. Cuando un nombre se repite se agrega lo que las diferencia:
+       el titulo de la columna de precio, que es lo que de verdad las separa.
+       Y la falta de lista de Tango SE ESCRIBE: una ausencia no se ve. */
+    var veces = {};
+    LP_PROV.forEach(function (p) { veces[p.proveedor] = (veces[p.proveedor] || 0) + 1; });
     var s = $('lpProv');
     s.innerHTML = '<option value="">Elegí el proveedor…</option>'
       + LP_PROV.map(function (p) {
-          return '<option value="' + p.id + '">' + esc(p.proveedor)
-            + (p.codigo_lista ? ' · ' + esc(p.codigo_lista) : '')
-            + (p.se_puede_leer ? '' : ' (no se puede leer)')
-            + '</option>';
+          var t = p.proveedor;
+          if (veces[p.proveedor] > 1) {
+            var cual = (p.lectura && (p.lectura.titulo_precio || p.lectura.hoja))
+                       || p.archivo || ('id ' + p.id);
+            t += ' — ' + String(cual).replace(/\.(xlsx|xlsm|xls|pdf)$/i, '');
+          }
+          t += ' · ' + (p.codigo_lista ? p.codigo_lista : 'sin lista en Tango');
+          if (!p.se_puede_leer) t += ' (no se puede leer)';
+          return '<option value="' + p.id + '">' + esc(t) + '</option>';
         }).join('');
     s.addEventListener('change', lpPintarRegla);
   });
