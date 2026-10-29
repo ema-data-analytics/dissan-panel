@@ -215,7 +215,7 @@ async function main(){
          las 43 consultas del panel, 31 devuelven filas. Lo encontro
          DISSAN: pidio 2026 entero en Ventas y en pantalla faltaba ENERO,
          porque de 5.108 renglones llegaban 1.000.
-         El juguete corta en 1.000 igual que el servidor y tiene 2.500
+         El juguete corta en 1.000 igual que el servidor y tiene 5.108
          filas guardadas: si el puente `rpcTodo` no pagina, esto da 1.000
          y falla. Es el control que no existia. */
       const puente = await pg.evaluate(() => {
@@ -227,8 +227,8 @@ async function main(){
       if (!puente.hay) falla(quien, 'sin_puente_de_paginas',
         'La pantalla no tiene rpcTodo: cualquier consulta de mas de 1.000 filas le llega recortada.');
       else if (puente.error) falla(quien, 'puente_de_paginas_roto', puente.error.slice(0,140));
-      else if (puente.filas !== 2500) falla(quien, 'tope_del_servidor',
-        'El puente trajo ' + puente.filas + ' de 2.500 filas (paso ' + puente.paso +
+      else if (puente.filas !== 5108) falla(quien, 'tope_del_servidor',
+        'El puente trajo ' + puente.filas + ' de 5.108 filas (paso ' + puente.paso +
         ', ' + puente.paginas + ' paginas): el tope del servidor esta recortando.');
       else medido.paginados++;
 
@@ -385,7 +385,7 @@ async function main(){
                 medido.grillas + ' grillas paginadas recorridas hasta la ultima pagina (' +
                 medido.paginas + ' paginas) · ' + medido.descargas +
                 ' con el archivo comprobado que baja TODAS las filas · ' + medido.paginados +
-                ' pantallas que traen las 2.500 filas pese al tope de 1.000 del servidor.');
+                ' pantallas que traen las 5.108 filas enteras pese al tope de 1.000 del servidor.');
     process.exit(0);
   }
   console.log('CONTROL DE PANTALLAS: ' + fallas.length + ' falla(s)\n');

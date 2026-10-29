@@ -71,7 +71,9 @@
           de punta a punta: la grilla tiene que mostrar los 2.500 y el
           Excel tiene que bajarlos.
      Sin esto el juguete tenia 50 filas y jamas podia pasar el tope. */
-  var TOPE_PRUEBA = 2500;
+  /* 5.108 = los renglones REALES de 2026 que devuelve la base. El juguete
+     tiene que ser tan grande como la realidad, o el control no prueba nada. */
+  var TOPE_PRUEBA = 5108;
   RPC['__prueba_tope__'] = (function(){
     var a = [];
     for (var i = 0; i < TOPE_PRUEBA; i++) a.push({ n: i });
