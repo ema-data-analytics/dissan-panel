@@ -142,7 +142,7 @@ const PANTALLAS = {
   Pruebas:        { archivo: 'pruebas.html',   rotulo: 'Pruebas' },
   Bitacora:       { archivo: 'bitacora.html',  rotulo: 'Bitácora' },
   Agenda:         { archivo: 'agenda/',        rotulo: 'Agenda' },
-  Listas:         { archivo: 'listas.html',    rotulo: 'Listas de precios' },
+  Listas:         { archivo: 'listas.html',    rotulo: 'Lista de precios de proveedores' },
   Seguridad:      { archivo: 'seguridad.html', rotulo: 'Seguridad' },
   Stock:          { archivo: 'stock.html',     rotulo: 'Stock' },
   Compras:        { archivo: 'compras.html',   rotulo: 'Compras' },
@@ -183,12 +183,20 @@ async function armarMenu() {
 
   /* El menú lateral se arma con los módulos del usuario, en el orden de la tabla.
      El que estás mirando queda marcado, no escondido: así se ve dónde estás. */
+  /* PANTALLAS es una lista escrita a mano, y una lista a mano se queda corta
+     sin avisar: hasta el 29/10 un modulo encendido en `modulos` que no tuviera
+     su entrada aca DESAPARECIA DEL MENU en silencio, y desde el panel parecia
+     que no se habia encendido. Ahora aparece igual, apagado y diciendo por que.
+     Es el mismo defecto del `tapar()` del 22/10 y del de las tablas de bajar.js. */
   const claves = lista.map(x => x.clave);
-  $('menuLateral').innerHTML = lista.filter(x => PANTALLAS[x.clave]).length
-    ? lista.filter(x => PANTALLAS[x.clave]).map(x =>
-        '<a href="' + PANTALLAS[x.clave].archivo + '"'
-        + (x.clave === mio ? ' class="activo"' : '') + '>'
-        + esc(x.nombre || PANTALLAS[x.clave].rotulo) + '</a>').join('')
+  $('menuLateral').innerHTML = lista.length
+    ? lista.map(x => PANTALLAS[x.clave]
+        ? '<a href="' + PANTALLAS[x.clave].archivo + '"'
+          + (x.clave === mio ? ' class="activo"' : '') + '>'
+          + esc(x.nombre || PANTALLAS[x.clave].rotulo) + '</a>'
+        : '<span class="sin-pantalla" title="Habilitado en la base, pero todavía no '
+          + 'tiene pantalla en el panel: le falta su entrada en PANTALLAS de core.js.">'
+          + esc(x.nombre || x.clave) + '</span>').join('')
     : '<span class="vacio">Sin módulos habilitados</span>';
 
   if (mio && claves.indexOf(mio) === -1) {
