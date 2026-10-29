@@ -40,11 +40,11 @@ async function calcular() {
   try {
     const t0 = performance.now();
     const [ctl, tra, cli, rie, sem] = await Promise.all([
-      rpc('api_cartera_control_v2',         { p_corte: corte }),
-      rpc('api_riesgo_cartera',             { p_corte: corte }),
-      rpc('api_cartera_por_cliente',        { p_corte: corte, p_limite: 40 }),
-      rpc('api_cartera_riesgo_con_ventas_v2', { p_dias: dias, p_limite: 20 }),
-      rpc('api_cobranzas_por_semana_v2',    { p_semanas: 10, p_corte: corte })
+      rpcTodo('api_cartera_control_v2',         { p_corte: corte }),
+      rpcTodo('api_riesgo_cartera',             { p_corte: corte }),
+      rpcTodo('api_cartera_por_cliente',        { p_corte: corte, p_limite: 40 }),
+      rpcTodo('api_cartera_riesgo_con_ventas_v2', { p_dias: dias, p_limite: 20 }),
+      rpcTodo('api_cobranzas_por_semana_v2',    { p_semanas: 10, p_corte: corte })
     ]);
     const ms = Math.round(performance.now() - t0);
     ULTIMO = { ctl: una(ctl.data), tra: tra.data || [], cli: cli.data || [],

@@ -6,6 +6,8 @@
    mas repeti — un pintar() que corre y no escribe, un id que no existe, una
    declaracion repetida, un SyntaxError. */
 (function(){
+  /* lo que el servidor de verdad deja pasar por consulta */
+  var TOPE_SERVIDOR = 1000;
   var RESUMEN = {"desde":"2026-08-01","hasta":"2026-10-27","total":{"clientes":3,"unidades":4972,"articulos":36,"facturado":24250699.43,"renglones":72,"comprobantes":28},"avisos":{"plata_sin_proveedor":0,"renglones_sin_proveedor":0,"plata_prefijo_contra_fiscal_mal":1678489232.84,"clientes_prefijo_contra_zona_mal":1,"renglones_prefijo_contra_zona_ok":72,"renglones_prefijo_contra_zona_mal":43,"clientes_prefijo_contra_fiscal_mal":37},"metodo":"Facturacion: renglones de factura de venta (t_comp = FAC), neto sin IVA, de vista_margen_v2_oc.","por_mes":[{"mes":"2026-08","anio":2026,"mes_nro":8,"facturado":15960270.57,"comprobantes":15},{"mes":"2026-09","anio":2026,"mes_nro":9,"facturado":5003108.45,"comprobantes":6},{"mes":"2026-10","anio":2026,"mes_nro":10,"facturado":3287320.41,"comprobantes":7}],"por_anio":[{"anio":2026,"clientes":3,"facturado":24250699.43,"renglones":72,"comprobantes":28}],"por_cliente":[{"f2024":0,"f2025":0,"f2026":13731678.24,"ultima":"2026-10-26","cliente":"COFARMEN LTDA. (San Juan)","primera":"2026-08-03","facturado":13731678.24,"provincia":"SAN JUAN","renglones":62,"cod_client":"SJ0014","comprobantes":22,"provincia_fiscal":"SAN JUAN"},{"f2024":0,"f2025":0,"f2026":7295600,"ultima":"2026-08-20","cliente":"LEM MEDICAL SRL","primera":"2026-08-20","facturado":7295600,"provincia":"SAN JUAN","renglones":2,"cod_client":"SJ0017","comprobantes":2,"provincia_fiscal":"CAPITAL FEDERAL"},{"f2024":0,"f2025":0,"f2026":3223421.19,"ultima":"2026-10-13","cliente":"SANATORIO ARGENTINO S.R.L.","primera":"2026-08-07","facturado":3223421.19,"provincia":"SAN JUAN","renglones":8,"cod_client":"SJ0011","comprobantes":4,"provincia_fiscal":"SAN JUAN"}],"por_proveedor":[{"f2024":0,"f2025":0,"f2026":7295600,"articulos":1,"facturado":7295600,"proveedor":"IMATIONTY SA","renglones":2,"comprobantes":2,"cod_proveedor":"1110"},{"f2024":0,"f2025":0,"f2026":6520437.96,"articulos":11,"facturado":6520437.96,"proveedor":"3M ARGENTINA SACIFIA","renglones":26,"comprobantes":9,"cod_proveedor":"112"},{"f2024":0,"f2025":0,"f2026":5872038.38,"articulos":10,"facturado":5872038.38,"proveedor":"COLOPLAST DE ARGENTINA S A","renglones":23,"comprobantes":12,"cod_proveedor":"111"},{"f2024":0,"f2025":0,"f2026":2487272.73,"articulos":4,"facturado":2487272.73,"proveedor":"BECTON DICKINSON ARGENTINA S R L","renglones":5,"comprobantes":3,"cod_proveedor":"115"},{"f2024":0,"f2025":0,"f2026":1730722.26,"articulos":8,"facturado":1730722.26,"proveedor":"LABORATORIO GAVAMAX S.A.","renglones":14,"comprobantes":8,"cod_proveedor":"00151"},{"f2024":0,"f2025":0,"f2026":344628.1,"articulos":2,"facturado":344628.1,"proveedor":"SULAN S.A.","renglones":2,"comprobantes":1,"cod_proveedor":"00218"},{"f2024":0,"f2025":0,"f2026":0,"articulos":1,"facturado":0,"proveedor":"SIN PROVEEDOR EN EL SINONIMO","renglones":1,"comprobantes":1,"cod_proveedor":"(sin proveedor)"}],"por_provincia":[{"clientes":3,"facturado":24250699.43,"provincia":"SAN JUAN","renglones":72,"comprobantes":28}],"clientes_distintos":3,"por_provincia_anio":[{"anio":2026,"facturado":24250699.43,"provincia":"SAN JUAN"}],"por_provincia_fiscal":[{"clientes":2,"facturado":16955099.43,"renglones":70,"provincia_fiscal":"SAN JUAN"},{"clientes":1,"facturado":7295600,"renglones":2,"provincia_fiscal":"CAPITAL FEDERAL"}]};
 
   var DETALLE = [{"fecha":"2026-10-26","cliente":"COFARMEN LTDA. (San Juan)","articulo":"Confeel 33120 Hidroc. 20x20","cantidad":15,"vendedor":"MENDOZA S/V","facturado":336725.55,"localidad":"SAN JUAN","proveedor":"COLOPLAST DE ARGENTINA S A","provincia":"SAN JUAN","cod_articu":"COLO0209","cod_client":"SJ0014","comprobante":"FAC A0000800007921","cod_proveedor":"111","precio_unitario":22448.37,"provincia_fiscal":"SAN JUAN"},{"fecha":"2026-10-26","cliente":"COFARMEN LTDA. (San Juan)","articulo":"Biatain 3710 alginato10x10","cantidad":30,"vendedor":"MENDOZA S/V","facturado":230919.6,"localidad":"SAN JUAN","proveedor":"COLOPLAST DE ARGENTINA S A","provincia":"SAN JUAN","cod_articu":"COLO0232","cod_client":"SJ0014","comprobante":"FAC A0000800007921","cod_proveedor":"111","precio_unitario":7697.32,"provincia_fiscal":"SAN JUAN"},{"fecha":"2026-10-26","cliente":"COFARMEN LTDA. (San Juan)","articulo":"CA31 Sond nasog. L105cm-D2.3m","cantidad":10,"vendedor":"MENDOZA S/V","facturado":14057,"localidad":"SAN JUAN","proveedor":"LABORATORIO GAVAMAX S.A.","provincia":"SAN JUAN","cod_articu":"GAVA0047","cod_client":"SJ0014","comprobante":"FAC A0000800007921","cod_proveedor":"00151","precio_unitario":1405.7,"provincia_fiscal":"SAN JUAN"},{"fecha":"2026-10-20","cliente":"COFARMEN LTDA. (San Juan)","articulo":"Brava 2650 Pasta c/ alcohol","cantidad":3,"vendedor":"MENDOZA S/V","facturado":98900.13,"localidad":"SAN JUAN","proveedor":"COLOPLAST DE ARGENTINA S A","provincia":"SAN JUAN","cod_articu":"COLO0142","cod_client":"SJ0014","comprobante":"FAC A0000800007898","cod_proveedor":"111","precio_unitario":32966.71,"provincia_fiscal":"SAN JUAN"},{"fecha":"2026-10-15","cliente":"COFARMEN LTDA. (San Juan)","articulo":"Confeel 33120 Hidroc. 20x20","cantidad":10,"vendedor":"MENDOZA S/V","facturado":224483.7,"localidad":"SAN JUAN","proveedor":"COLOPLAST DE ARGENTINA S A","provincia":"SAN JUAN","cod_articu":"COLO0209","cod_client":"SJ0014","comprobante":"FAC A0000800007865","cod_proveedor":"111","precio_unitario":22448.37,"provincia_fiscal":"SAN JUAN"},{"fecha":"2026-10-15","cliente":"COFARMEN LTDA. (San Juan)","articulo":"CA33 Sonda nasog. L45cm-D2.0mm","cantidad":20,"vendedor":"MENDOZA S/V","facturado":24675,"localidad":"SAN JUAN","proveedor":"LABORATORIO GAVAMAX S.A.","provincia":"SAN JUAN","cod_articu":"GAVA0046","cod_client":"SJ0014","comprobante":"FAC A0000800007865","cod_proveedor":"00151","precio_unitario":1233.75,"provincia_fiscal":"SAN JUAN"}];
@@ -60,6 +62,32 @@
 
   window.__LLAMADAS = [];
 
+  /* FIXTURES DEL CONTROL — 29/10/2026.
+     Para que el control pueda VER el recorte hay que darle algo mas grande
+     que el tope. Dos cosas:
+       1. `__prueba_tope__`: 2.500 filas minimas, para probar el puente
+          `rpcTodo` solo, sin depender de ninguna pantalla.
+       2. el detalle de Ventas inflado a 2.500 renglones, para probarlo
+          de punta a punta: la grilla tiene que mostrar los 2.500 y el
+          Excel tiene que bajarlos.
+     Sin esto el juguete tenia 50 filas y jamas podia pasar el tope. */
+  var TOPE_PRUEBA = 2500;
+  RPC['__prueba_tope__'] = (function(){
+    var a = [];
+    for (var i = 0; i < TOPE_PRUEBA; i++) a.push({ n: i });
+    return a;
+  })();
+  if (Array.isArray(RPC['api_ventas_fact_informe']) && RPC['api_ventas_fact_informe'].length){
+    var base = RPC['api_ventas_fact_informe'], inflado = [];
+    for (var k = 0; k < TOPE_PRUEBA; k++){
+      var f = {}, o = base[k % base.length];
+      for (var c in o) if (Object.prototype.hasOwnProperty.call(o, c)) f[c] = o[c];
+      f.renglon = k + 1;
+      inflado.push(f);
+    }
+    RPC['api_ventas_fact_informe'] = inflado;
+  }
+
   window.supabase = {
     createClient: function(){
       return {
@@ -74,12 +102,32 @@
           signOut: function(){ return Promise.resolve({}); },
           onAuthStateChange: function(){ return { data:{ subscription:{ unsubscribe:function(){} } } }; }
         },
+        /* EL JUGUETE AHORA CORTA EN 1.000, COMO EL SERVIDOR DE VERDAD.
+           29/10/2026. El "Max rows" de la API de Supabase viene en 1.000 y
+           recorta cualquier consulta que devuelva filas, sin error y sin
+           aviso. El juguete no lo hacia, asi que el control nunca podia ver
+           el defecto que encontro DISSAN: pidio 2026 entero en Ventas y en
+           pantalla faltaba ENERO, porque de 5.108 renglones llegaban 1.000.
+           Un juguete mas amable que la realidad no sirve de control. */
         rpc: function(fn, args){
           window.__LLAMADAS.push({ fn:fn, args:args });
           if (!(fn in RPC)){
             return Promise.resolve({ data:null, error:{ message:'funcion de juguete sin respuesta: ' + fn } });
           }
-          return Promise.resolve({ data: RPC[fn], error:null });
+          var d = RPC[fn];
+          var pedir = function(desde, hasta){
+            if (!Array.isArray(d)) return Promise.resolve({ data:d, error:null });
+            var a = desde || 0;
+            var b = (hasta === undefined || hasta === null) ? d.length - 1 : hasta;
+            if (b - a + 1 > TOPE_SERVIDOR) b = a + TOPE_SERVIDOR - 1;   /* el corte, igual que el real */
+            return Promise.resolve({ data: d.slice(a, b + 1), error:null });
+          };
+          var p = pedir(0, TOPE_SERVIDOR - 1);
+          p.range = function(a, b){ return pedir(a, b); };
+          p.then = function(ok, mal){
+            return pedir(0, TOPE_SERVIDOR - 1).then(ok, mal);
+          };
+          return p;
         }
       };
     }

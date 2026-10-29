@@ -55,7 +55,7 @@ const JUGUETE = path.join(__dirname, 'supabase-de-juguete.js');
 const fallas = [];
 /* lo que el control MIDIO. Sin esto, "0 fallas" tambien es lo que
    imprime un control que no llego a mirar nada. */
-const medido = { grillas:0, paginas:0, botones:0, descargas:0 };
+const medido = { grillas:0, paginas:0, botones:0, descargas:0, paginados:0 };
 function falla(pantalla, clase, que){ fallas.push({ pantalla, clase, que }); }
 
 /* --------------------------------------------------------------- */
@@ -178,7 +178,7 @@ async function main(){
       if (fs.existsSync(JUGUETE)) await pg.addInitScript({ path: JUGUETE });
       await pg.goto('http://127.0.0.1:' + PUERTO + '/' + p + '?f=' + Date.now(),
                     { waitUntil: 'load' });
-      await pg.waitForTimeout(1400);
+      await pg.waitForTimeout(2200);
 
       const quien = p + ' · ' + rot;
       for (const e of errores) falla(quien, 'error_de_consola', e.slice(0, 160));
@@ -208,6 +208,29 @@ async function main(){
       for (const m of r.contraste) falla(quien, 'contraste_bajo',
         '"' + m.texto + '" · ' + m.color + ' sobre ' + m.fondo + ' = ' + m.ratio +
         ' a 1 (minimo ' + MINIMO_CONTRASTE + ') · .' + m.clase);
+
+      /* ---- 8. EL TOPE DEL SERVIDOR ----
+         El "Max rows" de la API de Supabase viene en 1.000 y recorta
+         CUALQUIER consulta que devuelva filas, sin error y sin aviso. De
+         las 43 consultas del panel, 31 devuelven filas. Lo encontro
+         DISSAN: pidio 2026 entero en Ventas y en pantalla faltaba ENERO,
+         porque de 5.108 renglones llegaban 1.000.
+         El juguete corta en 1.000 igual que el servidor y tiene 2.500
+         filas guardadas: si el puente `rpcTodo` no pagina, esto da 1.000
+         y falla. Es el control que no existia. */
+      const puente = await pg.evaluate(() => {
+        if (typeof rpcTodo !== 'function') return { hay:false };
+        return rpcTodo('__prueba_tope__').then(r => ({
+          hay:true, filas:(r.data||[]).length, paginas:r.paginas, paso:r.paso, freno:r.freno
+        })).catch(e => ({ hay:true, error:String(e.message || e) }));
+      });
+      if (!puente.hay) falla(quien, 'sin_puente_de_paginas',
+        'La pantalla no tiene rpcTodo: cualquier consulta de mas de 1.000 filas le llega recortada.');
+      else if (puente.error) falla(quien, 'puente_de_paginas_roto', puente.error.slice(0,140));
+      else if (puente.filas !== 2500) falla(quien, 'tope_del_servidor',
+        'El puente trajo ' + puente.filas + ' de 2.500 filas (paso ' + puente.paso +
+        ', ' + puente.paginas + ' paginas): el tope del servidor esta recortando.');
+      else medido.paginados++;
 
       /* ---- 6. FILAS QUE NO SE PUEDEN ALCANZAR ----
          Una grilla que tiene 72 renglones y muestra 30 TIENE que tener un
@@ -330,12 +353,13 @@ async function main(){
            porque algo lo cubre es el defecto del 20/10, donde apretaba el
            vacio y la pantalla mostraba las cifras sin filtrar. */
         let porque = '';
-        await bt.click({ timeout: 1500 }).catch(e => { porque = String(e.message).split('\n')[0]; });
-        await pg.waitForTimeout(320);
+        await bt.click({ timeout: 6000 }).catch(e => { porque = String(e.message).split('\n')[0]; });
+        await pg.waitForTimeout(420);
         const mut = await pg.evaluate(() => { if (window.__obs) window.__obs.disconnect(); return window.__mut; });
         const despues = await huella();
         if (porque) falla(quien, 'boton_tapado',
-          '«' + info.rot + '» no se puede apretar: ' + porque.slice(0, 120));
+          '«' + info.rot + '» no se puede apretar: ' + porque.slice(0, 120) +
+          ' — si dice Timeout, la pantalla sigue ocupada pintando y el boton quedo muerto mientras tanto.');
         else medido.botones++;
         if (!porque && mut === 0 && antes === despues) falla(quien, 'boton_muerto',
           '«' + info.rot + '» se aprieta y no cambia una sola cosa de la pantalla: ' +
@@ -360,7 +384,8 @@ async function main(){
     console.log('  midio: ' + medido.botones + ' botones apretados · ' +
                 medido.grillas + ' grillas paginadas recorridas hasta la ultima pagina (' +
                 medido.paginas + ' paginas) · ' + medido.descargas +
-                ' con el archivo comprobado que baja TODAS las filas.');
+                ' con el archivo comprobado que baja TODAS las filas · ' + medido.paginados +
+                ' pantallas que traen las 2.500 filas pese al tope de 1.000 del servidor.');
     process.exit(0);
   }
   console.log('CONTROL DE PANTALLAS: ' + fallas.length + ' falla(s)\n');

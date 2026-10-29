@@ -42,13 +42,13 @@ async function calcular() {
   try {
     const t0 = performance.now();
     const [ctl, ctas, sin, comp, mov, imp] = await Promise.all([
-      rpc('api_tesoreria_partida_doble_v2',      {}),
-      rpc('api_tesoreria_cuentas_v2',            { p_limite: 500 }),
-      rpc('api_tesoreria_asientos_sin_cerrar_v2',{}),
-      rpc('api_tesoreria_por_comprobante_v2',    { p_desde: desde, p_hasta: hasta }),
-      rpc('api_tesoreria_movimientos_v2',        { p_desde: desde, p_hasta: hasta,
+      rpcTodo('api_tesoreria_partida_doble_v2',      {}),
+      rpcTodo('api_tesoreria_cuentas_v2',            { p_limite: 500 }),
+      rpcTodo('api_tesoreria_asientos_sin_cerrar_v2',{}),
+      rpcTodo('api_tesoreria_por_comprobante_v2',    { p_desde: desde, p_hasta: hasta }),
+      rpcTodo('api_tesoreria_movimientos_v2',        { p_desde: desde, p_hasta: hasta,
                                                    p_limite: 300 }),
-      rpc('api_tesoreria_fechas_imposibles_v2',  {})
+      rpcTodo('api_tesoreria_fechas_imposibles_v2',  {})
     ]);
     const ms = Math.round(performance.now() - t0);
     ULTIMO = { ctl: una(ctl.data), ctas: ctas.data || [], sin: sin.data || [],

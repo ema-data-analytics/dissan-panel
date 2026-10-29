@@ -428,7 +428,7 @@ function mvPedirDetalle(f, estado, cuerpo){
   /* Los 19 parametros de api_oc_pedido_reporte_v3. Los ocho del final son los que
      hasta el 14/10 la tabla de abajo ignoraba: mostraba 524 renglones mientras las
      tarjetas decian 731. Dos numeros de la misma pantalla que no coinciden. */
-  rpc('api_oc_pedido_reporte_v3', {
+  rpcTodo('api_oc_pedido_reporte_v3', {
     p_desde:            f.desde || null,
     p_hasta:            f.hasta || null,
     p_articulos:        f.articulos.length   ? f.articulos   : null,

@@ -269,8 +269,8 @@ function vtCargar(){
      api_margen_tablero_v3, asi que esta pantalla y el Tablero no pueden decir
      numeros distintos. */
   var pedidos = [ rpc('api_ventas_fact_resumen', f),
-                  rpc('api_ventas_fact_informe', det),
-                  rpc('api_ventas_fact_por_mes_v2',
+                  rpcTodo('api_ventas_fact_informe', det),
+                  rpcTodo('api_ventas_fact_por_mes_v2',
                       { p_desde:f.p_desde, p_hasta:f.p_hasta, p_clientes:f.p_clientes,
                         p_provincias:f.p_provincias, p_proveedores:f.p_proveedores }) ];
   if (!VT.opciones){
@@ -866,38 +866,95 @@ function vtGrafBarras(filas, campoEt, campoVal, fnTip, fnTexto, tono, anchoEt, a
   return s.join('');
 }
 
-/* columnas: una por mes. El rotulo se escribe cada 3 meses para que se lea,
-   y el mes exacto va en el tooltip de cada columna. */
+/* COLUMNAS POR MES — rehecho el 29/10/2026.
+   LO QUE ESTABA MAL, y lo vio DISSAN antes que yo: el viewBox se armaba con
+   el ANCHO DE LOS DATOS (18 px por mes = 196 px con 11 meses) y el CSS lo
+   estira al ancho de la caja con width:100%. Con pocos meses eso agranda
+   TODO el dibujo varias veces: barras enormes y letras enormes. El dibujo
+   tiene que tener un tamano fijo y las columnas acomodarse adentro.
+   Y NO TENIA EJE Y: ni una cifra. Un grafico sin escala no se puede leer,
+   solo se puede mirar: no se sabe si la columna mas alta son 10 millones o
+   300. Ahora tiene cuatro lineas con su valor, todos los meses rotulados
+   mientras entren, y el numero arriba de cada columna. */
+var VT_G = { W:760, H:250, L:64, R:12, T:16, B:38 };
+
+/* una escala que termine en un numero redondo: 1, 2, 2,5 o 5 por potencia de 10 */
+function vtEscalaLinda(max){
+  if (!(max > 0)) return 1;
+  var p = Math.pow(10, Math.floor(Math.log(max) / Math.LN10));
+  var r = max / p;
+  var m = r <= 1 ? 1 : r <= 2 ? 2 : r <= 2.5 ? 2.5 : r <= 5 ? 5 : 10;
+  return m * p;
+}
+
+/* el rotulo del eje: corto, porque es una escala y no un importe exacto */
+function vtCorto(v){
+  if (v >= 1e9) return '$' + vtDec(v / 1e9, 1) + ' MM';
+  if (v >= 1e6) return '$' + vtDec(v / 1e6, v / 1e6 >= 100 ? 0 : 1) + ' M';
+  if (v >= 1e3) return '$' + vtDec(v / 1e3, 0) + ' mil';
+  return '$' + vtDec(v, 0);
+}
+function vtDec(n, d){
+  return Number(n).toLocaleString('es-AR', { minimumFractionDigits:d, maximumFractionDigits:d });
+}
+
 function vtGrafColumnas(filas){
   if (!filas || !filas.length) return '';
+  var G = VT_G, n = filas.length;
   var max = 0;
-  for (var i = 0; i < filas.length; i++) max = Math.max(max, Number(filas[i].facturado || 0));
-  if (max <= 0) max = 1;
-  var aCol = 18, pad = 8, alto = 130, base = alto + 16, ancho = aCol * filas.length + pad * 2;
+  for (var i = 0; i < n; i++) max = Math.max(max, Number(filas[i].facturado || 0));
+  var tope = vtEscalaLinda(max);
+  var anchoPlot = G.W - G.L - G.R, altoPlot = G.H - G.T - G.B;
+  var y0 = G.T + altoPlot;                       /* la linea del cero */
+  /* con 3 meses, repartir 684 px entre 3 deja las columnas sueltas en medio
+     de un campo vacio. Se usa SOLO el ancho que hace falta y se centra. */
+  var usado = Math.min(anchoPlot, n * 112);
+  var x0 = G.L + (anchoPlot - usado) / 2;
+  var slot = usado / n;
+  var aBarra = Math.min(42, Math.max(6, slot * 0.6));
+  var paso = n <= 16 ? 1 : Math.ceil(n / 12);    /* cada cuantos meses se rotula */
+
   var s = ['<div class="db-graf"><div class="db-tip"></div>',
-           '<svg viewBox="0 0 ' + ancho + ' ' + (base + 14) +
-           '" role="img" aria-label="facturación mes a mes">'];
-  for (var j = 0; j < filas.length; j++){
+           '<svg viewBox="0 0 ' + G.W + ' ' + G.H + '" preserveAspectRatio="xMidYMid meet"',
+           ' role="img" aria-label="facturación mes a mes, en pesos">'];
+
+  /* el eje Y: cuatro lineas con su cifra. Sin esto el grafico no dice cuanto. */
+  for (var k = 0; k <= 4; k++){
+    var val = tope * k / 4;
+    var y = y0 - altoPlot * k / 4;
+    s.push('<line class="rej" x1="' + G.L + '" y1="' + y + '" x2="' + (G.W - G.R) +
+           '" y2="' + y + '"></line>');
+    s.push('<text class="ejeY" x="' + (G.L - 8) + '" y="' + (y + 3.5) +
+           '" text-anchor="end">' + vtEsc(vtCorto(val)) + '</text>');
+  }
+
+  for (var j = 0; j < n; j++){
     var f = filas[j];
     var v = Number(f.facturado || 0);
-    var hCol = Math.max(1, Math.round((alto - 10) * v / max));
-    var x = pad + j * aCol;
+    var hCol = Math.max(1, altoPlot * v / tope);
+    var cx = x0 + slot * j + slot / 2;
     var tono = (Number(f.anio) % 2 === 0) ? '' : 'v';
     s.push('<g class="f" data-tip="' + vtEsc(VT_MESES[Number(f.mes_nro)] + ' ' + f.anio + ': ' +
            vtExacto(v) + ' en ' + vtNum(f.comprobantes) + ' facturas') + '">');
-    s.push('<rect class="b ' + tono + '" x="' + (x + 2) + '" y="' + (alto - hCol) +
-           '" width="' + (aCol - 4) + '" height="' + hCol + '"></rect>');
-    if (j % 3 === 0 || j === filas.length - 1){
-      s.push('<text class="et" x="' + (x + aCol/2) + '" y="' + (alto + 11) +
+    s.push('<rect class="z" x="' + (x0 + slot * j) + '" y="' + G.T +
+           '" width="' + slot + '" height="' + altoPlot + '"></rect>');
+    s.push('<rect class="b ' + tono + '" x="' + (cx - aBarra / 2) + '" y="' + (y0 - hCol) +
+           '" width="' + aBarra + '" height="' + hCol + '"></rect>');
+    /* el numero arriba de la columna, mientras entre sin pisarse */
+    if (n <= 14 && v > 0){
+      s.push('<text class="cifra" x="' + cx + '" y="' + (y0 - hCol - 5) +
+             '" text-anchor="middle">' + vtEsc(vtCorto(v)) + '</text>');
+    }
+    if (j % paso === 0 || j === n - 1){
+      s.push('<text class="et" x="' + cx + '" y="' + (y0 + 14) +
              '" text-anchor="middle">' + vtEsc(VT_MESES[Number(f.mes_nro)]) + '</text>');
-      s.push('<text class="et" x="' + (x + aCol/2) + '" y="' + (alto + 21) +
+      s.push('<text class="et" x="' + cx + '" y="' + (y0 + 25) +
              '" text-anchor="middle">' + vtEsc(String(f.anio).substring(2)) + '</text>');
     }
-    s.push('<rect class="z" x="' + x + '" y="0" width="' + aCol + '" height="' + base + '"></rect>');
     s.push('</g>');
   }
-  s.push('<line class="eje" x1="' + pad + '" y1="' + alto + '" x2="' + (ancho - pad) +
-         '" y2="' + alto + '"></line>');
+  s.push('<line class="eje" x1="' + G.L + '" y1="' + y0 + '" x2="' + (G.W - G.R) +
+         '" y2="' + y0 + '"></line>');
   s.push('</svg></div>');
   return s.join('');
 }

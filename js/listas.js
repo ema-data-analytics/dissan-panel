@@ -514,7 +514,7 @@ function lpFechaCorta(iso) {
 }
 
 function lpCargarProveedores() {
-  return rpc('api_listas_proveedores', {}).then(function (r) {
+  return rpcTodo('api_listas_proveedores', {}).then(function (r) {
     LP_PROV = r.data || [];
     /* DOS FILAS CON EL MISMO NOMBRE NO SON UN DUPLICADO.      29/10/2026
        JOHNSON & JOHNSON tiene DOS listas: la de Distribuidores (lista L025

@@ -69,6 +69,48 @@ async function rpc(fn, args = {}) {
   return { data, ms };
 }
 
+/* EL TOPE DE 1.000 DEL SERVIDOR, Y POR QUE ESTO EXISTE.      29/10/2026
+   Lo encontro DISSAN, no yo: pidio el ano 2026 entero en Ventas y en
+   pantalla no estaba ENERO. La base devuelve 5.108 renglones; el
+   navegador recibia 1.000.
+   El recorte NO estaba en mi codigo ni en la funcion de la base: es el
+   "Max rows" de la API de Supabase, que viene en 1.000 de fabrica y
+   corta CUALQUIER consulta que devuelva filas, sin una palabra, sin un
+   error y sin un aviso. De las 43 consultas del panel, 31 devuelven
+   filas: las 31 estaban expuestas.
+   Arreglarlo subiendo ese numero en el tablero de Supabase no sirve:
+   es una perilla que manana vuelve a estar en otro lado y nadie se
+   entera. Asi que se pide DE A PAGINAS hasta que no venga mas nada.
+
+   EL PASO NO SE SUPONE, SE MIDE: si el tope del servidor fuera 500 y
+   aca estuviera escrito 1.000, la primera pagina vendria con 500, se
+   leeria como "ya vinieron todas" y volveriamos al mismo recorte con
+   otro numero. Por eso el paso es LO QUE VINO EN LA PRIMERA PAGINA. */
+const RPC_PAGINA = 1000;
+const RPC_VUELTAS_MAX = 200;        /* 200 paginas: freno duro, nunca un bucle eterno */
+
+async function rpcTodo(fn, args = {}) {
+  const t0 = performance.now();
+  let desde = 0, todo = [], paso = null, vueltas = 0, freno = false;
+  for (;;) {
+    const { data, error } = await sb.rpc(fn, args).range(desde, desde + RPC_PAGINA - 1);
+    if (error) {
+      const x = new Error(traducirError(error));
+      x.ms = Math.round(performance.now() - t0);
+      throw x;
+    }
+    const p = data || [];
+    todo = todo.concat(p);
+    vueltas++;
+    if (paso === null) paso = p.length;
+    if (p.length === 0 || p.length < paso) break;
+    desde += p.length;
+    if (vueltas >= RPC_VUELTAS_MAX) { freno = true; break; }
+  }
+  return { data: todo, ms: Math.round(performance.now() - t0),
+           paginas: vueltas, paso: paso, freno: freno };
+}
+
 /* ---------- el ojo de la contraseña ---------- */
 const OJO_VER = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"'
   + ' stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
@@ -160,9 +202,9 @@ async function armarMenu() {
   const mio = $('app').dataset.modulo || '';
   let lista = [], yo = {};
   try {
-    const { data } = await rpc('api_mis_modulos', {});
+    const { data } = await rpcTodo('api_mis_modulos', {});
     lista = data || [];
-    const p = await rpc('api_mi_perfil', {});
+    const p = await rpcTodo('api_mi_perfil', {});
     yo = (p.data && p.data[0]) || {};
     MI_ROL = yo.rol || '';
   } catch (e) {

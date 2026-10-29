@@ -68,7 +68,7 @@ function btCargar(){
   var f = btFiltros();
   var t0 = Date.now();
   Promise.all([
-    rpc('api_bitacora', f),
+    rpcTodo('api_bitacora', f),
     rpc('api_bitacora_resumen', { p_desde:f.p_desde, p_hasta:f.p_hasta })
   ]).then(function(r){
     BT.filas = r[0].data || [];

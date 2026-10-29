@@ -25,11 +25,11 @@ async function calcular() {
   try {
     const t0 = performance.now();
     const [val, dep, hvr, bre, liq] = await Promise.all([
-      rpc('api_stock_valorizado'),
-      rpc('api_stock_por_deposito'),
-      rpc('api_stock_historico_vs_reposicion'),
-      rpc('api_stock_brecha_por_articulo', { p_limite: 20 }),
-      rpc('api_stock_a_liquidar', { p_dias_sin_venta: 180, p_limite: 20,
+      rpcTodo('api_stock_valorizado'),
+      rpcTodo('api_stock_por_deposito'),
+      rpcTodo('api_stock_historico_vs_reposicion'),
+      rpcTodo('api_stock_brecha_por_articulo', { p_limite: 20 }),
+      rpcTodo('api_stock_a_liquidar', { p_dias_sin_venta: 180, p_limite: 20,
                                     p_incluir_nunca_vendidos: true })
     ]);
     const ms = Math.round(performance.now() - t0);
@@ -215,7 +215,7 @@ async function verKardex() {
   if (b.disabled) return;
   b.disabled = true; b.textContent = 'Buscando...';
   try {
-    const { data, ms } = await rpc('api_kardex', {
+    const { data, ms } = await rpcTodo('api_kardex', {
       p_cod_articu: a,
       p_desde: $('k-desde').value || null,
       p_hasta: $('k-hasta').value || null,

@@ -144,3 +144,20 @@
   .db-aviso b{ color:var(--off-white); }
   .db-vacio{ color:var(--tx2); font-size:12px; padding:16px 2px; }
   .db-pie{ font-size:10.5px; color:var(--tx2); margin-top:6px; line-height:1.5; }
+
+  /* EL GRAFICO DE COLUMNAS, REHECHO — 29/10/2026 -----------------------
+     Lo vio DISSAN antes que yo: "el grafico se ve muy tosco, demasiado
+     grande, y no tiene datos en X ni en Y". Tenia razon en las dos cosas.
+     1) El viewBox se armaba con el ANCHO DE LOS DATOS (18 px por mes =
+        196 px con 11 meses) y esta hoja lo estira al ancho de la caja con
+        width:100%: con pocos meses eso agranda TODO varias veces.
+        Ahora el dibujo mide 760x250 siempre y las columnas se acomodan
+        adentro, asi que 3 meses y 30 meses se ven igual de prolijos.
+     2) No habia eje Y: ni una cifra. Un grafico sin escala no se lee, se
+        mira: no se sabe si la columna mas alta son 10 millones o 300. */
+  .db-graf.ancho, .vi-graf{ max-width:860px; }
+  .db-graf .rej{ stroke:rgba(255,255,255,.09); stroke-width:1; }
+  .db-graf .ejeY{ font-size:9.5px; fill:var(--tx2); font-variant-numeric:tabular-nums; }
+  .db-graf .ejeT{ font-size:9.5px; fill:var(--tx2); }
+  .db-graf .cifra{ font-size:9.5px; fill:var(--off-white); font-weight:600;
+                   font-variant-numeric:tabular-nums; }

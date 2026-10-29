@@ -33,12 +33,12 @@ async function calcular() {
     const [res, mes, prov, ant, sal, inf] = await Promise.all([
       /* Las cuatro _v2 arreglan la mezcla de monedas medida el 21/10: importe_to viene en
          pesos y el neto/exento/IVA en la moneda del comprobante. Las v1 quedaron intactas. */
-      rpc('api_compras_resumen_v2',          { p_desde: desde, p_hasta: hasta }),
-      rpc('api_compras_por_mes_v2',          { p_desde: desde, p_hasta: hasta }),
-      rpc('api_compras_por_proveedor_v2',    { p_desde: desde, p_hasta: hasta, p_limite: 20 }),
-      rpc('api_cuentas_a_pagar',             {}),
-      rpc('api_cuentas_a_pagar_por_proveedor', { p_limite: 50 }),
-      rpc('api_compras_inflacion_articulo_v2', { p_desde: desde, p_hasta: hasta,
+      rpcTodo('api_compras_resumen_v2',          { p_desde: desde, p_hasta: hasta }),
+      rpcTodo('api_compras_por_mes_v2',          { p_desde: desde, p_hasta: hasta }),
+      rpcTodo('api_compras_por_proveedor_v2',    { p_desde: desde, p_hasta: hasta, p_limite: 20 }),
+      rpcTodo('api_cuentas_a_pagar',             {}),
+      rpcTodo('api_cuentas_a_pagar_por_proveedor', { p_limite: 50 }),
+      rpcTodo('api_compras_inflacion_articulo_v2', { p_desde: desde, p_hasta: hasta,
                                                p_min_compras: 3, p_limite: 25,
                                                p_incluir_dudosos: false })
     ]);
