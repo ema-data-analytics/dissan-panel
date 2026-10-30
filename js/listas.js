@@ -447,21 +447,33 @@ function lpLeer(prov, f, diag) {
   if (cfg.tipo === 'imagen') {
     return fuera('La lista viene como imagen. Pedirla en Excel o PDF.');
   }
-  if (!cfg.tipo) {
-    return fuera(prov.proveedor + ' no tiene cargada la configuracion de lectura ' +
-                 '(cotiza.lista_proveedor.lectura).');
-  }
-  if (cfg.tipo !== 'pdf') {
-    return fuera(prov.proveedor + ' manda la lista en ' + String(cfg.tipo).toUpperCase() +
-                 ' y este archivo es PDF. Si el laboratorio cambio el formato hay que ' +
-                 'actualizar la configuracion de lectura antes de cargarla.');
+
+  /* EL TIPO LO DICE EL ARCHIVO, NO LA CONFIGURACION (30/10/2026).
+     Antes, si el proveedor estaba cargado como 'excel' y mandaba un PDF, esto lo
+     rechazaba con "manda la lista en EXCEL y este archivo es PDF". Un laboratorio
+     cambia de formato sin avisarle a nadie: no se rechaza, se lee y se declara
+     COMO se leyo. Espejo de lo que hace la Edge Function con el Excel. */
+  var cfgUsada = null, aviso = null;
+  if (cfg.tipo === 'pdf') cfgUsada = cfg;
+  else if (cfg.pdf)       cfgUsada = Object.assign({ tipo: 'pdf' }, cfg.pdf);
+  else {
+    cfgUsada = { tipo: 'pdf', fmt: 'ar', cod: [0, 110],
+                 precio: { modo: 'moneda', ocurrencia: 1 } };
+    aviso = prov.proveedor + ' no tiene cargada la lectura de PDF' +
+            (cfg.tipo ? ' (tiene la de ' + String(cfg.tipo).toUpperCase() + ')' : '') +
+            '. Un PDF no se describe solo, asi que se leyo con la lectura generica: ' +
+            'el codigo al principio del renglon y el primer importe como precio. ' +
+            'Controlar los renglones antes de subirlos.';
   }
 
   var t0 = Date.now();
   return f.arrayBuffer().then(function (buf) {
-    return lpLeerPdf(buf, cfg, diag === true);
+    return lpLeerPdf(buf, cfgUsada, diag === true);
   }).then(function (leido) {
-    return lpArmarLectura(prov, nombre, leido, Date.now() - t0, cfg, diag === true);
+    var r = lpArmarLectura(prov, nombre, leido, Date.now() - t0, cfgUsada, diag === true);
+    /* El aviso de COMO se leyo va primero, arriba de todo. */
+    if (aviso) r.avisos = [aviso].concat(r.avisos || []);
+    return r;
   });
 }
 
