@@ -129,7 +129,7 @@ header.top{background:var(--caja);border-bottom:1px solid var(--linea);position:
 </section>
 
 <!-- ══════════ app ══════════ -->
-<div id="app" data-modulo="Agenda" hidden>
+<div id="app" hidden>
   <header class="top">
     <div class="wrap">
       <div>
@@ -170,6 +170,14 @@ header.top{background:var(--caja);border-bottom:1px solid var(--linea);position:
 <div id="tapa" hidden></div>
 <div id="panel" hidden></div>
 
+<!-- ESTA PANTALLA NO PASA POR EL PORTERO DE core.js, Y ES A PROPOSITO.
+     No carga core.js: es una pagina suelta, con su propio ingreso y su
+     propia CLAVE, que se valida en la BASE. Medido el 31/10/2026:
+     ema_agenda_datos('clave-que-no-es') devuelve
+     {"ok": false, "error": "Clave incorrecta"}, asi que sin la clave no
+     sale un solo dato. NO se le pone data-modulo: haria creer que el
+     portero la cuida, y aca no hay portero que leerlo. Si algun dia se la
+     mete al panel, hay que cargarle core.js Y declararle el modulo. -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script>
 'use strict';
