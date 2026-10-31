@@ -156,6 +156,25 @@
 </div>
 
 <!-- ---- Modal: cambiar contraseña ---- -->
+<!-- 31/10/2026 — DAR DE BAJA PEDIA NADA: un clic en el icono y el usuario
+     quedaba afuera. Es la unica accion destructiva de la pantalla y no tenia
+     confirmacion. Va la confirmacion ADENTRO de la pantalla, no un confirm()
+     del navegador: un dialogo del navegador traba la pestana entera. -->
+<div class="modal-fondo" id="modalEstado">
+  <div class="modal-caja">
+    <div class="modal-titulo" id="estadoTitulo">Dar de baja el acceso</div>
+    <input type="hidden" id="estadoUsuarioId">
+    <input type="hidden" id="estadoActivar">
+    <p id="estadoTexto" style="margin:0 0 14px;line-height:1.55"></p>
+    <div class="modal-botones">
+      <button type="button" class="btn-cancelar" onclick="cerrarModal('modalEstado')">Cancelar</button>
+      <button type="button" class="btn-confirmar" id="estadoConfirmar"
+              onclick="confirmarEstado()">Dar de baja</button>
+    </div>
+    <div class="modal-mensaje" id="segMensajeEstado"></div>
+  </div>
+</div>
+
 <div class="modal-fondo" id="modalPassword">
   <div class="modal-caja">
     <div class="modal-titulo">Cambiar contraseña</div>
@@ -180,6 +199,6 @@
 <script src="js/core.js?v=13"></script>
 <script src="js/bajar-formatos.js?v=2"></script>
 <script src="js/bajar.js?v=2"></script>
-<script src="js/seguridad.js?v=3"></script>
+<script src="js/seguridad.js?v=4"></script>
 </body>
 </html>

@@ -228,11 +228,41 @@ function calcular(){ cargarListaUsuarios(); }
   function abrirModal(id) { document.getElementById(id).classList.add('visible'); }
   function cerrarModal(id) { document.getElementById(id).classList.remove('visible'); }
 
+  /* 31/10/2026 — Dar de baja es la unica accion destructiva de esta pantalla
+     y se hacia con UN clic, sin preguntar nada. Ahora abre la confirmacion,
+     que vive adentro de la pantalla (nunca confirm(), que traba la pestana). */
   function cambiarEstado(id, activar) {
+    var fila = null, u = (segUsuariosCache || []);
+    for (var i = 0; i < u.length; i++) if (String(u[i].id) === String(id)) fila = u[i];
+    var quien = fila ? (fila.nombre || fila.email || '') : '';
+    document.getElementById('estadoUsuarioId').value = id;
+    document.getElementById('estadoActivar').value = activar ? '1' : '';
+    document.getElementById('estadoTitulo').textContent =
+      activar ? 'Reactivar el acceso' : 'Dar de baja el acceso';
+    document.getElementById('estadoConfirmar').textContent =
+      activar ? 'Reactivar' : 'Dar de baja';
+    document.getElementById('estadoTexto').textContent = activar
+      ? ('Vas a reactivar a ' + quien + '. Va a poder volver a entrar al panel con su contrase\u00f1a de siempre.')
+      : ('Vas a dar de baja a ' + quien + '. No va a poder entrar al panel. El usuario NO se borra: queda anulado y se puede reactivar desde esta misma pantalla.');
+    var m = document.getElementById('segMensajeEstado');
+    m.textContent = ''; m.className = 'modal-mensaje';
+    document.getElementById('modalEstado').classList.add('visible');
+  }
+
+  function confirmarEstado() {
+    var id = document.getElementById('estadoUsuarioId').value;
+    var activar = document.getElementById('estadoActivar').value === '1';
+    var m = document.getElementById('segMensajeEstado');
+    var b = document.getElementById('estadoConfirmar');
+    m.textContent = ''; m.className = 'modal-mensaje'; b.disabled = true;
     SEG_FN({ accion: 'estado', id: id, activo: !!activar }).then(function(res) {
-      if (res && res.ok) { cargarListaUsuarios(); return; }
-      /* el candado del ultimo administrador contesta por acá, y hay que verlo */
-      avisarFalloServidor({ message: SEG_MOTIVO(res) });
+      b.disabled = false;
+      if (res && res.ok) { cerrarModal('modalEstado'); cargarListaUsuarios(); return; }
+      /* EL CANDADO NO ES UNA FALLA DE RED. El del ultimo administrador va a
+         rechazar SIEMPRE: decirle "proba de nuevo" manda al usuario a dar
+         vueltas, y "avisa al administrador" se lo dice AL administrador. */
+      m.textContent = SEG_MOTIVO(res);
+      m.className = 'modal-mensaje error';
     });
   }
 
