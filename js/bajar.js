@@ -148,6 +148,10 @@ function bajarFiltros(){
     var el = campos[i];
     if (el.type === 'hidden' || el.disabled) continue;
     if (el.closest && el.closest('.modal-fondo')) continue;   /* los modales no son filtros */
+    /* un control que solo cambia COMO se ve (filas por pagina) no cambia QUE
+       datos hay: se declara con data-no-filtro y no entra al archivo */
+    if (el.hasAttribute('data-no-filtro')) continue;
+    if (el.closest && el.closest('[data-no-filtro]')) continue;
 
     var rot = bajarRotulo(el);
     var val = '';
@@ -184,7 +188,20 @@ function bajarRotulo(el){
     if (l) return (l.textContent || '').trim().replace(/\s*[:：]\s*$/, '');
   }
   var p = el.closest('label');
-  if (p) return (p.textContent || '').trim().replace(/\s+/g, ' ');
+  if (p){
+    /* OJO: p.textContent trae el texto del propio control. Un <select>
+       aporta todas sus opciones y el rotulo sale "Filas por pagina
+       3060120250500". Van solo los nodos de texto DIRECTOS del label. */
+    var t = '';
+    for (var k = 0; k < p.childNodes.length; k++){
+      var nd = p.childNodes[k];
+      if (nd.nodeType === 3) t += nd.nodeValue;
+      else if (nd.nodeType === 1 && !/^(SELECT|INPUT|TEXTAREA|OPTION)$/.test(nd.tagName)
+               && !nd.querySelector('select, input, textarea')) t += nd.textContent;
+    }
+    t = t.trim().replace(/\s+/g, ' ').replace(/\s*[:：]\s*$/, '');
+    if (t) return t;
+  }
   var caja = el.closest('.fg, .mv-campo, .hil-campo');
   var lab = caja ? caja.querySelector('label') : null;
   if (lab) return (lab.textContent || '').trim().replace(/\s*[:：]\s*$/, '');

@@ -77,7 +77,8 @@ function filasPintar(est){
     '<button type="button" class="fl-b" data-ir="+" ' + (est.pag === paginas ? 'disabled' : '') + '>siguiente</button>' +
     '<button type="button" class="fl-b" data-ir="u" ' + (est.pag === paginas ? 'disabled' : '') + '>última &raquo;</button>' +
     '<span class="fl-sep"></span>' +
-    '<label class="fl-lab">Filas por página <select class="fl-sel">' + ops + '</select></label>' +
+    '<label class="fl-lab">Filas por página ' +
+    '<select class="fl-sel" data-no-filtro="1">' + ops + '</select></label>' +
     '<span class="fl-baj">el Excel y el PDF bajan las <b>' + filasNum(total) + '</b>, no esta página</span>';
 }
 
