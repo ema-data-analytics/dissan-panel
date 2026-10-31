@@ -354,3 +354,52 @@ window.addEventListener('load', async () => {
   const { data } = await sb.auth.getSession();
   if (data.session) await abrirApp(); else $('l-user').focus();
 });
+
+/* ===== ORDEN DE LAS COLUMNAS: UNA SOLA FUENTE =====      31/10/2026
+   Las pantallas genericas tomaban `Object.keys(datos[0])`, y cuando la
+   funcion de la base arma su respuesta con jsonb_build_object, Postgres
+   ORDENA LAS CLAVES POR LARGO. Medido: "cuanto le vendimos a DROGUERIA
+   CENTRAL en 2026" salia ULTIMA · CLIENTE · PRIMERA · FACTURADO · … porque
+   ultima=6, cliente=7, primera=7, facturado=9, cod_client=10,
+   comprobantes=12, provincia_fiscal=16. Es el largo, no el significado.
+
+   NO se arregla reordenando aca con un criterio propio: el .xlsx toma las
+   columnas del MISMO objeto y `api_columnas_formato` decide SU orden, asi
+   que dos criterios dejarian la pantalla diciendo un orden y el archivo
+   otro — el defecto que mas veces mordio este proyecto.
+
+   Entonces el orden lo da LA BASE, con la funcion que el Excel YA usa:
+   devuelve el orden curado de `columna_formato.orden` cuando TODAS las
+   columnas lo tienen (las 23 de la planilla de DISSAN), y el orden pedido
+   cuando no. Reordenando las claves de cada fila con eso, la pantalla, el
+   grafico, el informe y el .xlsx quedan con el MISMO orden, y de paso la
+   pantalla empieza a respetar el orden de la planilla de DISSAN, que hasta
+   hoy sólo respetaba el archivo.
+
+   Si la llamada falla, se devuelven los datos TAL CUAL: un orden fulero es
+   mucho mejor que una pantalla vacia. */
+function ordenarColumnasDeLaBase(datos){
+  try {
+    if (!datos || !datos.length || typeof datos[0] !== 'object') {
+      return Promise.resolve(datos);
+    }
+    var cols = Object.keys(datos[0]);
+    if (cols.length < 2) return Promise.resolve(datos);
+    return rpcTodo('api_columnas_formato', { p_columnas: cols })
+      .then(function(r){
+        var meta = (r && r.data) || [];
+        if (!meta.length) return datos;
+        var orden = meta.map(function(m){ return m.columna; })
+                        .filter(function(c){ return cols.indexOf(c) >= 0; });
+        /* lo que la base no devolvio va al final, no se pierde */
+        cols.forEach(function(c){ if (orden.indexOf(c) < 0) orden.push(c); });
+        if (orden.join('|') === cols.join('|')) return datos;   /* ya estaba */
+        return datos.map(function(f){
+          var o = {};
+          for (var i = 0; i < orden.length; i++) o[orden[i]] = f[orden[i]];
+          return o;
+        });
+      })
+      .catch(function(){ return datos; });
+  } catch (e) { return Promise.resolve(datos); }
+}

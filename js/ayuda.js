@@ -319,6 +319,16 @@ function ayPreguntarModelo(texto, deIntencion){
 }
 
 function ayTerminar(pregunta, r){
+  /* El orden de las columnas lo da la base, UNA sola vez y para todos:
+     tabla, grafico, informe y el .xlsx salen del mismo objeto. Ver
+     ordenarColumnasDeLaBase() en core.js. */
+  ordenarColumnasDeLaBase(r.datos || []).then(function(d){
+    r.datos = d;
+    ayTerminar2(pregunta, r);
+  });
+}
+
+function ayTerminar2(pregunta, r){
   AY.enviando = false;
   document.getElementById('ayEnviar').disabled = false;
   document.getElementById('ayCargando').hidden = true;

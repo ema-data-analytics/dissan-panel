@@ -121,8 +121,29 @@ function hiloCamino(){
         esc(r.origen) + ' y ' + esc(r.destino) + '.</strong><br>' + esc(r.motivo) + '</div>';
       return;
     }
+    /* 31/10/2026 — EL CAMINO PUEDE CRUZAR UNA TABLA PUENTE, Y SE DICE.
+       La guarda de catalogos de api_hilo_camino mira el origen y el destino,
+       no los saltos del medio: devolvia caminos que pasan por una tabla con
+       ~1 fila por articulo sin avisar, y cruzar eso no sigue una operacion,
+       salta a TODAS las operaciones que comparten ese articulo. La base ahora
+       las declara en `cruza_tabla_puente`, con la medicion que lo probo.
+       No se esconde el camino: se muestra con el aviso. De los 3.722 caminos
+       medidos, 446 cruzan la unica tabla verificada hasta hoy. */
     var out = '<div class="hil-ok"><strong>' + r.saltos + ' paso(s)</strong> · ' +
-      esc(r.confianza) + '<br>' + esc(r.aviso) + '</div>' +
+      esc(r.confianza) + '<br>' + esc(r.aviso) + '</div>';
+    (r.cruza_tabla_puente || []).forEach(function(pv){
+      out += '<div class="hil-no" style="margin-top:8px">' +
+        '<strong>OJO: este camino pasa por ' + esc(pv.tabla) + ', que NO es un ' +
+        'comprobante: es una tabla puente.</strong><br>' +
+        esc(pv.filas ? Number(pv.filas).toLocaleString('es-AR') : '?') + ' filas contra ' +
+        esc(pv.contra_que || '') + ': razón ' + esc(String(pv.razon)) + ', o sea ~1 fila por ' +
+        'entidad y no una por operación. Cruzarla salta a todas las operaciones que ' +
+        'comparten ese valor, así que el camino existe pero <strong>no es una cadena de ' +
+        'operaciones</strong>: no lo uses para seguir un comprobante.' +
+        '<br><span style="color:#9FB3C8;font-size:12px">Medido el ' +
+        esc(String(pv.medido_el || '')) + '. ' + esc(pv.por_que || '') + '</span></div>';
+    });
+    out +=
       '<div style="margin-top:10px;font-size:13px;color:#9FB3C8">' +
       (r.ruta || []).map(function(x){ return esc(x); }).join(' <span style="color:#54708C">→</span> ') + '</div>';
     (r.pasos || []).forEach(function(p, i){
