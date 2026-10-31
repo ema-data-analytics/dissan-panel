@@ -241,7 +241,21 @@ async function armarMenu() {
           + esc(x.nombre || x.clave) + '</span>').join('')
     : '<span class="vacio">Sin módulos habilitados</span>';
 
-  if (mio && claves.indexOf(mio) === -1) {
+  /* 31/10/2026 — FALLA CERRADA. Antes este if arrancaba con `mio &&`, asi
+     que una pantalla SIN data-modulo no se tapaba nunca: el portero se
+     saltaba solo. Toda pantalla del panel declara su modulo en
+     <div id="app" data-modulo="...">; si no lo declara es que nadie decidio
+     quien puede verla, y eso se trata como "no habilitada", no como
+     "habilitada para todos". */
+  if (!mio) {
+    tapar('<b>Esta pantalla no declara su módulo.</b> Toda pantalla del panel '
+      + 'tiene que decir en <code>&lt;div id="app" data-modulo="..."&gt;</code> '
+      + 'cuál es su módulo de la tabla <code>modulos</code>, que es lo que '
+      + 'decide qué rol puede verla. Sin eso no se abre.');
+    return false;
+  }
+
+  if (claves.indexOf(mio) === -1) {
     tapar('<b>Este módulo no está habilitado para tu usuario.</b> '
       + (MI_ROL ? 'Entraste como <b>' + esc(MI_ROL) + '</b> y ' : '')
       + 'el módulo <b>' + esc(mio) + '</b> no está en la lista de los que podés ver'
