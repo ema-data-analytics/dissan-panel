@@ -135,11 +135,30 @@ var AY_EJEMPLOS = [
 function ayNum(n, d){ return Number(n).toLocaleString('es-AR',
   { minimumFractionDigits:d||0, maximumFractionDigits:(d===undefined?2:d) }); }
 function ayEsNum(v){ return typeof v === 'number' && isFinite(v); }
+/* 31/10/2026 — LAS FECHAS DE LA TABLA SALIAN 2025-09-30.
+   Es el mismo defecto que arregle el 20/10 en el panel viejo y que esta
+   pantalla nunca tuvo: ayValor no sabia de fechas, asi que toda columna de
+   fecha de CUALQUIER consulta de la Ayuda salia en ISO. Va aca, en el
+   formateador generico, no en una lista de nombres de columna: la Ayuda
+   consulta 580 tablas y una lista se queda corta sin avisar.
+   SOLO CAMBIA LO QUE SE MUESTRA: el dato que viaja al grafico, al Excel y
+   al modelo sigue siendo el original. El grafico agrupa por YYYY-MM con
+   slice(0,7) sobre el dato, no sobre esto. */
+function ayFechaISO(v){
+  var m = /^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2}))?/.exec(String(v));
+  if (!m) return null;
+  var d = m[3] + '/' + m[2] + '/' + m[1];
+  /* La hora solo si no es medianoche: una fecha sin hora no tiene que
+     mostrar 00:00, que hace pensar que el dato trae hora y es cero. */
+  if (m[4] !== undefined && !(m[4] === '00' && m[5] === '00')) d += ' ' + m[4] + ':' + m[5];
+  return d;
+}
 function ayValor(v){
   if (v === null || v === undefined) return '<span class="ay-nulo">—</span>';
   if (ayEsNum(v)) return esc(ayNum(v));
   if (typeof v === 'object') return esc(JSON.stringify(v));
-  return esc(v);
+  var f = ayFechaISO(v);
+  return esc(f !== null ? f : v);
 }
 function ayPlata(u){ return 'US$ ' + u.toLocaleString('es-AR',{minimumFractionDigits:4, maximumFractionDigits:4}); }
 /* Sin tabla de precios no hay dolares: devuelve 0 y el pie muestra los tokens.
