@@ -510,8 +510,23 @@ function lpPintarRegla() {
       + esc((p.lectura && p.lectura.nota) || 'falta la configuración de lectura del laboratorio')
       + '.';
   } else {
-    h += '<br>Se espera un <b>' + esc(String(p.lectura.tipo).toUpperCase()) + '</b>'
-      + (p.lectura.tipo === 'pdf' ? ', que se lee en esta misma pantalla.' : '.');
+    /* 31/10/2026 — DECIA "Se espera un PDF" Y DESPUES LEIA EL EXCEL SIN
+       CHISTAR. Desde el 30/10 la pantalla toma los dos formatos: el que
+       tiene lectura cargada se lee con ella, y el que no, Excel se reconoce
+       solo por los titulos y PDF cae a la lectura generica. El rotulo decia
+       otra cosa, que es justo el cartel que mando al usuario a pensar que
+       su archivo no servia. Ahora dice lo que la pantalla HACE. */
+    var hayPdf   = (p.lectura.tipo === 'pdf')   || !!p.lectura.pdf;
+    var hayExcel = (p.lectura.tipo === 'excel') || !!p.lectura.excel;
+    var cargadas = (hayPdf && hayExcel) ? 'PDF y Excel'
+                 : hayPdf ? 'PDF' : hayExcel ? 'Excel' : '(ninguna)';
+    h += '<br>Se puede subir el <b>PDF</b> o el <b>Excel</b>, indistinto. '
+      + 'Lectura cargada del laboratorio: <b>' + cargadas + '</b>.';
+    if (!(hayPdf && hayExcel)) {
+      h += ' El otro formato igual se lee: el Excel se reconoce solo por los '
+        + 'titulos de las columnas y el PDF cae a la lectura generica. '
+        + 'La pantalla avisa cual se uso.';
+    }
   }
   caja.innerHTML = h;
   caja.hidden = false;
