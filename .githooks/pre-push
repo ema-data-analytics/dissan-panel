@@ -1,33 +1,63 @@
 #!/usr/bin/env bash
 # =====================================================================
-# NO SE SUBE UNA PANTALLA QUE NO SE VE                      28/10/2026
+# LA PUERTA. NO SALE UN PUSH QUE NO PASE LOS CONTROLES.
 # =====================================================================
-# Corre control/pantallas.js antes de cada push. Si falla, el push NO
-# sale. Esto existe porque una regla escrita en las notas no frena nada:
-# el 28/10 subi una pantalla con texto de 1,09 a 1 de contraste y mis
-# controles no lo agarraron porque median errores y scroll, no SI SE VE.
+# 28/10  nacio con un solo control: NO SE SUBE UNA PANTALLA QUE NO SE VE.
+#        Existia porque una regla escrita en las notas no frena nada: ese
+#        dia subi una pantalla con texto de 1,09 a 1 de contraste y mis
+#        controles no lo agarraron porque median errores y scroll, no SI
+#        SE VE.
+# 31/10  SE DESCUBRIO QUE ESTE HOOK NUNCA HABIA CORRIDO. `core.hooksPath`
+#        es configuracion local del clon, no se versiona, y el contenedor
+#        se rehace cada sesion: la puerta se desenchufaba sola todos los
+#        dias. Ahora control/pantallas.js se enchufa solo al correr.
+# 01/11  se le sumaron los otros dos controles.
 #
-# Se prende una sola vez por copia del repositorio:
+# Se prende una sola vez por copia del repositorio (y si se olvida, el
+# control de pantallas lo hace solo la primera vez que corre):
 #     git config core.hooksPath .githooks
 #
-# Si alguna vez hay que subir con el control en rojo (una urgencia real),
+# Si alguna vez hay que subir con un control en rojo (una urgencia real),
 # es con `git push --no-verify`, a conciencia y diciendolo.
+#
+# Tarda unos cinco minutos. Tardar es barato: entregar algo que no vi
+# funcionar cuesta el dia, la confianza y la cara delante de DISSAN.
 # =====================================================================
 set -u
 cd "$(git rev-parse --show-toplevel)" || exit 1
 
-if [ ! -f control/pantallas.js ]; then
-  echo "pre-push: no esta control/pantallas.js. No se controla nada: se corta."
-  exit 1
+FALLARON=""
+PASARON=""
+
+# correr <archivo> <comando...>  — si el archivo no esta, se corta:
+# NO MEDIDO NO ES LIMPIO.
+correr(){
+  local nombre="$1"; shift
+  local archivo="$1"; shift
+  if [ ! -f "$archivo" ]; then
+    echo "pre-push: no esta $archivo. No se controla nada: se corta."
+    FALLARON="$FALLARON $nombre(falta)"
+    return
+  fi
+  echo ""
+  echo "── pre-push: $nombre ──"
+  if "$@"; then PASARON="$PASARON $nombre"; else FALLARON="$FALLARON $nombre"; fi
+}
+
+correr "las edge functions" control/edge.js       node control/edge.js
+correr "el control del control del archivo" control/archivo-senuelos.py \
+                                                  python3 control/archivo-senuelos.py
+correr "las pantallas"      control/pantallas.js  node control/pantallas.js
+correr "el archivo bajado"  control/archivo.js    node control/archivo.js
+
+echo ""
+if [ -z "$FALLARON" ]; then
+  echo "pre-push: pasan todos ($PASARON ). Sube."
+  exit 0
 fi
 
-echo "pre-push: corriendo el control de pantallas…"
-if node control/pantallas.js; then
-  echo "pre-push: pasa. Sube."
-  exit 0
-else
-  echo ""
-  echo "pre-push: EL PUSH SE CORTA. Arreglá lo de arriba y volvé a intentar."
-  echo "          (si de verdad hay que subir igual: git push --no-verify)"
-  exit 1
-fi
+echo "pre-push: EL PUSH SE CORTA. Fallaron:$FALLARON"
+[ -n "$PASARON" ] && echo "          Pasaron:$PASARON"
+echo "          Arreglá lo de arriba y volvé a intentar."
+echo "          (si de verdad hay que subir igual: git push --no-verify)"
+exit 1
