@@ -107,7 +107,13 @@ const HDR = new Set([
   "MINORISTA", "INDICE", "MATERIAL", "COD_ARTIC",
 ]);
 
-const sinTildes = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "");
+/* Las marcas combinantes van ESCAPADAS (\u0300-\u036f), no literales.  01/11/2026
+   Escritas literales son caracteres invisibles adentro de una clase de
+   caracteres: cualquiera que copie este archivo las pierde sin darse
+   cuenta y sinTildes deja de sacar tildes, en silencio. Es funcionalmente
+   lo mismo y se puede leer. */
+const sinTildes = (s: string) =>
+  s.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
 const FRAG = /^[0-9.,]+$/;
 const NUMTOK = /^[0-9][0-9.,]*$/;
@@ -370,6 +376,24 @@ const IMAGEN = /\.(jpe?g|png|gif|bmp|webp|tiff?|heic)$/i;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
+  /* EL PORTERO, ANTES DE TODO LO DEMAS.                       01/11/2026
+     Esta funcion ya tenia el control del modulo (tieneElModulo), bien hecho
+     y con el JWT del que llama. Pero corria DESPUES de leer el cuerpo, y
+     sobre todo: con solo la clave publishable el `Authorization` viene
+     VACIO, tieneElModulo devuelve null, y null no corta a proposito —«un
+     control roto que deja a la persona afuera de su propia pantalla es peor
+     que el agujero que tapa», y eso sigue siendo cierto.
+     Lo que faltaba es el escalon de antes: sin JWT de persona no se entra.
+     Medido el 01/11: con solo la clave del repositorio esta funcion
+     contestaba «Falta elegir el proveedor», o sea que habia llegado adentro. */
+  {
+    const autorizacion = req.headers.get("Authorization") || "";
+    if (!/^bearer\s+[\w-]+\.[\w-]+\.[\w-]+$/i.test(autorizacion.trim())) {
+      return json({ ok: false, filas: [],
+                    avisos: ["Hace falta entrar al panel."] }, 401);
+    }
+  }
+
   const arranque = Date.now();
   try {
     const cuerpo = await req.json().catch(() => ({}));

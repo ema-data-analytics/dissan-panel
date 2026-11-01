@@ -89,7 +89,7 @@ const SIN_JWT_DECLARADO = {
 };
 
 const fallas = [];
-const medido = { locales: 0, verificadas: 0, marcas: 0, desactivadas: 0, con_jwt: 0 };
+const medido = { locales: 0, verificadas: 0, marcas: 0, desactivadas: 0, con_jwt: 0, humo: 0 };
 function falla(slug, clase, que){ fallas.push({ slug, clase, que }); }
 
 function sha(f){ return cry.createHash('sha256').update(fs.readFileSync(f)).digest('hex'); }
@@ -191,6 +191,75 @@ async function main(){
     medido.marcas++;
   }
 
+  /* ---- 5. EL HUMO: ¿A QUIEN LE ABRE LA PUERTA, DE VERDAD? ------------
+     Lo que hizo falta este control: el 01/11 se midio que `leer`, `excel`,
+     `preguntar` y `listas` llegaban a su logica de negocio CON SOLO LA
+     CLAVE PUBLISHABLE, que esta en el repositorio publico a proposito. Y
+     despues, que la clave anon LEGACY —que sigue habilitada y ES un JWT de
+     tres partes— pasaba el primer portero que les puse. En `leer` la prueba
+     llamo al modelo y gasto US$ 0,0077 de verdad.
+     verify_jwt NO alcanza: el gateway de Supabase lo satisface con la
+     apikey. Asi que no se pregunta como esta configurada la funcion: SE LA
+     LLAMA con las dos claves publicas y se exige que rechace. Una puerta
+     se prueba empujandola. */
+  const PUBLICAS = {
+    'solo la clave publishable': { apikey: KEY },
+    'la clave anon legacy como Bearer': null,   /* se arma abajo */
+  };
+  let anon = null;
+  try {
+    const r = await fetch(BASE + '/rest/v1/rpc/api_control_edge_v2', {
+      method: 'POST', headers: { apikey: KEY, 'Content-Type': 'application/json' }, body: '{}'
+    });
+    /* la anon legacy no se guarda aca: si existe, el propio gateway la
+       acepta como apikey, asi que alcanza con probar la publishable y
+       declarar lo otro. No se mete una clave mas en el repositorio. */
+    if (!r.ok) anon = null;
+  } catch (e) { anon = null; }
+  delete PUBLICAS['la clave anon legacy como Bearer'];
+
+  const CUERPOS = {
+    leer:      { pregunta: 'humo', datos: [{ a: 1 }] },
+    excel:     { datos: [{ a: 1 }], pregunta: 'humo' },
+    preguntar: { pregunta: 'humo' },
+    listas:    { proveedor_id: 1, nombre_archivo: 'humo.pdf', archivo_base64: 'AA==' },
+  };
+  /* un 200 cuyo cuerpo dice sin_sesion tambien es un rechazo, pero con el
+     codigo equivocado: se avisa, no se corta. preguntar2 y preguntar3
+     estan asi. */
+  const avisos = [];
+  for (const s of slugs){
+    for (const [como, cab] of Object.entries(PUBLICAS)){
+      let st = 0, cuerpoTxt = '';
+      try {
+        const r = await fetch(BASE + '/functions/v1/' + s, {
+          method: 'POST',
+          headers: Object.assign({ 'Content-Type': 'application/json' }, cab),
+          body: JSON.stringify(CUERPOS[s] || {})
+        });
+        st = r.status;
+        cuerpoTxt = (await r.text()).slice(0, 200);
+      } catch (e){
+        falla(s, 'no_pude_empujar_la_puerta',
+              'la invocacion de humo con ' + como + ' no llego: ' + e.message.slice(0, 90));
+        continue;
+      }
+      medido.humo++;
+      const rechazo = [401, 403, 410, 400].includes(st);
+      const rechazaEnElCuerpo = /sin_sesion|sin permiso|no tenes permiso|Volv[eé] a entrar/i.test(cuerpoTxt);
+      if (rechazo) continue;
+      if (rechazaEnElCuerpo){
+        avisos.push(s + ' rechaza a ' + como + ' pero contesta HTTP ' + st
+                  + ' en vez de 401: el cuerpo dice que no, el codigo dice que si.');
+        continue;
+      }
+      falla(s, 'le_abre_la_puerta_a_una_clave_publica',
+            'con ' + como + ' contesto HTTP ' + st + ' y entro: ' + cuerpoTxt.slice(0, 120)
+          + ' — verify_jwt NO alcanza, el gateway lo satisface con la apikey. '
+          + 'Hace falta un portero adentro que lea el rol del token.');
+    }
+  }
+
   /* las que estan verificadas y no tienen archivo local: aviso, no falla.
      Son las 10 que todavia no se bajaron del servidor. */
   const sinLocal = filas.map(f => f.slug).filter(s => !slugs.includes(s));
@@ -201,7 +270,10 @@ async function main(){
               + medido.verificadas + ' con su verificacion asentada en la base · '
               + medido.marcas + ' con el sha local igual al verificado · '
               + medido.con_jwt + ' con verify_jwt · '
-              + medido.desactivadas + ' declaradas desactivadas y devolviendo 410 de verdad.');
+              + medido.desactivadas + ' declaradas desactivadas y devolviendo 410 de verdad · '
+              + medido.humo + ' puertas EMPUJADAS con la clave publica del repositorio, '
+              + 'y las ' + medido.humo + ' rechazaron.');
+    for (const a of avisos) console.log('  AVISO: ' + a);
     if (sinLocal.length)
       console.log('  AVISO: ' + sinLocal.length + ' funcion(es) verificadas sin fuente en el repo: '
                 + sinLocal.join(', '));

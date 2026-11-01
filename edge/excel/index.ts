@@ -117,6 +117,54 @@ function esPorUnidad(c: string): boolean {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
+
+  /* EL PORTERO: HACE FALTA LA SESION DE UNA PERSONA.          01/11/2026
+     verify_jwt NO alcanza, y esto se MIDIO, no se supuso: con solo la clave
+     publishable —que esta en el repositorio publico a proposito, porque lo
+     que protege los datos es Auth + RLS— esta funcion llegaba a su logica
+     de negocio y rechazaba por falta de DATOS, no por falta de sesion. O
+     sea que cualquiera que lea el repositorio podia hacerla trabajar.
+     Aca eso vale CPU y memoria: arma un libro de Excel entero por llamada.
+
+     La clave publishable NO es un JWT: empieza con sb_ y no tiene puntos.
+     Un JWT de usuario tiene tres partes separadas por punto. El panel manda
+     siempre `Authorization: Bearer <access_token>` —medido en los cuatro
+     lugares del panel que llaman a una Edge Function— asi que esto no le
+     cambia nada a quien entra de verdad.
+
+     Es la regla del 21/10 (sin JWT -> 0, falla cerrada) aplicada donde
+     faltaba, y el mismo golpe del portero sin data-modulo del 31/10: una
+     puerta que se saltea sola porque la condicion nunca se cumple. */
+  {
+    /* NO ALCANZA CON LA FORMA DEL TOKEN, Y ESTO TAMBIEN SE MIDIO.
+       La primera version de este portero solo exigia que el Authorization
+       tuviera la FORMA de un JWT (tres partes separadas por punto). Un
+       senuelo lo rompio en cinco minutos: la clave anon LEGACY del proyecto
+       —que sigue habilitada— ES un JWT de tres partes, con "role":"anon"
+       adentro, asi que pasaba el control y esta funcion trabajaba igual.
+       En `leer` la prueba llamo al modelo de verdad y gasto credito.
+       Un control que mira la forma y no el contenido no es un control: es
+       el mismo defecto que `if (mio && claves.indexOf(mio) === -1)` del
+       31/10, que con mio = '' no hacia nada.
+       Ahora se LEE el rol que el token declara y se exige authenticated,
+       que es el rol que Supabase le pone al usuario que entro con su
+       contrasena. Y se exige sub, que es quien es. */
+    const autorizacion = req.headers.get("Authorization") || "";
+    const quien = (() => {
+      const m = /^bearer\s+([\w-]+)\.([\w-]+)\.([\w-]+)$/i.exec(autorizacion.trim());
+      if (!m) return null;
+      try {
+        const b = m[2].replace(/-/g, "+").replace(/_/g, "/");
+        const p = JSON.parse(atob(b + "=".repeat((4 - b.length % 4) % 4)));
+        return p && p.role === "authenticated" && p.sub ? p : null;
+      } catch { return null; }
+    })();
+    if (!quien) {
+      return json({ ok: false, origen: "sin_sesion",
+                    motivo: "Hace falta entrar al panel." }, 401);
+    }
+  }
+
   const arranque = Date.now();
 
   try {
