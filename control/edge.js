@@ -69,14 +69,31 @@ const KEY   = 'sb_publishable_7CfYchCqBdDnXJ63IblnTw_cjFCjvUl';
    Son los que me desplegue de verdad el 30/10 y el 31/10. */
 const MARCADORES = ['PLACEHOLDER', '__LEER_DEL_ARCHIVO__', 'TODO:', 'FIXME', 'XXX:'];
 
+/* LAS DESACTIVADAS VIVEN EN LA BASE, NO ACA.                    31/10/2026
+   Primero las puse en una lista en este archivo, y el umbral de 1.000
+   bytes quedo escrito EN DOS LUGARES: aca con la excepcion, y en la vista
+   de la base sin ella. El control marcaba carga-temporal y diag-clave
+   igual, porque el veredicto lo calcula la vista. Es la regla replicada a
+   medias — el defecto de la cuarentena del 08/10 y del 28/10, que da "una
+   cifra creible y mal".
+   Ahora la excepcion vive en public.edge_desactivada, declarada con su
+   motivo, y la vista la usa. Una sola fuente. Este archivo no tiene lista. */
+
+/* verify_jwt: false declarado, con su motivo. Cualquier otra funcion sin
+   JWT es un endpoint publico sin autenticacion y el control corta. */
+const SIN_JWT_DECLARADO = {
+  'bajar': 'el portero es el vale de un solo uso (app_vale_excel_usar), no el JWT: '
+         + 'la pestana nueva que baja el archivo sale del sandbox del iframe y no lleva sesion'
+};
+
 const fallas = [];
-const medido = { locales: 0, verificadas: 0, marcas: 0 };
+const medido = { locales: 0, verificadas: 0, marcas: 0, desactivadas: 0, con_jwt: 0 };
 function falla(slug, clase, que){ fallas.push({ slug, clase, que }); }
 
 function sha(f){ return cry.createHash('sha256').update(fs.readFileSync(f)).digest('hex'); }
 
 async function veredictos(){
-  const r = await fetch(BASE + '/rest/v1/rpc/api_control_edge', {
+  const r = await fetch(BASE + '/rest/v1/rpc/api_control_edge_v2', {
     method: 'POST',
     headers: { apikey: KEY, 'Content-Type': 'application/json' },
     body: '{}'
@@ -115,8 +132,11 @@ async function main(){
       if (txt.includes(m))
         falla(s, 'marcador_en_el_codigo',
               'el archivo local tiene "' + m + '" adentro. Eso es lo que desplegue el 30/10 y el 31/10.');
-    if (txt.length < 1000)
-      falla(s, 'archivo_muy_corto', 'el archivo local tiene ' + txt.length + ' bytes. No es codigo.');
+
+    /* el umbral de tamano lo decide la base (public.edge_desactivada), no
+       este archivo: una sola fuente. Lo unico que se mide aca es que una
+       declarada desactivada lo este DE VERDAD, o sea que devuelva 410. */
+    if (txt.length < 1000 && /\b410\b/.test(txt)) medido.desactivadas++;
   }
 
   /* ---- 1 a 3: contra lo verificado en la base ------------------------- */
@@ -151,6 +171,21 @@ async function main(){
           + 'es el defecto del 28/10, que costo US$ 1,0566.');
       continue;
     }
+
+    /* UN ENDPOINT PUBLICO SIN AUTENTICACION SE DECLARA O NO EXISTE.
+       Lo encontro el respaldo del 31/10: probe-pdf esta ACTIVE con
+       verify_jwt:false y el propio archivo dice que es una prueba
+       desechable. verify_jwt autentica, no autoriza, pero sin JWT no hay
+       ni lo uno. Es la regla del 21/10: sin JWT -> 0, falla cerrada. */
+    if (v.verify_jwt === false && !SIN_JWT_DECLARADO[s]){
+      falla(s, 'endpoint_publico_sin_declarar',
+            'esta viva con verify_jwt:false y no esta declarada en SIN_JWT_DECLARADO. '
+          + 'Es un endpoint publico sin autenticacion: o se retira, o se le pone el JWT, '
+          + 'o se declara aca con el motivo y con cual es su portero.');
+      continue;
+    }
+    if (v.verify_jwt !== false) medido.con_jwt++;
+
     medido.marcas++;
   }
 
@@ -162,7 +197,9 @@ async function main(){
     console.log('CONTROL DE EDGE FUNCTIONS: ' + slugs.length + ' funcion(es), 0 fallas.');
     console.log('  midio: ' + medido.locales + ' archivos locales sin marcadores y con Deno.serve · '
               + medido.verificadas + ' con su verificacion asentada en la base · '
-              + medido.marcas + ' con el sha local igual al verificado.');
+              + medido.marcas + ' con el sha local igual al verificado · '
+              + medido.con_jwt + ' con verify_jwt · '
+              + medido.desactivadas + ' declaradas desactivadas y devolviendo 410 de verdad.');
     if (sinLocal.length)
       console.log('  AVISO: ' + sinLocal.length + ' funcion(es) verificadas sin fuente en el repo: '
                 + sinLocal.join(', '));
