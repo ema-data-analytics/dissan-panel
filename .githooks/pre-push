@@ -37,12 +37,44 @@ correr(){
   if [ ! -f "$archivo" ]; then
     echo "pre-push: no esta $archivo. No se controla nada: se corta."
     FALLARON="$FALLARON $nombre(falta)"
+    # Una puerta que falta se anota igual, y se anota como FALLADA: si no,
+    # api_estado_del_sistema la mostraria con la medicion de ayer, que es
+    # la mentira que este registro existe para que no pueda pasar.
+    node control/anotar.js "$nombre" 0 "no esta $archivo" \
+         "la puerta no existe en esta copia del repositorio" 2>/dev/null
     return
   fi
   echo ""
   echo "── pre-push: $nombre ──"
-  if "$@"; then PASARON="$PASARON $nombre"; else FALLARON="$FALLARON $nombre"; fi
+  # LA SALIDA SE GUARDA Y SE MUESTRA. Se guarda para poder anotar en la base
+  # QUE midio esta corrida —la linea "midio:" de cada control— y se muestra
+  # porque el que corre el push tiene que leerla. `tee` hace las dos cosas;
+  # el codigo de salida sale de PIPESTATUS, no de tee, que siempre da 0.
+  local log; log="$(mktemp)"
+  "$@" 2>&1 | tee "$log"
+  local salio="${PIPESTATUS[0]}"
+  local midio resumen
+  midio="$(grep -m1 -E '^[[:space:]]*(midio|adentro de los archivos midio):' "$log" | head -c 600)"
+  resumen="$(grep -m1 -E '(0 fallas|falla\(s\)|de [0-9]+\.|SE CORTA|NO PUDO)' "$log" | head -c 600)"
+  if [ "$salio" -eq 0 ]; then
+    PASARON="$PASARON $nombre"
+    node control/anotar.js "$nombre" 1 "$midio" "$resumen" 2>/dev/null
+  else
+    FALLARON="$FALLARON $nombre"
+    node control/anotar.js "$nombre" 0 "$midio" "$resumen" 2>/dev/null
+  fi
+  rm -f "$log"
 }
+
+# EL ACCESO VA PRIMERO, Y NO ES UN DETALLE DE ORDEN.          01/11/2026
+# Hoy le dije al usuario que no podia entrar al panel —cuando el 31/10 habia
+# entrado— y le pedi que confirmara cosas en el navegador por su cuenta. Le
+# hice perder una hora. Fue una afirmacion sobre lo que yo puedo hacer, sacada
+# de la memoria, sin medirla: la misma clase que publicar una cifra sin
+# verificarla. Esta puerta exige que la medicion exista y sea de esta sesion.
+# Primera, porque si no se sabe QUE se puede probar, lo que digan las otras
+# cinco no se puede interpretar.
+correr "el acceso"          control/acceso.js     node control/acceso.js
 
 correr "las edge functions" control/edge.js       node control/edge.js
 correr "los rotulos"        control/rotulo.js     node control/rotulo.js

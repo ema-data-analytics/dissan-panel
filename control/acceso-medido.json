@@ -1,0 +1,9 @@
+{
+  "cuando": "2026-11-01T20:14:33.435315+00:00",
+  "navegador": true,
+  "navegador_detalle": "Chrome del usuario por la extension. tabs_context: 1 pestaña, tabId 1156094890, DISSAN · Ayuda inteligente, sesion de ANIBAL (rol pruebas) puesta. Medido llamando a tabs_context_mcp.",
+  "puente": false,
+  "puente_detalle": "get_device_info devolvio: 'The device this session is bound to is not connected to the bridge.' No puedo leer ni escribir archivos en su computadora, asi que el .xlsx que baja a su disco NO lo puedo abrir.",
+  "pantalla_leida": "Ventas facturadas, boton 'Correr el control ahora': 9.067 de 9.298 facturas al peso · contabilidad $15.130.293.121,30 contra sistema $15.130.293.277,34 · diferencia -$156,04 · 744 facturas sin asiento por $3.187.540.243,81. Los seis valores iguales a la base en la misma corrida.",
+  "que_no_puedo_probar_hoy": "El archivo que baja al disco del usuario (puente caido). El PDF no lo mide ninguna puerta todavia."
+}

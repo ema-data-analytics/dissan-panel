@@ -421,8 +421,12 @@ function ayPedirLectura(item){
         .catch(function(){ return null; })      /* si falla la memoria, se paga */
         .then(function(m){
           if (m && m.lectura) return m;         /* ya estaba escrita: gratis */
+          /* `total` es el total MEDIDO por la base, que puede ser mayor que
+             las filas que llegaron: sin el, la lectura publica el tope como
+             si fuera el total (01/11/2026). */
           return AY_FN('leer', { pregunta: item.pregunta, datos: x.datos,
-                                 titulo: x.titulo, aviso: x.aviso });
+                                 titulo: x.titulo, aviso: x.aviso,
+                                 total: x.total || x.datos.length });
         });
     })
     .then(function(j){
@@ -459,8 +463,17 @@ function ayLecturaOk(j){
     if (j.escrita_en) de.push('del ' + new Date(j.escrita_en)
       .toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'}));
   }
-  if (j.filas_leidas) de.push(ayNum(j.filas_leidas,0) + ' de ' +
-                              ayNum(j.filas_totales,0) + ' renglones');
+  /* EL PIE DICE LOS TRES NUMEROS CUANDO SON TRES.             01/11/2026
+     Decia "40 de 5.000 renglones" sobre un resultado de 12.077: hacia creer
+     que 5.000 era el total, que es justo el defecto que se arreglo hoy un
+     piso mas abajo. Si la base midio mas de lo que vino, se dicen los dos. */
+  if (j.filas_leidas){
+    var tot = Number(j.total_medido) || 0;
+    de.push(ayNum(j.filas_leidas,0) + ' de ' + ayNum(j.filas_totales,0) +
+            (tot > Number(j.filas_totales)
+              ? ' traidas, de ' + ayNum(tot,0) + ' medidas'
+              : ' renglones'));
+  }
   if (j.modelo) de.push(j.modelo);
   if (j.ms != null) de.push(ayNum(j.ms/1000,1) + ' s');
   /* LO QUE SALIO ESTA LECTURA, A LA VISTA.                    22/10/2026

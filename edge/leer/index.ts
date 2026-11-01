@@ -405,6 +405,16 @@ Deno.serve(async (req) => {
     const datos = Array.isArray(cuerpo?.datos) ? cuerpo.datos : [];
     const titulo = String(cuerpo?.titulo ?? "").trim();
     const aviso = String(cuerpo?.aviso ?? "").trim();
+    /* EL TOTAL MEDIDO POR LA BASE, que puede ser MAYOR que las filas que
+       llegaron.                                              01/11/2026
+       Encontrado en pantalla: «cuantos articulos tienen stock cero» traia
+       5.000 filas —el tope— de un resultado de 12.077, y la lectura escribia
+       «5.000 articulos con existencia cero». Una pregunta de CONTAR,
+       contestada con el recorte. Es el limit 2000 escondido del 20/10 un
+       piso mas arriba: ahi se arreglo el tope de la base y quedo este
+       debajo. Si no viene, vale la cantidad de filas (comportamiento de
+       antes, para no romper a ningun llamador). */
+    const totalMedido = Math.max(Number(cuerpo?.total ?? 0) || 0, datos.length);
 
     if (!pregunta) return json({ ok: false, origen: "vacia", motivo: "Falta la pregunta." });
     if (!datos.length) {
@@ -453,6 +463,20 @@ Deno.serve(async (req) => {
       `PREGUNTA DEL DUEÑO: ${pregunta}\n\n` +
       (titulo ? `QUE ENTENDIO EL SISTEMA: ${titulo}\n` : "") +
       (aviso ? `SUPUESTO QUE TOMO: ${aviso}\n` : "") +
+      (totalMedido > datos.length
+        ? `\n=== OJO: EL RESULTADO ESTA RECORTADO, Y ESO CAMBIA LO QUE PODES ` +
+          `AFIRMAR ===\n` +
+          `El resultado tiene ${totalMedido} renglones medidos por la base, y de ` +
+          `esos llegaron solo ${datos.length} (tope de la consulta).\n` +
+          `- CUANTOS SON: son ${totalMedido}. Ese es el numero que se publica. ` +
+          `NUNCA digas que son ${datos.length}: ${datos.length} es el tope, no el total.\n` +
+          `- Las SUMAS y los PROMEDIOS del resumen estan medidos sobre esos ` +
+          `${datos.length}, o sea sobre UNA PARTE. Cada vez que uses una suma o ` +
+          `un promedio, deci sobre cuantos esta medido: "medido sobre ` +
+          `${datos.length} de ${totalMedido}".\n` +
+          `- Las PARTICIONES (cuantos de un tipo, cuantos del otro) tambien son ` +
+          `sobre ${datos.length}: no las presentes como si fueran del total.\n\n`
+        : "") +
       `\nRESUMEN CALCULADO EN SQL (de aca salen las cifras, copialas tal cual):\n` +
       `${JSON.stringify(resumen)}\n\n` +
       `FILAS (${cuantas} de ${datos.length}` +
@@ -535,6 +559,9 @@ Deno.serve(async (req) => {
       stop_reason: salida?.stop_reason ?? null,
       filas_leidas: cuantas,
       filas_totales: datos.length,
+      /* el total que midio la base, para que el pie de la pantalla no diga
+         "de 5.000" cuando son 12.077 (01/11/2026) */
+      total_medido: totalMedido,
       tokens,
       costo_usd: anotado?.costo_usd ?? null,
       tiene_precio: anotado?.tiene_precio === true,
