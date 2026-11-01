@@ -48,6 +48,23 @@
 // cambiaria "hay tres renglones asi" de verdadero a falso.
 // ---------------------------------------------------------------------------
 //
+// 01/11/2026 — EL TOPE SE PUBLICABA COMO SI FUERA EL TOTAL
+//
+// Encontrado EN PANTALLA: «cuantos articulos tienen stock cero» le mandaba a
+// esta funcion 5.000 filas —el tope de la consulta— de un resultado que la
+// base mide en 12.077, y la lectura escribia «5.000 articulos con existencia
+// cero». Una pregunta de CONTAR, contestada con el recorte. Es el limit 2000
+// escondido del 20/10 un piso mas arriba: ahi se arreglo el tope de la base y
+// quedo este debajo.
+//
+// Ahora el llamador manda `total` —lo que midio la base— y el prompt lleva el
+// bloque OJO: EL RESULTADO ESTA RECORTADO, que dice tres cosas: que el numero
+// que se publica es el total, que las sumas estan medidas sobre una parte y
+// hay que decir sobre cuantos, y que las particiones tampoco son del total.
+// La respuesta devuelve total_medido para que el pie de la pantalla no diga
+// "de 5.000" cuando son 12.077.
+// ---------------------------------------------------------------------------
+//
 // CUATRO COSAS MEDIDAS EL 15/10/2026, cada una despues de una corrida fallada:
 //
 //   1. LOS MODELOS SON LOS MEDIDOS, NO LOS SUPUESTOS. Se consulto
@@ -491,6 +508,7 @@ Deno.serve(async (req) => {
       return json({
         ok: true, medicion: true,
         filas_totales: datos.length, filas_que_viajan: cuantas,
+        total_medido: totalMedido,
         bytes_de_las_filas: filasTexto.length,
         bytes_del_resumen: JSON.stringify(resumen).length,
         bytes_del_contenido: contenido.length,
