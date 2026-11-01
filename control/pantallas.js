@@ -165,6 +165,25 @@ async function main(){
 
   controlarVersiones();
 
+  /* LA PUERTA SE ENCHUFA SOLA.                                 31/10/2026
+     El pre-push existia desde el 28/10 y NUNCA CORRIO: `core.hooksPath`
+     es configuracion local del clon, no se versiona, y este contenedor se
+     rehace en cada sesion. O sea que la puerta se desarmaba sola todos los
+     dias y nadie se enteraba. Por eso el 31/10, con el control ya escrito,
+     entregue seis defectos que este mismo control frena.
+     Cada corrida del control repara la puerta, y lo dice. */
+  try {
+    const actual = require('child_process')
+      .execSync('git config core.hooksPath || true', { cwd: __dirname + '/..' })
+      .toString().trim();
+    if (actual !== '.githooks') {
+      require('child_process')
+        .execSync('git config core.hooksPath .githooks', { cwd: __dirname + '/..' });
+      console.log('AVISO: el pre-push estaba DESENCHUFADO (core.hooksPath = "' +
+                  (actual || 'sin configurar') + '"). Lo enchufe: .githooks\n');
+    }
+  } catch (e) { console.log('AVISO: no pude revisar el pre-push: ' + e.message + '\n'); }
+
   const pantallas = fs.readdirSync(RAIZ).filter(f => f.endsWith('.html')).sort();
   const b = await chromium.launch();
 
@@ -175,6 +194,19 @@ async function main(){
       const errores = [], f404 = [];
       pg.on('pageerror', e => errores.push(String(e.message)));
       pg.on('response', r => { if (r.status() === 404) f404.push(r.url().split(String(PUERTO))[1]); });
+      /* EL JUGUETE TIENE QUE GANARLE AL CDN.                      31/10/2026
+         Defecto mio, encontrado la primera vez que este control corrio de
+         verdad: el juguete hace `window.supabase = {...}` en addInitScript,
+         y despues la pantalla carga supabase-js del CDN, que LO PISA. La
+         pantalla terminaba hablando con la base real, donde la funcion de
+         prueba no existe, y el control daba 30 fallas FALSAS en las 15
+         pantallas. Un control que grita por lo que no importa entrena a
+         ignorarlo, que es el peor estado posible.
+         Se corta el pedido al CDN: el juguete queda solo en la cancha. */
+      await pg.route('**/supabase-js@*/**', r => r.fulfill({
+        status: 200, contentType: 'application/javascript',
+        body: '/* supabase-js real cortado por el control: manda el juguete */'
+      }));
       if (fs.existsSync(JUGUETE)) await pg.addInitScript({ path: JUGUETE });
       await pg.goto('http://127.0.0.1:' + PUERTO + '/' + p + '?f=' + Date.now(),
                     { waitUntil: 'load' });
