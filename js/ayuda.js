@@ -386,8 +386,9 @@ function ayPedirLectura(item){
     ? Promise.resolve({ datos: deLaPantalla, titulo: '', aviso: '' })
     : AY_TODAS(item.pregunta).then(function(p){
         if (p && p.entendio === true && p.datos && p.datos.length)
-          return { datos: p.datos, titulo: AY_TITULO(p), aviso: p.aviso || '' };
-        return { datos: datos, titulo: '', aviso: r.aviso || '' };
+          return { datos: p.datos, titulo: AY_TITULO(p), aviso: p.aviso || '',
+                   total: Number(p.total) || 0 };
+        return { datos: datos, titulo: '', aviso: r.aviso || '', total: 0 };
       });
 
   /* =====================================================================
@@ -402,9 +403,21 @@ function ayPedirLectura(item){
   traer.then(function(x){
       if (sello !== AY.lectura) return null;
       if (!x.datos || !x.datos.length) throw new Error('No hay filas que leer.');
-      AY.filasDeLaLectura = x.datos.length;
+      /* LA CLAVE ES EL TOTAL MEDIDO, NO LAS FILAS QUE VINIERON.
+                                                             01/11/2026
+         Encontrado en pantalla hoy: «cuantos articulos tienen stock cero»
+         servia la lectura escrita el 23/10, que dice «5.000 articulos con
+         existencia cero ... a la foto del 21/10/2026». Hoy la base mide
+         12.077. La clave era `pregunta#filas_traidas`, y las filas traidas
+         SON EL TOPE (5.000): o sea que cuando el resultado llega al tope la
+         clave se queda clavada y la lectura vieja se sirve para siempre,
+         justo en el caso donde el numero mas cambia. Con el total medido la
+         clave se mueve sola: 12.077 no es 5.000, asi que se vuelve a
+         escribir. Es la regla del denominador otra vez — el numero que
+         identifica una medicion tiene que ser el que la medicion afirma. */
+      AY.filasDeLaLectura = x.total || x.datos.length;
       return AY_RPC('api_lectura_memoria',
-                    { p_pregunta: item.pregunta, p_filas: x.datos.length })
+                    { p_pregunta: item.pregunta, p_filas: AY.filasDeLaLectura })
         .catch(function(){ return null; })      /* si falla la memoria, se paga */
         .then(function(m){
           if (m && m.lectura) return m;         /* ya estaba escrita: gratis */

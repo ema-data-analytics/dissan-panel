@@ -122,6 +122,32 @@ def formato_porcentaje_de_verdad(fmt):
     return '%' in re.sub(r'"[^"]*"', '', fmt or '')
 
 
+def decimales_del_formato(fmt):
+    """Cuantos decimales va a MOSTRAR Excel con ese formato. Lo que esta
+    entre comillas es texto y no cuenta."""
+    limpio = re.sub(r'"[^"]*"', '', fmt or '')
+    limpio = limpio.split(';')[0]            # el formato de los positivos
+    m = re.search(r'[0#]\.([0#]+)', limpio)
+    return len(m.group(1)) if m else 0
+
+
+def muestra_miles(fmt):
+    """El separador de miles. Con `#,##0` Excel escribe 2.024 donde la
+    pantalla escribe 2024."""
+    return '#,##' in re.sub(r'"[^"]*"', '', fmt or '')
+
+
+def pantalla_entero_pelado(texto):
+    """La pantalla muestra un entero SIN separador de miles y SIN decimales
+    —un año, un codigo numerico, un contador chico—. Devuelve False en
+    cuanto hay un separador, una coma decimal, un $ o un %: esos casos son
+    plata o porcentaje y los miden los controles de al lado."""
+    t = (texto or '').replace(' ', ' ').strip()
+    if not t or '$' in t or '%' in t:
+        return False
+    return bool(re.fullmatch(r'-?\d+', t))
+
+
 def encabezados_de(ws, ncols):
     """La fila de encabezados. Las del titulo tienen SOLO la columna A, asi
     que con dos o mas columnas basta pedir 2 celdas llenas.
@@ -340,6 +366,32 @@ def revisar(ruta):
                             falla(nombre, 'plata_sin_formato',
                                   '%s: la pantalla la muestra con $ ("%s") y en el '
                                   'archivo quedo en formato %s.' % (donde, texto, fmt))
+                    # EL FORMATO MUESTRA UN NUMERO QUE LA PANTALLA NO
+                    # MUESTRA.                                 01/11/2026
+                    # La columna Año del comparativo de Ventas mostraba 2024
+                    # y el archivo la guardaba con formato de dos decimales:
+                    # en Excel se abria 2.024,00 y en el PDF 2.024. El VALOR
+                    # estaba bien —2024— asi que los cuatro controles de
+                    # arriba pasaban. Lo que miente es el formato, y es la
+                    # OC 5245 que salia 5.245 (23/10) un piso mas abajo.
+                    # Causa de fondo: una columna que mezcla numeros y texto
+                    # ("2024, 2025, 2026, Total") no queda declarada
+                    # numerica, y el armador le ponia igual el formato de
+                    # plata por defecto.
+                    elif pantalla_entero_pelado(texto) and float(v) == int(float(v)):
+                        medido['enteros_pelados'] = medido.get('enteros_pelados', 0) + 1
+                        dec = decimales_del_formato(fmt)
+                        mil = muestra_miles(fmt) and abs(float(v)) >= 1000
+                        if dec or mil:
+                            va_a_mostrar = ('{:,.%df}' % dec).format(float(v)) \
+                                .replace(',', ' ').replace('.', ',') \
+                                .replace(' ', '.' if mil else '')
+                            falla(nombre, 'el_formato_muestra_otro_numero',
+                                  '%s: la pantalla muestra "%s" y el archivo lo '
+                                  'guardo con formato %s, asi que Excel lo va a '
+                                  'mostrar "%s". El valor esta bien; lo que miente '
+                                  'es el formato.'
+                                  % (donde, texto, fmt, va_a_mostrar))
                 continue
 
             # 5. TEXTO CONTRA TEXTO: los caracteres no se pueden perder.

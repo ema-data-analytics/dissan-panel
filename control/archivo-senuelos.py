@@ -90,6 +90,22 @@ SENUELOS = [
         [[cel('03'), cel('120')]],
         [[3, 120]], ['General', '#,##0'])),
 
+    # 01/11/2026: el defecto que encontre ABRIENDO el archivo de Ventas.
+    # El valor 2024 estaba bien, asi que los controles de valor pasaban; lo
+    # que mentia era el formato. Dos senuelos: los decimales de mas y el
+    # separador de miles de mas.
+    ('un año con formato de plata: 2024 se abre 2.024,00',
+     'el_formato_muestra_otro_numero', lambda d: armar(
+        d, ['Prueba'], ['Año', 'Facturado'],
+        [[cel('2024'), cel('100')], [cel('Total'), cel('100')]],
+        [[2024, 100], ['Total', 100]], ['#,##0.00', '#,##0'])),
+
+    ('un numero con separador que la pantalla no muestra: 2024 -> 2.024',
+     'el_formato_muestra_otro_numero', lambda d: armar(
+        d, ['Prueba'], ['Año', 'Facturado'],
+        [[cel('2024'), cel('100')], [cel('Total'), cel('100')]],
+        [[2024, 100], ['Total', 100]], ['#,##0', '#,##0'])),
+
     ('a un codigo le cambiaron los caracteres',
      'al_codigo_le_cambiaron_los_caracteres', lambda d: armar(
         d, ['Prueba'], ['Articulo', 'Unidades'],

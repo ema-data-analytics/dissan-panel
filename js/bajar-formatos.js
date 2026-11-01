@@ -216,9 +216,22 @@ function bajarXlsx(hoja){
         continue;
       var ref = bajarCol(i) + nf;
       if (cel.t === 'num'){
-        var fmt = hoja.formatos[i] === 'pct' ? IDX.pct
-                : (hoja.formatos[i] === 'ent' ? IDX.ent
-                : (hoja.formatos[i] === 'num4' ? IDX.num4 : IDX.num));
+        /* EL FORMATO POR DEFECTO NO PUEDE SER PLATA.           01/11/2026
+           Cuando la columna NO quedo declarada numerica (porque mezcla
+           texto y numeros: el comparativo de Ventas tiene 2024, 2025, 2026
+           y despues "Total"), esta linea caia igual en IDX.num, que son dos
+           decimales, y el año 2024 se abria en Excel como 2.024,00.
+           El primer intento de arreglo mando esos enteros a IDX.ent, que es
+           `#,##0`, y la puerta lo volvio a cortar: el separador de miles
+           tambien agrega algo que la pantalla no muestra — 2026 se abria
+           "2.026", que es LA MISMA clase. Sin formato declarado va General,
+           que muestra lo que muestra la pantalla. El valor nunca cambia:
+           sigue siendo numero, se ordena y se suma igual. */
+        var fmt = hoja.formatos[i] === 'pct'  ? IDX.pct
+                : hoja.formatos[i] === 'ent'  ? IDX.ent
+                : hoja.formatos[i] === 'num4' ? IDX.num4
+                : hoja.formatos[i] === 'num'  ? IDX.num
+                : IDX.texto;                 /* General: ni miles ni decimales */
         cs += '<c r="' + ref + '" s="' + fmt + '"><v>' + cel.v + '</v></c>';
       } else if (cel.t === 'fecha'){
         cs += '<c r="' + ref + '" s="' + IDX.fecha + '"><v>' +

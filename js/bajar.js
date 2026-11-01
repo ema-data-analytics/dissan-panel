@@ -94,7 +94,12 @@ function bajarCelda(td){
   var f = bajarFecha(texto);
   if (f) return { v: f, t: 'fecha' };
   var n = bajarNumero(texto);
-  if (n !== null) return { v: n, t: 'num', pct: /%$/.test(texto) };
+  /* `txt` es LO QUE DICE LA PANTALLA, y viaja al lado del numero.
+     01/11/2026: la columna Año del comparativo de Ventas muestra 2024 y
+     bajaba 2.024,00 en el Excel y 2.024 en el PDF. El numero estaba bien;
+     lo que estaba mal era el formato. Sin el texto original no hay con que
+     comparar, asi que de aca en adelante viaja siempre. */
+  if (n !== null) return { v: n, t: 'num', pct: /%$/.test(texto), txt: texto };
   return { v: texto, t: texto ? 'texto' : 'vacio' };
 }
 
@@ -366,9 +371,19 @@ function bajarAPDF(tabla, boton){
         if (!cel || cel.t === 'vacio') return '';
         if (cel.t === 'fecha' && cel.v instanceof Date)
           return cel.v.toLocaleDateString('es-AR', {day:'2-digit',month:'2-digit',year:'numeric'});
-        if (cel.t === 'num')
+        if (cel.t === 'num'){
+          /* UN AÑO NO ES UN IMPORTE.                          01/11/2026
+             Si la COLUMNA no es numerica, este numero esta ahi de prestado
+             —la columna Año del comparativo de Ventas, que ademas termina
+             en "Total"— y formatearlo le mete un separador de miles que la
+             pantalla no tiene: 2024 salia "2.024". Es la OC 5245 que salia
+             5.245 (23/10) un piso mas abajo. En esa columna va el texto de
+             la pantalla, tal cual, que es justo lo que este PDF promete. */
+          if (!(d.tipos[k] && d.tipos[k].tipo === 'num'))
+            return cel.txt !== undefined ? cel.txt : String(cel.v);
           return cel.v.toLocaleString('es-AR', { maximumFractionDigits:2 }) +
                  (d.tipos[k] && d.tipos[k].pct ? '%' : '');
+        }
         return String(cel.v);
       });
     });
