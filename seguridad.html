@@ -66,7 +66,7 @@
 <div class="seg-header">
   <div>
     <div class="seg-titulo-h">Usuarios del sistema</div>
-    <div class="seg-sub">Alta, edición y anulación de accesos. Solo visible para el rol Super.</div>
+    <div class="seg-sub">Alta, edición y anulación de accesos. Lo ven los roles que <code>modulos.roles</code> habilita para Seguridad.</div>
   </div>
   <div class="seg-buscador">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
@@ -102,9 +102,16 @@
       <input type="password" id="segPassword" required minlength="12" autocomplete="new-password">
       <label>Rol</label>
       <select id="segRol">
-        <option value="usuario">Usuario</option>
-        <option value="admin">Admin</option>
-        <option value="super">Super</option>
+        <!-- NINGUN ROL ESCRITO A MANO. Los roles salen de api_roles_v2(),
+             que los lee de modulos.roles, y los pone js/seguridad.js. Aca
+             habia una lista cableada con «usuario» -- un rol que el
+             servidor RECHAZA con «Rol invalido» -- y sin «operador», que es
+             el rol real del usuario de DISSAN: el 21/10 editarle el perfil
+             LE CAMBIABA EL ROL SIN QUERER. La lista seguia aca, asi que si
+             la base no contestaba la pantalla volvia a ofrecer eso mismo:
+             fallaba ABIERTA al defecto viejo. Ahora sin roles de la base no
+             hay ningun rol que elegir. -->
+        <option value="" disabled selected>Cargando los roles…</option>
       </select>
       <div class="modal-botones">
         <button type="button" class="btn-cancelar" onclick="cerrarModal('modalNuevo')">Cancelar</button>
@@ -125,9 +132,16 @@
       <input type="text" id="perfilNombre" required>
       <label>Rol</label>
       <select id="perfilRol">
-        <option value="usuario">Usuario</option>
-        <option value="admin">Admin</option>
-        <option value="super">Super</option>
+        <!-- NINGUN ROL ESCRITO A MANO. Los roles salen de api_roles_v2(),
+             que los lee de modulos.roles, y los pone js/seguridad.js. Aca
+             habia una lista cableada con «usuario» -- un rol que el
+             servidor RECHAZA con «Rol invalido» -- y sin «operador», que es
+             el rol real del usuario de DISSAN: el 21/10 editarle el perfil
+             LE CAMBIABA EL ROL SIN QUERER. La lista seguia aca, asi que si
+             la base no contestaba la pantalla volvia a ofrecer eso mismo:
+             fallaba ABIERTA al defecto viejo. Ahora sin roles de la base no
+             hay ningun rol que elegir. -->
+        <option value="" disabled selected>Cargando los roles…</option>
       </select>
       <div class="modal-botones">
         <button type="button" class="btn-cancelar" onclick="cerrarModal('modalPerfil')">Cancelar</button>

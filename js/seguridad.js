@@ -83,10 +83,24 @@ var SEG_ROLES = [];   /* los que manda api_roles_v2(), via la Edge Function */
 /* Carga los roles de verdad en los tres desplegables. */
 function segCargarRoles(lista, rolDe){
   if (lista && lista.length) SEG_ROLES = lista.map(function(x){ return x.rol || x; });
-  if (!SEG_ROLES.length) return;
   ['segRol','perfilRol'].forEach(function(id){
     var s = document.getElementById(id);
     if (!s) return;
+    /* SIN ROLES DE LA BASE NO HAY ROL QUE ELEGIR, Y SE DICE.      01/11/2026
+       Antes esto hacia `return` y la pantalla se quedaba con las opciones
+       del HTML, que eran la lista vieja cableada: «usuario» —que el
+       servidor rechaza con «Rol invalido»— y sin «operador». O sea fallaba
+       ABIERTA al defecto del 21/10, el mismo golpe del portero sin
+       data-modulo del 31/10. Ahora el desplegable queda vacio Y DICIENDO
+       POR QUE: un desplegable vacio sin explicacion es una pantalla que no
+       se entiende. */
+    if (!SEG_ROLES.length){
+      s.innerHTML = '<option value="" disabled selected>'
+                  + 'No se pudieron cargar los roles</option>';
+      s.disabled = true;
+      return;
+    }
+    s.disabled = false;
     var antes = s.value;
     s.innerHTML = SEG_ROLES.map(function(r){
       return '<option value="' + esc(r) + '">' + esc(r) + '</option>'; }).join('');

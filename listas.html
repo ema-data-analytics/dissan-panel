@@ -76,7 +76,13 @@
     </div>
     <div class="lp-campo">
       <label class="lp-rot" for="lpArch">Archivo de la lista</label>
-      <input id="lpArch" class="lp-file" type="file" accept=".pdf,.xlsx,.xls,.xlsm">
+      <!-- El accept dice EXACTAMENTE lo que edge/listas/index.ts sabe leer:
+           PDF y .xlsx. Tenia tambien .xls y .xlsm, que el motor NO lee: el
+           usuario podia elegir un archivo que la funcion no sabe abrir y el
+           error aparecia despues de subirlo. Lo encontro control/rotulo.js
+           el 01/11, no yo. Si algun dia el motor aprende otro formato, se
+           agrega en los dos lados o el control corta. -->
+      <input id="lpArch" class="lp-file" type="file" accept=".pdf,.xlsx">
     </div>
     <div class="lp-campo lp-accion">
       <button id="lpProcesar" class="lp-btn" type="button">Procesar la lista</button>

@@ -45,6 +45,7 @@ correr(){
 }
 
 correr "las edge functions" control/edge.js       node control/edge.js
+correr "los rotulos"        control/rotulo.js     node control/rotulo.js
 correr "el control del control del archivo" control/archivo-senuelos.py \
                                                   python3 control/archivo-senuelos.py
 correr "las pantallas"      control/pantallas.js  node control/pantallas.js
