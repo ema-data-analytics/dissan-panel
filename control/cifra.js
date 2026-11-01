@@ -41,6 +41,8 @@ if (!process.env.NODE_USE_ENV_PROXY && process.env.HTTPS_PROXY) {
   process.exit(r.status === null ? 1 : r.status);
 }
 
+require('./enchufar').enchufar();   /* la puerta se enchufa sola */
+
 const BASE = 'https://hwgfmpvszdohnzqtwscw.supabase.co';
 /* la publishable esta hecha para estar a la vista. La service_role NUNCA
    entra al repo. */

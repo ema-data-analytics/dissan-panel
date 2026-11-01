@@ -38,6 +38,8 @@ if (!process.env.NODE_USE_ENV_PROXY && process.env.HTTPS_PROXY) {
   process.exit(r.status === null ? 1 : r.status);
 }
 
+require('./enchufar').enchufar();   /* la puerta se enchufa sola */
+
 const fs    = require('fs');
 const path  = require('path');
 const http  = require('http');
