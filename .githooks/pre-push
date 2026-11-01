@@ -81,6 +81,10 @@ correr "los rotulos"        control/rotulo.js     node control/rotulo.js
 correr "las cifras publicadas" control/cifra.js   node control/cifra.js
 correr "el control del control del archivo" control/archivo-senuelos.py \
                                                   python3 control/archivo-senuelos.py
+# El PDF tiene su propio control del control: son otras ocho clases, y hasta el
+# 01/11 el PDF no lo medía NADIE — la puerta cerraba diciendo "NO midio: el PDF".
+correr "el control del control del pdf" control/pdf-senuelos.js \
+                                                  node control/pdf-senuelos.js
 correr "las pantallas"      control/pantallas.js  node control/pantallas.js
 correr "el archivo bajado"  control/archivo.js    node control/archivo.js
 

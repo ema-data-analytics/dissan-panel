@@ -349,6 +349,36 @@ function bajarRecortar(s, pt, max){
   return t + '...';
 }
 
+/* UN CARTEL NO SE RECORTA: SE PARTE EN RENGLONES.           01/11/2026
+   Encontrado por control/pdf.py en su primera corrida: en la Bitacora y en
+   el detalle de Ventas habia palabras terminando en x=859,9 y x=860,4 sobre
+   una hoja de 841,89. No eran de la tabla: eran del SUBTITULO, que se
+   escribia en un solo renglon sin cortar y se iba del papel. Y lo peor es
+   cual era ese cartel: el que avisa "ATENCION: N columnas de texto salen
+   recortadas". El aviso del recorte se salia de la hoja.
+   El pie si estaba clamped (`bajarRecortar(linea, 7, A - MX*2)`); el titulo
+   y el subtitulo no. Un cartel recortado con "..." pierde justo el final,
+   que es donde dice que hay que bajar el Excel, asi que se PARTE en
+   renglones por palabra y la tabla baja lo que haga falta. */
+function bajarEnvolver(s, pt, max, topeRenglones){
+  var palabras = bajarPdfTexto(s).split(/\s+/).filter(function(p){ return p; });
+  var renglones = [], actual = '';
+  palabras.forEach(function(p){
+    var prueba = actual ? actual + ' ' + p : p;
+    if (bajarAnchoTexto(prueba, pt) <= max) { actual = prueba; return; }
+    if (actual) renglones.push(actual);
+    actual = p;
+  });
+  if (actual) renglones.push(actual);
+  if (!renglones.length) return [''];
+  if (topeRenglones && renglones.length > topeRenglones){
+    var ultimo = renglones.slice(topeRenglones - 1).join(' ');
+    renglones = renglones.slice(0, topeRenglones - 1);
+    renglones.push(bajarRecortar(ultimo, pt, max));
+  }
+  return renglones;
+}
+
 /*  doc = { titulo, subtitulo, pie:[lineas], encabezados, filas:[[texto]],
            alinear:[ 'izq'|'der' ], anchos:[pt] }                        */
 function bajarPdf(doc){
@@ -414,6 +444,43 @@ function bajarPdf(doc){
             return esNum[i] ? w : Math.max(14, w - exceso * w / textoTotal);
           });
       }
+
+      /* NADA SE ESCRIBE FUERA DEL PAPEL.                      01/11/2026
+         Encontrado por control/pdf.py en su primera corrida: en la
+         Bitacora y en el detalle de Ventas habia palabras terminando en
+         x=859,9 y x=860,4 sobre una hoja de 841,89. La causa son los dos
+         PISOS de arriba: `Math.max(26, ...)` y `Math.max(14, ...)`. Con
+         muchas columnas de texto, catorce pisos de 14 pt suman mas que
+         la hoja, y despues de aplicarlos NADIE volvia a mirar el total.
+         El resultado se imprime cortado por el borde del papel y no hay
+         nada que lo avise.
+         Ahora, si despues de los pisos sigue sin entrar:
+           1. se achica la letra y se vuelve a intentar (hay 8 vueltas), y
+           2. en la ultima vuelta se bajan los pisos del texto hasta que
+              entre. Una columna de 6 pt no se lee —y el subtitulo ya
+              declara que las columnas de texto salieron recortadas—,
+              pero el numero sigue entero y la hoja sigue siendo una hoja.
+         Lo que sigue pendiente de fondo es partir el PDF en bloques de
+         columnas, que es el arreglo que no pierde nada. */
+      var total2 = anchos.reduce(function(a, b){ return a + b; }, 0);
+      if (total2 > util + 0.5){
+        if (ptFila > 4.2){ ptFila = Math.max(4.2, ptFila - 0.5); ptEnc = ptFila; continue; }
+        var sobraTexto = 0;
+        anchos.forEach(function(w, i){ if (!esNum[i]) sobraTexto += w; });
+        var queda = Math.max(0, util - (total2 - sobraTexto));
+        if (sobraTexto > 0)
+          anchos = anchos.map(function(w, i){
+            return esNum[i] ? w : Math.max(2, queda * w / sobraTexto);
+          });
+        /* si ni los numeros solos entran, se escala TODO a la hoja: una
+           columna angosta se lee mal, una palabra fuera del papel no se
+           lee nunca. */
+        var total3 = anchos.reduce(function(a, b){ return a + b; }, 0);
+        if (total3 > util){
+          var k = util / total3;
+          anchos = anchos.map(function(w){ return w * k; });
+        }
+      }
       break;
     }
     ptFila = Math.max(4.2, ptFila - 0.5);
@@ -441,6 +508,12 @@ function bajarPdf(doc){
       'entran en la hoja, asi que salen recortadas con puntos suspensivos. Los numeros, las ' +
       'fechas y los codigos estan enteros. Para el texto completo, el Excel.';
   }
+
+  /* el subtitulo partido en renglones, y la tabla baja lo que haga falta.
+     Se calcula ACA, antes de la primera pagina, porque `nuevaPagina` arranca
+     en L - ARRIBA. Tope de 3 renglones: mas que eso se come la hoja. */
+  var subLineas = doc.subtitulo ? bajarEnvolver(doc.subtitulo, 9, util, 3) : [];
+  ARRIBA = 74 + Math.max(0, subLineas.length - 1) * 11;
 
   var paginas = [], actual = null, y = 0;
   function nuevaPagina(){
@@ -482,10 +555,15 @@ function bajarPdf(doc){
 
   /* el encabezado de la hoja y el numero de pagina */
   paginas.forEach(function(p, i){
-    p.texto.push({ x: MX, y: L - 28, s: doc.titulo, pt: 12, c: [0.071,0.196,0.322] });
-    p.texto.push({ x: MX, y: L - 43, s: doc.subtitulo, pt: 9, c: [0.23,0.23,0.23] });
+    /* el titulo tambien se recorta: una sola linea, y nunca fuera del papel */
+    p.texto.push({ x: MX, y: L - 28, s: bajarRecortar(doc.titulo || '', 12, util),
+                   pt: 12, c: [0.071,0.196,0.322] });
+    subLineas.forEach(function(linea, k){
+      p.texto.push({ x: MX, y: L - 43 - k * 11, s: linea, pt: 9, c: [0.23,0.23,0.23] });
+    });
+    var yPie = L - 56 - Math.max(0, subLineas.length - 1) * 11;
     (doc.pie || []).forEach(function(linea, k){
-      p.texto.push({ x: MX, y: L - 56 - k * 10, s: bajarRecortar(linea, 7, A - MX*2),
+      p.texto.push({ x: MX, y: yPie - k * 10, s: bajarRecortar(linea, 7, util),
                      pt: 7, c: [0.43,0.43,0.43] });
     });
     var n = 'Pagina ' + (i + 1) + ' de ' + paginas.length;

@@ -347,7 +347,16 @@ Deno.serve(async (req) => {
 
     const auth = req.headers.get("Authorization") ?? "";
     const jwt = auth.replace(/^Bearer\s+/i, "").trim();
-    if (!jwt) return json({ ok: false, origen: "sin_sesion", respuesta: "Volvé a entrar al panel." });
+    if (!jwt) {
+      /* EL CODIGO HTTP TAMBIEN TIENE QUE DECIR QUE NO.        01/11/2026
+         Esto rechazaba bien —el cuerpo dice sin_sesion— pero contestaba
+         HTTP 200: el cuerpo decia que no y el codigo decia que si. El
+         control de edge functions lo venia avisando en cada corrida. Un
+         cliente que mira el status (fetch, un proxy, un monitor) lo leia
+         como exito. Va 401, igual que leer, excel y preguntar. */
+      return json({ ok: false, origen: "sin_sesion",
+                    respuesta: "Volvé a entrar al panel." }, 401);
+    }
 
     const llave = Deno.env.get("ANTHROPIC_API_KEY");
     if (!llave) {

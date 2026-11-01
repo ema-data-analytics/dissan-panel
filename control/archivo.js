@@ -65,7 +65,8 @@ const SALIDA  = path.join('/tmp', 'control-archivos');
 const PUERTO  = 8099;
 
 const fallas = [];
-const medido = { pantallas: 0, grillas: 0, bajados: 0, conPantalla: 0 };
+const medido = { pantallas: 0, grillas: 0, bajados: 0, conPantalla: 0,
+                 pdfs: 0, pdfsBajados: 0 };
 function falla(donde, clase, que){ fallas.push({ donde, clase, que }); }
 
 /* servidor local, igual que el control de pantallas */
@@ -186,6 +187,34 @@ async function main(){
       if (/login|ingresar|^panel-dissan/i.test(nombre))
         falla(p, 'nombre_de_archivo_del_login',
               'el archivo se llama "' + nombre + '": la busqueda del titulo se fue hasta el login.');
+
+      /* ---- Y EL PDF DE LA MISMA GRILLA ----------------------------------
+         Hasta el 01/11 esta puerta decia, abajo de todo, "NO midio: el PDF".
+         Era verdad y era el agujero mas grande que quedaba: el PDF es el que
+         se imprime y se manda, y un numero cortado ahi miente igual que en
+         la pantalla (el 23/10 salio "2.638.99..." y la OC 5245 como 5.245).
+         Ahora se aprieta tambien el boton de PDF, se guarda el archivo al
+         lado, y control/pdf.py lo abre y lee CADA PALABRA CON SU POSICION. */
+      const botonesPdf = await pg.$$('.bajar-btn[data-que="pdf"]');
+      if (botonesPdf[i]){
+        medido.pdfs++;
+        try {
+          const esperarPdf = pg.waitForEvent('download', { timeout: 20000 });
+          await botonesPdf[i].click();
+          const dlp = await esperarPdf;
+          await dlp.saveAs(destino.replace(/\.xlsx$/i, '') + '.pdf');
+          medido.pdfsBajados++;
+        } catch (e){
+          falla(p, 'el_boton_de_pdf_no_bajo_nada',
+                'aprete el boton de PDF de la grilla ' + (i + 1)
+              + ' y no llego ninguna descarga en 20 s: ' + e.message.slice(0,90));
+        }
+      } else {
+        falla(p, 'la_grilla_no_tiene_boton_de_pdf',
+              'la grilla ' + (i + 1) + ' tiene boton de Excel y no de PDF: la barra se '
+            + 'pone sola en toda tabla, asi que si falta uno de los dos hay un defecto '
+            + 'en js/bajar.js, no en la pantalla.');
+      }
     }
 
     await ctx.close();
@@ -203,11 +232,16 @@ async function main(){
   /* ---- la parte que ABRE los archivos ---------------------------------- */
   const py = spawnSync('python3', [path.join(__dirname, 'archivo.py'), SALIDA],
                        { encoding:'utf8' });
-  const salidaPy = (py.stdout || '') + (py.stderr || '');
+  /* y el PDF, que hasta el 01/11 no lo medía nadie */
+  const pyPdf = spawnSync('python3', [path.join(__dirname, 'pdf.py'), SALIDA],
+                          { encoding:'utf8' });
+  const salidaPy = (py.stdout || '') + (py.stderr || '')
+                 + '\n' + (pyPdf.stdout || '') + (pyPdf.stderr || '');
 
-  if (fallas.length || py.status !== 0){
+  if (fallas.length || py.status !== 0 || pyPdf.status !== 0){
     console.log('CONTROL DEL ARCHIVO BAJADO: ' + fallas.length + ' falla(s) al bajar'
-              + (py.status !== 0 ? ' + fallas adentro de los archivos' : '') + '\n');
+              + (py.status !== 0 ? ' + fallas adentro del Excel' : '')
+              + (pyPdf.status !== 0 ? ' + fallas adentro del PDF' : '') + '\n');
     const porClase = {};
     for (const f of fallas) (porClase[f.clase] = porClase[f.clase] || []).push(f);
     for (const c of Object.keys(porClase)){
@@ -217,17 +251,18 @@ async function main(){
     }
     if (salidaPy.trim()) console.log(salidaPy.trim());
     console.log('\n  midio: ' + medido.pantallas + ' pantallas · ' + medido.grillas
-              + ' botones de Excel apretados · ' + medido.bajados + ' archivos bajados y abiertos.');
+              + ' botones de Excel y ' + medido.pdfs + ' de PDF apretados · '
+              + medido.bajados + ' .xlsx y ' + medido.pdfsBajados
+              + ' .pdf bajados y abiertos.');
     process.exit(1);
   }
 
   console.log('CONTROL DEL ARCHIVO BAJADO: 0 fallas.');
   if (salidaPy.trim()) console.log(salidaPy.trim());
   console.log('  midio: ' + medido.pantallas + ' pantallas · ' + medido.grillas
-            + ' botones de Excel apretados · ' + medido.bajados
-            + ' archivos bajados y ABIERTOS celda por celda.');
-  console.log('  NO midio: el PDF. Que no haya un numero, una fecha o un codigo cortado '
-            + 'necesita extraer el texto con su posicion, y eso todavia no esta.');
+            + ' botones de Excel y ' + medido.pdfs + ' de PDF apretados · '
+            + medido.bajados + ' .xlsx abiertos celda por celda y '
+            + medido.pdfsBajados + ' .pdf abiertos palabra por palabra.');
   process.exit(0);
 }
 
