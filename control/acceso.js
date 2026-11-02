@@ -113,6 +113,54 @@ async function main(){
               + 'y el panel siguio sirviendo codigo de nueve dias antes). '
               + 'Hay que habilitar github.io en el proxy de la sesion.');
 
+  /* ---- 2 bis: CON QUE VA A ARRANCAR LA PROXIMA SESION ------- 02/11/2026
+     El hook SessionStart de .claude/ imprime api_estado_del_sistema() antes
+     de que la sesion pueda decir una palabra. Es el mecanismo que hace que
+     el estado NO dependa de que alguien se acuerde de pedirlo — o sea, el
+     que sostiene toda esta puerta un piso mas arriba.
+     Si ese hook se rompe o se borra, no avisa NADA: la proxima sesion
+     arranca sin el estado y nadie se entera, que es exactamente lo que paso
+     con `core.hooksPath` hasta el 31/10 (el pre-push estuvo desenchufado
+     dias). Por eso se mide aca: esta puerta es la de "con que cuento". */
+  const HOOK_JSON = path.join(__dirname, '..', '.claude', 'settings.json');
+  const HOOK_SH   = path.join(__dirname, '..', '.claude', 'hooks', 'session-start.sh');
+  let hookOk = false, hookDetalle = '';
+  try {
+    const cfg = JSON.parse(fs.readFileSync(HOOK_JSON, 'utf8'));
+    const entradas = ((cfg.hooks || {}).SessionStart || [])
+                       .flatMap(e => e.hooks || []);
+    const cmd = entradas.map(h => String(h.command || '')).join(' ');
+    if (!entradas.length)
+      throw new Error('.claude/settings.json no declara ningun hook SessionStart');
+    if (!/session-start\.sh/.test(cmd))
+      throw new Error('el hook SessionStart no apunta a .claude/hooks/session-start.sh'
+                    + ' (dice: ' + cmd.slice(0, 80) + ')');
+    const sh = fs.readFileSync(HOOK_SH, 'utf8');
+    if (!/control\/estado\.js/.test(sh))
+      throw new Error('.claude/hooks/session-start.sh no llama a control/estado.js');
+    /* y que de verdad imprima el estado: el archivo puede existir y no servir */
+    const r = require('child_process').spawnSync('node',
+                [path.join(__dirname, 'estado.js')],
+                { encoding: 'utf8', cwd: path.join(__dirname, '..'), timeout: 60000 });
+    const salida = (r.stdout || '') + (r.stderr || '');
+    if (!/ESTADO DEL SISTEMA DISSAN/.test(salida))
+      throw new Error('control/estado.js corrio y NO imprimio el estado');
+    const puertas = (salida.match(/^\s{2}(VERDE|AMBAR|ROJO)/gm) || []).length;
+    if (!puertas)
+      throw new Error('control/estado.js imprimio el encabezado pero ni una fila '
+                    + 'de semaforo: un cartel vacio es peor que ninguno');
+    hookOk = true;
+    hookDetalle = 'el hook SessionStart de .claude/ llama a control/estado.js, que '
+                + 'corrio e imprimio ' + puertas + ' filas de semaforo.';
+  } catch (e){
+    hookDetalle = e.message.slice(0, 180);
+    fallas.push('EL ESTADO NO VA A LLEGAR SOLO A LA PROXIMA SESION: ' + hookDetalle
+              + '. Ese hook es lo que hace que "lo probaste?" no dependa de que '
+              + 'alguien se acuerde de preguntarle a la base. Si se rompe no avisa '
+              + 'nada y la sesion que viene arranca a ciegas — es `core.hooksPath` '
+              + 'otra vez, que estuvo desenchufado dias sin que nadie lo supiera.');
+  }
+
   /* ---- 3: lo que un script NO puede medir, y por eso se exige ---------- */
   let m = null;
   try {
@@ -193,6 +241,8 @@ async function main(){
     console.log('  LEI EN PANTALLA: ' + String(m.pantalla_leida).slice(0, 140));
     console.log('  medido el ' + m.cuando);
   }
+  console.log('  ' + (hookOk ? 'ARRANCA ' : 'NO ARRANCA')
+            + '  la proxima sesion con el estado a la vista  — ' + hookDetalle);
 
   if (fallas.length){
     console.log('\nCONTROL DE ACCESO: ' + fallas.length + ' falla(s)\n');
@@ -216,6 +266,7 @@ async function main(){
             + ') · el Chrome del usuario: ' + (si(m.navegador) ? 'TENGO' : 'NO TENGO')
             + ' · el puente a su computadora: ' + (si(m.puente) ? 'TENGO' : 'NO TENGO')
             + ' · medicion fechada ' + m.cuando
+            + ' · el arranque de la proxima sesion: ' + hookDetalle
             + (si(m.navegador) ? '' : ' · OJO: sin el Chrome del usuario, en esta '
                + 'corrida NO se verifico nada en SU pantalla.'));
   process.exit(0);
