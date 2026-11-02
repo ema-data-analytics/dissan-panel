@@ -52,6 +52,23 @@ require('./enchufar').enchufar();   /* la puerta se enchufa sola */
 const fs   = require('fs');
 const path = require('path');
 
+/* DOS MODOS, Y EL MODO QUEDA ANOTADO.                        02/11/2026
+   Esta puerta exige control/acceso-medido.json, que sale de dos llamadas
+   que un script NO puede hacer: si tengo el Chrome del usuario y si tengo
+   el puente a su maquina. Eso esta bien cuando hay alguien —yo— y es
+   justamente la falla del 01/11 que la hizo nacer.
+   Pero el 02/11 se le agrego un reloj: control/todos.js corre las ocho
+   puertas solas cada mañana, para que la medicion nunca este vieja. En esa
+   corrida NO HAY NADIE que mida el navegador, y exigirlo pondria un rojo
+   todas las mañanas. Un control que grita siempre se apaga, y entonces no
+   frena nada el dia que grita de verdad.
+   Asi que en modo desatendido se mide lo que SI se puede medir desde el
+   contenedor —las dos vias de red, ahora mismo— y se DECLARA en la linea
+   "midio:" que el navegador y el puente no se midieron en esa corrida. El
+   pre-push sigue en modo estricto, porque ahi hay alguien. */
+const DESATENDIDO = process.env.CONTROL_SIN_NADIE === '1'
+                 || process.argv.includes('--desatendido');
+
 const BASE   = 'https://hwgfmpvszdohnzqtwscw.supabase.co';
 const KEY    = 'sb_publishable_7CfYchCqBdDnXJ63IblnTw_cjFCjvUl';
 const PANEL  = 'https://ema-data-analytics.github.io/dissan-panel/index.html';
@@ -99,8 +116,33 @@ async function main(){
   /* ---- 3: lo que un script NO puede medir, y por eso se exige ---------- */
   let m = null;
   try {
+    /* En modo desatendido el archivo NO se lee, ni siquiera si existe: seria
+       la medicion de OTRA corrida, y decir "TENGO el Chrome" porque anoche lo
+       tenia es exactamente la clase de afirmacion sin medir que esta puerta
+       existe para frenar. */
+    if (DESATENDIDO) throw new Error('modo desatendido: no se lee la medicion de otra corrida');
     m = JSON.parse(fs.readFileSync(MEDIDO, 'utf8'));
   } catch (e){
+    if (DESATENDIDO){
+      console.log('CONTROL DE ACCESO — QUE PUEDO PROBAR HOY  (modo desatendido)');
+      for (const v of vias)
+        console.log('  ' + (v.llega ? 'LLEGA   ' : 'NO LLEGA')
+                  + '  ' + v.via + (v.llega ? '  (HTTP ' + v.http + ', ' + v.ms + ' ms)'
+                                            : '  — ' + (v.error || '')));
+      console.log('  NO SE MIDIO  el Chrome del usuario ni el puente a su computadora: '
+                + 'en esta corrida no hay nadie que pueda medirlos.');
+      if (fallas.length){
+        console.log('\nCONTROL DE ACCESO: ' + fallas.length + ' falla(s)\n');
+        for (const f of fallas) console.log('  - ' + f);
+        process.exit(1);
+      }
+      console.log('\nCONTROL DE ACCESO: 0 fallas.');
+      console.log('  midio: las dos vias de red AHORA MISMO (la base y el panel '
+                + 'publicado). NO midio el navegador ni el puente: corrida '
+                + 'desatendida, no hay nadie que los mida. Para probar en pantalla '
+                + 'hace falta una corrida con alguien.');
+      process.exit(0);
+    }
     fallas.push('NO existe control/acceso-medido.json. Esa es la medicion de '
               + 'si tengo el Chrome del usuario y el puente a su maquina, y un '
               + 'script no la puede hacer solo: son herramientas de mi lado. '

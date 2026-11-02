@@ -76,6 +76,16 @@ correr(){
 # cinco no se puede interpretar.
 correr "el acceso"          control/acceso.js     node control/acceso.js
 
+# EL ALCANCE VA SEGUNDO.                                      02/11/2026
+# La cagada mas grande del proyecto no fue de codigo: el 21/10 porte DIECISEIS
+# pantallas porque esa lista estaba en mis notas, y nadie las habia pedido. El
+# alcance se mira en `modulos`, que es lo que el usuario tiene en la pantalla.
+# Va antes que todo lo que mide COMO quedo algo, porque si lo que esta de mas
+# no tendria que existir, da igual que ande bien.
+correr "el alcance"         control/alcance.js    node control/alcance.js
+correr "el control del control del alcance" control/alcance-senuelos.js \
+                                                  node control/alcance-senuelos.js
+
 correr "las edge functions" control/edge.js       node control/edge.js
 correr "los rotulos"        control/rotulo.js     node control/rotulo.js
 correr "las cifras publicadas" control/cifra.js   node control/cifra.js
