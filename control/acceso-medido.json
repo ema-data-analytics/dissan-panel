@@ -1,9 +1,9 @@
 {
-  "cuando": "2026-11-01T20:14:33.435315+00:00",
-  "navegador": true,
-  "navegador_detalle": "Chrome del usuario por la extension. tabs_context: 1 pestaña, tabId 1156094890, DISSAN · Ayuda inteligente, sesion de ANIBAL (rol pruebas) puesta. Medido llamando a tabs_context_mcp.",
+  "cuando": "2026-11-02T12:52:00.000000+00:00",
+  "navegador": false,
+  "navegador_detalle": "NO. Medido llamando a tabs_context_mcp en esta corrida: 'Multiple Chrome browsers are connected to this account and none has been selected for this session' — Browser 1 (Windows, af847e60) y Browser 2 (Windows, b57ec6f4). No elijo yo cual: el usuario tiene que decir cual de los dos es el que usa, y hasta que lo diga esta sesion no tiene su Chrome. Ayer (01/11) si lo tenia; hoy no, y la diferencia esta medida, no recordada.",
   "puente": false,
-  "puente_detalle": "get_device_info devolvio: 'The device this session is bound to is not connected to the bridge.' No puedo leer ni escribir archivos en su computadora, asi que el .xlsx que baja a su disco NO lo puedo abrir.",
-  "pantalla_leida": "Ventas facturadas, boton 'Correr el control ahora': 9.067 de 9.298 facturas al peso · contabilidad $15.130.293.121,30 contra sistema $15.130.293.277,34 · diferencia -$156,04 · 744 facturas sin asiento por $3.187.540.243,81. Los seis valores iguales a la base en la misma corrida.",
-  "que_no_puedo_probar_hoy": "El archivo que baja al disco del usuario (puente caido). El PDF no lo mide ninguna puerta todavia."
+  "puente_detalle": "NO. get_device_info devolvio en esta corrida: 'The device this session is bound to is not connected to the bridge.' No puedo leer ni escribir archivos en su computadora, asi que el .xlsx que baja a SU disco sigue sin poder abrirse desde aca.",
+  "pantalla_leida": "NINGUNA en el Chrome del usuario, y por eso no afirmo nada sobre su pantalla. Lo que SI se midio en pantalla en esta corrida fue el Chromium del contenedor, por control/pantallas.js: 15 pantallas x 2 tamanos, 44 botones apretados con la mano, 4 grillas recorridas hasta la ultima pagina (684 paginas) y 4 con el archivo bajado comprobado adentro, todas contra la base en la misma corrida. Es un navegador de verdad contra la base de verdad; NO es el Chrome del usuario.",
+  "que_no_puedo_probar_hoy": "1) Nada en el Chrome del usuario hasta que diga cual de los dos Browser es el suyo. 2) El archivo que baja a su disco (puente caido). Las dos cosas dependen de el, no de mi, y estan dichas antes de entregar, no al cierre."
 }

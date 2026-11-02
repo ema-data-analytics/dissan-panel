@@ -201,9 +201,23 @@ async function main(){
     process.exit(1);
   }
 
+  /* LA LINEA "midio:" ES LO QUE QUEDA EN LA BASE.               02/11/2026
+     Encontrado al volver a correr esta puerta hoy: pasaba con el navegador
+     en NO —medido, legitimo— y la linea que se guarda en ema.control_corrida
+     decia solo "exigio la medicion", sin decir QUE dio. Entonces
+     api_estado_del_sistema() mostraba "el acceso: paso" y el que la leyera no
+     podia saber que hoy NO se verifico nada en el Chrome del usuario. Es la
+     misma clase que todo esto frena: un registro que pasa sin declarar lo que
+     no pudo medir. Ahora el resultado va ADENTRO de la linea que se guarda. */
+  const si = x => (x === true || x === 'si' || x === 'SI');
   console.log('\nCONTROL DE ACCESO: 0 fallas.');
-  console.log('  midio: las dos vias de red AHORA MISMO, y exigio la medicion '
-            + 'del navegador y del puente, fechada en esta sesion.');
+  console.log('  midio: las dos vias de red AHORA MISMO ('
+            + vias.map(v => v.via + ' ' + (v.llega ? 'HTTP ' + v.http : 'NO LLEGA')).join(' · ')
+            + ') · el Chrome del usuario: ' + (si(m.navegador) ? 'TENGO' : 'NO TENGO')
+            + ' · el puente a su computadora: ' + (si(m.puente) ? 'TENGO' : 'NO TENGO')
+            + ' · medicion fechada ' + m.cuando
+            + (si(m.navegador) ? '' : ' · OJO: sin el Chrome del usuario, en esta '
+               + 'corrida NO se verifico nada en SU pantalla.'));
   process.exit(0);
 }
 
