@@ -562,8 +562,18 @@ td.num,th.num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-n
   font-size:13px; cursor:default; opacity:1;
 }
 /* 02/11: antes el CSS le pegaba " · sin pantalla" al final. Ahora el aviso va
-   en el NOMBRE del modulo, en la tabla `modulos` ("Sueldos (en construcción)"),
+   en el NOMBRE del modulo, en la tabla `modulos` ("Cotizador (en construcción)"),
    que es un solo lugar: lo lee el usuario en el menu y lo lee la puerta del
    alcance para saber que ese modulo no tiene pantalla A PROPOSITO. Dos lugares
    que dicen lo mismo se desincronizan y nadie se entera. */
-#menuLateral .sin-pantalla{ font-style:italic }
+#menuLateral .sin-pantalla{ font-style:italic; opacity:.65 }
+
+/* EL ARBOL DEL MENU (02/11): la cabeza es un rotulo, no un enlace; lo que
+   cuelga va corrido a la derecha, como en la hoja que dibujo el usuario. */
+#menuLateral .menu-cabeza{
+  margin:14px 0 2px; padding:0 14px;
+  font-size:11px; font-weight:700; letter-spacing:.06em;
+  text-transform:uppercase; color:var(--gris); cursor:default;
+}
+#menuLateral .menu-cabeza:first-child{ margin-top:4px }
+#menuLateral a.hijo, #menuLateral .sin-pantalla.hijo{ padding-left:28px }

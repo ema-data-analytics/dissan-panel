@@ -94,8 +94,13 @@ const SENUELOS = [
      Se planta agregando la pantalla a la COPIA: la base no se toca. */
   ['un modulo "(en construcción)" que SI tiene pantalla',
    'modulo_en_construccion_que_si_tiene_pantalla', (d) => {
-      escribir(d, 'sueldos.html',
-        '<!doctype html><html><body><div id="app" data-modulo="Sueldos"></div>'
+      /* Cotizador esta ACTIVO y en construccion en `modulos`. Si aparece una
+         pantalla que lo declara, el nombre le miente al usuario. (Antes este
+         senuelo usaba Sueldos, que el 02/11 volvio a apagarse: un senuelo
+         apuntado a un modulo inactivo no prueba nada y pasa por OK sin medir,
+         que es el peor estado de un control.) */
+      escribir(d, 'cotizador.html',
+        '<!doctype html><html><body><div id="app" data-modulo="Cotizador"></div>'
       + '</body></html>\n');
    }],
 

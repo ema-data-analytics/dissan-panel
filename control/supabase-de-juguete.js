@@ -26,16 +26,24 @@
     plata_sin_asiento:3184022830.59, facturas_sin_renglones:4,
     cuentas:'Cuentas 411001 Ventas Gravadas y 411002 Ventas Exentas de la contabilidad de DISSAN.' };
 
-  var MODULOS = [{clave:'Dashboard',nombre:'Tablero general'},
-                 {clave:'Informe',nombre:'Informe'},
-                 {clave:'MargenDeVentas',nombre:'Margen de ventas'},
-                 {clave:'Ventas',nombre:'Ventas facturadas (en prueba)'},
-                 {clave:'Pruebas',nombre:'Pruebas'},
-                 {clave:'Bitacora',nombre:'Bitácora'},
-                 {clave:'Agenda',nombre:'Agenda de control'},
-                 {clave:'Hilo',nombre:'Hilo conductor'},
-                 {clave:'Ayuda',nombre:'Ayuda inteligente'},
-                 {clave:'Dashboard',nombre:'Tablero general'}];
+  /* 02/11: el menu paso a ser un ARBOL (cabeza + submenu), asi que el juguete
+     tiene que devolver `grupo` como lo devuelve api_mis_modulos_v2. Si el
+     juguete se queda con la forma vieja, el control mide una pantalla que no
+     es la que se publica — que es exactamente lo que un juguete no puede
+     hacer. Incluye una en construccion a proposito, para que el control vea
+     el renglon apagado tambien. */
+  var MODULOS = [{clave:'Dashboard',nombre:'Tablero General',grupo:null},
+                 {clave:'Ayuda',nombre:'Ayuda Inteligente',grupo:null},
+                 {clave:'Cotizador',nombre:'Cotizador (en construcción)',grupo:null},
+                 {clave:'MargenDeVentas',nombre:'Márgenes de Ventas Reales (Pedidos – OC)',grupo:'CONSULTAS'},
+                 {clave:'Ventas',nombre:'Ventas Facturadas y Costos (Detalle - Filtros)',grupo:'CONSULTAS'},
+                 {clave:'Listas',nombre:'Listas de Precios Proveedores',grupo:'COMPRAS'},
+                 {clave:'Informe',nombre:'Informe de Base Verificada',grupo:'HERRAMIENTAS DE CONTROL'},
+                 {clave:'Hilo',nombre:'Hilo Conductor',grupo:'HERRAMIENTAS DE CONTROL'},
+                 {clave:'Bitacora',nombre:'Bitácora',grupo:'HERRAMIENTAS DE CONTROL'},
+                 {clave:'Agenda',nombre:'Agenda de Control',grupo:'HERRAMIENTAS DE CONTROL'},
+                 {clave:'Seguridad',nombre:'Usuarios y Permisos',grupo:'HERRAMIENTAS DE CONTROL'},
+                 {clave:'Pruebas',nombre:'Pruebas',grupo:'HERRAMIENTAS DE CONTROL'}];
 
   /* traidos de la base el 28/10, filtro SAN JUAN 01/08-27/10/2026: hay filas CON
      costo, filas SIN costo con dos motivos distintos, y una con pedido y OC */
@@ -49,6 +57,7 @@
 
   var RPC = {
     api_mis_modulos: MODULOS,
+    api_mis_modulos_v2: MODULOS,
     api_mi_perfil: [{nombre:'ANIBAL', email:'super@dissan.com.ar', rol:'pruebas'}],
     api_ventas_fact_resumen: RESUMEN,
     api_ventas_fact_detalle: DETALLE,

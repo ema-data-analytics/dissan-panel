@@ -202,7 +202,11 @@ async function armarMenu() {
   const mio = $('app').dataset.modulo || '';
   let lista = [], yo = {};
   try {
-    const { data } = await rpcTodo('api_mis_modulos', {});
+    /* v2 porque devuelve tambien `grupo`, que es de que cabeza cuelga cada
+       modulo. api_mis_modulos() quedo INTACTA: cambiar el tipo de retorno de
+       una funcion no se reemplaza en el lugar, y un segundo overload deja a
+       PostgREST sin saber cual elegir (la trampa del 08/10). */
+    const { data } = await rpcTodo('api_mis_modulos_v2', {});
     lista = data || [];
     const p = await rpcTodo('api_mi_perfil', {});
     yo = (p.data && p.data[0]) || {};
@@ -231,14 +235,36 @@ async function armarMenu() {
      que no se habia encendido. Ahora aparece igual, apagado y diciendo por que.
      Es el mismo defecto del `tapar()` del 22/10 y del de las tablas de bajar.js. */
   const claves = lista.map(x => x.clave);
-  $('menuLateral').innerHTML = lista.length
-    ? lista.map(x => PANTALLAS[x.clave]
-        ? '<a href="' + PANTALLAS[x.clave].archivo + '"'
-          + (x.clave === mio ? ' class="activo"' : '') + '>'
-          + esc(x.nombre || PANTALLAS[x.clave].rotulo) + '</a>'
-        : '<span class="sin-pantalla" title="En construcción: está en el plan y '
-          + 'todavía no tiene pantalla. Figura acá para que se vea qué viene.">'
-          + esc(x.nombre || x.clave) + '</span>').join('')
+
+  /* EL MENU ES UN ARBOL, NO UNA LISTA.                        02/11/2026
+     El usuario lo dibujo en una hoja y lo dijo textual: "los puntos las
+     cabeza del menu, lo que esta debajo del punto el submenu". Yo lo habia
+     hecho plano. La cabeza sale de `modulos.grupo`: en null el modulo es
+     una cabeza suelta y clickeable (Tablero, Ayuda, Cotizador); con valor,
+     cuelga de esa cabeza. Las cabezas NO son modulos: son rotulos, no se
+     clickean y no tienen permisos propios — el permiso lo trae cada hijo,
+     asi que una cabeza cuyos hijos no ve nadie no se dibuja sola. */
+  function renglon(x, hijo){
+    const clases = (hijo ? 'hijo' : '') + (x.clave === mio ? ' activo' : '');
+    const cls = clases.trim() ? ' class="' + clases.trim() + '"' : '';
+    return PANTALLAS[x.clave]
+      ? '<a href="' + PANTALLAS[x.clave].archivo + '"' + cls + '>'
+        + esc(x.nombre || PANTALLAS[x.clave].rotulo) + '</a>'
+      : '<span class="sin-pantalla' + (hijo ? ' hijo' : '') + '" title="En '
+        + 'construcción: está en el plan y todavía no tiene pantalla. Figura '
+        + 'acá para que se vea qué viene.">'
+        + esc(x.nombre || x.clave) + '</span>';
+  }
+  let html = '', cabeza = null;
+  for (const x of lista){
+    const g = x.grupo || null;
+    if (g !== cabeza){
+      cabeza = g;
+      if (g) html += '<div class="menu-cabeza">' + esc(g) + '</div>';
+    }
+    html += renglon(x, !!g);
+  }
+  $('menuLateral').innerHTML = lista.length ? html
     : '<span class="vacio">Sin módulos habilitados</span>';
 
   /* 31/10/2026 — FALLA CERRADA. Antes este if arrancaba con `mio &&`, asi
