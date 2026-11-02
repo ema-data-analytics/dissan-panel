@@ -255,17 +255,65 @@ async function armarMenu() {
         + 'acá para que se vea qué viene.">'
         + esc(x.nombre || x.clave) + '</span>';
   }
-  let html = '', cabeza = null;
+  /* SE DESPLIEGA. Un menu con submenu muestra la cabeza y el submenu se abre
+     al tocarla; si estuviera todo abierto no seria un submenu, seria una
+     lista con titulos. Dicho por el usuario el 02/11 despues de que yo lo
+     dibujara abierto: "se ve el encabezado de menu, nomas y se desplega el
+     submenu".
+     Arranca abierta SOLO la rama de la pantalla que estas mirando, para que
+     se vea donde estas parado. Lo que abras despues queda guardado por
+     navegador (localStorage): si se bloquea o falla, no pasa nada — se cae a
+     "cerradas salvo la tuya", que es el comportamiento de siempre. */
+  const ramas = [];
+  let cabeza = null, rama = null;
   for (const x of lista){
     const g = x.grupo || null;
-    if (g !== cabeza){
-      cabeza = g;
-      if (g) html += '<div class="menu-cabeza">' + esc(g) + '</div>';
-    }
-    html += renglon(x, !!g);
+    if (!g){ ramas.push({ cabeza: null, hijos: [x] }); cabeza = null; rama = null; continue; }
+    if (g !== cabeza){ cabeza = g; rama = { cabeza: g, hijos: [] }; ramas.push(rama); }
+    rama.hijos.push(x);
   }
+
+  let abiertas = {};
+  try { abiertas = JSON.parse(localStorage.getItem('menuAbiertas') || '{}') || {}; }
+  catch (e) { abiertas = {}; }
+
+  const html = ramas.map((r, i) => {
+    if (!r.cabeza) return renglon(r.hijos[0], false);
+    const tengoElActivo = r.hijos.some(h => h.clave === mio);
+    const abierta = tengoElActivo || abiertas[r.cabeza] === true;
+    return '<div class="menu-cabeza' + (abierta ? ' abierta' : '') + '" role="button" '
+         + 'tabindex="0" data-rama="' + i + '" data-cabeza="' + esc(r.cabeza) + '">'
+         + '<span class="menu-flecha" aria-hidden="true"></span>' + esc(r.cabeza) + '</div>'
+         + '<div class="menu-rama" data-rama="' + i + '"' + (abierta ? '' : ' hidden') + '>'
+         + r.hijos.map(h => renglon(h, true)).join('') + '</div>';
+  }).join('');
+
   $('menuLateral').innerHTML = lista.length ? html
     : '<span class="vacio">Sin módulos habilitados</span>';
+
+  /* un solo oyente en el contenedor: las cabezas se redibujan y los oyentes
+     puestos de a uno se pierden sin avisar */
+  $('menuLateral').addEventListener('click', ev => {
+    const c = ev.target.closest('.menu-cabeza');
+    if (!c) return;
+    const r = $('menuLateral').querySelector('.menu-rama[data-rama="' + c.dataset.rama + '"]');
+    if (!r) return;
+    const abrir = r.hidden;
+    r.hidden = !abrir;
+    c.classList.toggle('abierta', abrir);
+    try {
+      const g = JSON.parse(localStorage.getItem('menuAbiertas') || '{}') || {};
+      g[c.dataset.cabeza] = abrir;
+      localStorage.setItem('menuAbiertas', JSON.stringify(g));
+    } catch (e) { /* sin localStorage el menu anda igual, solo no recuerda */ }
+  });
+  $('menuLateral').addEventListener('keydown', ev => {
+    if (ev.key !== 'Enter' && ev.key !== ' ') return;
+    const c = ev.target.closest('.menu-cabeza');
+    if (!c) return;
+    ev.preventDefault();
+    c.click();
+  });
 
   /* 31/10/2026 — FALLA CERRADA. Antes este if arrancaba con `mio &&`, asi
      que una pantalla SIN data-modulo no se tapaba nunca: el portero se

@@ -218,15 +218,48 @@ async function main(){
 
       const r = await pg.evaluate(([min, medir]) => {
         const fn = new Function('return ' + medir)();
+        /* misma regla que bajarSoloCartel() de js/bajar.js: una tabla cuyas
+           filas son todas una celda sola con colspan es un cartel, no una
+           grilla. Se repite aca porque esto corre ADENTRO de la pagina y no
+           puede importar el archivo; si alguna vez cambia alla, el senuelo
+           del archivo lo agarra. */
+        const soloCartel = (t) => {
+          const ths = t.querySelectorAll('thead th').length;
+          const trs = t.querySelectorAll('tbody tr');
+          if (!trs.length) return true;
+          for (const tr of trs){
+            if (tr.children.length !== 1) return false;
+            const span = parseInt(tr.children[0].getAttribute('colspan') || '1', 10);
+            if (!(span > 1 || (ths && span >= ths))) return false;
+          }
+          return true;
+        };
         const c = document.getElementById('contenido');
         return {
           escribio: !!(c && c.innerText.replace(/\s+/g,'').length > 40),
           scrollPagina: document.documentElement.scrollWidth - document.documentElement.clientWidth,
-          grillas: [...document.querySelectorAll('#contenido table')].length,
+          /* UNA LISTA A MANO SE QUEDA CORTA SIN AVISAR.         02/11/2026
+             Aca habia escrita una lista de envoltorios
+             ('.vi-tb-caja,.db-tb-caja,.rt-tb,.marco'). La tabla de Usuarios
+             vive en `.seg-tabla-wrap`, que no estaba, asi que el control
+             buscaba la barra en el lugar equivocado y la daba por faltante.
+             Ahora usa LA MISMA REGLA que bajar.js —el padre cuyo nombre de
+             clase diga caja, wrap o tb— en vez de una lista paralela. Dos
+             listas que tienen que decir lo mismo se desincronizan y nadie se
+             entera: es el defecto del rotulo del 31/10.
+             Y las tablas que son solo un cartel ("No se encontraron
+             usuarios") NO cuentan: ahi bajar.js no pone barra a proposito,
+             porque un boton que no puede funcionar nunca es peor que no
+             tenerlo. */
+          grillas: [...document.querySelectorAll('#contenido table')]
+            .filter(t => !soloCartel(t)).length,
           grillasSinBajar: [...document.querySelectorAll('#contenido table')]
-            .filter(t => { const caja = t.closest('.vi-tb-caja,.db-tb-caja,.rt-tb,.marco') || t;
+            .filter(t => !soloCartel(t))
+            .filter(t => { const p = t.parentElement;
+                           const caja = (p && p.id !== 'contenido'
+                                         && /caja|wrap|tb/.test(p.className || '')) ? p : t;
                            const prev = caja.previousElementSibling;
-                           return !(prev && prev.className === 'bajar-barra'); }).length,
+                           return !(prev && /\bbajar-barra\b/.test(prev.className || '')); }).length,
           contraste: fn(min)
         };
       }, [MINIMO_CONTRASTE, MEDIR_CONTRASTE.toString()]);

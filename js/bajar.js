@@ -415,6 +415,24 @@ function bajarAPDF(tabla, boton){
    tablas nuevas reciben su barra. Ninguna queda sin la opción, que es
    exactamente lo que se pidió.
    ===================================================================== */
+/* true si la tabla no tiene ni un renglón de datos: todas sus filas son
+   carteles ("Cargando...", "No se encontraron usuarios"), o sea una sola
+   celda abarcando todas las columnas. Se mide contra la cantidad de
+   columnas del encabezado; si no hay encabezado, alcanza con que la fila
+   tenga una celda sola con colspan. */
+function bajarSoloCartel(t){
+  var ths = t.querySelectorAll('thead th').length;
+  var trs = t.querySelectorAll('tbody tr');
+  if (!trs.length) return true;
+  for (var i = 0; i < trs.length; i++){
+    var celdas = trs[i].children;
+    if (celdas.length !== 1) return false;               /* hay datos */
+    var span = parseInt(celdas[0].getAttribute('colspan') || '1', 10);
+    if (!(span > 1 || (ths && span >= ths))) return false;
+  }
+  return true;
+}
+
 function bajarPonerBotones(){
   var cont = document.getElementById('contenido');
   if (!cont) return;
@@ -424,6 +442,17 @@ function bajarPonerBotones(){
     if (t.dataset.bajar === '1') continue;
     if (t.closest('.modal-fondo')) continue;        /* los modales no son grillas */
     if (!t.querySelector('tbody tr')) continue;     /* todavía no tiene datos */
+    /* UN CARTEL NO ES UNA GRILLA.                              02/11/2026
+       Encontrado por la puerta del archivo bajado, al destaparse la pantalla
+       de Usuarios: su tabla tenía un solo renglón que decía "No se
+       encontraron usuarios", le poníamos los botones igual, y al apretarlos
+       contestaban "No hay renglones para bajar". Un botón que no puede
+       funcionar nunca es peor que no tenerlo: el usuario lo aprieta, no pasa
+       nada, y deja de confiar en los que sí andan.
+       La regla es genérica, no una lista de pantallas: un renglón de aviso es
+       una fila con UNA sola celda que abarca todas las columnas (colspan).
+       Si TODAS las filas son así, no hay datos. */
+    if (bajarSoloCartel(t)) continue;
     t.dataset.bajar = '1';
 
     var barra = document.createElement('div');

@@ -568,12 +568,26 @@ td.num,th.num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-n
    que dicen lo mismo se desincronizan y nadie se entera. */
 #menuLateral .sin-pantalla{ font-style:italic; opacity:.65 }
 
-/* EL ARBOL DEL MENU (02/11): la cabeza es un rotulo, no un enlace; lo que
-   cuelga va corrido a la derecha, como en la hoja que dibujo el usuario. */
+/* EL ARBOL DEL MENU (02/11): la cabeza se toca y el submenu SE DESPLIEGA.
+   Si estuviera siempre abierto no seria un submenu, seria una lista con
+   titulos. Lo que cuelga va corrido a la derecha, como en la hoja. */
 #menuLateral .menu-cabeza{
-  margin:14px 0 2px; padding:0 14px;
+  display:flex; align-items:center; gap:7px;
+  margin:12px 0 2px; padding:7px 14px;
   font-size:11px; font-weight:700; letter-spacing:.06em;
-  text-transform:uppercase; color:var(--gris); cursor:default;
+  text-transform:uppercase; color:var(--gris); cursor:pointer;
+  user-select:none; border-radius:7px;
 }
 #menuLateral .menu-cabeza:first-child{ margin-top:4px }
-#menuLateral a.hijo, #menuLateral .sin-pantalla.hijo{ padding-left:28px }
+#menuLateral .menu-cabeza:hover{ background:rgba(255,255,255,.06); color:#fff }
+#menuLateral .menu-cabeza:focus-visible{ outline:2px solid var(--verde); outline-offset:-2px }
+/* la flecha dice si esta abierta o cerrada: sin eso, una rama cerrada parece
+   una cabeza sin hijos y el usuario no sabe que hay algo para abrir */
+#menuLateral .menu-flecha{
+  width:0; height:0; flex:none;
+  border-left:5px solid currentColor;
+  border-top:4px solid transparent; border-bottom:4px solid transparent;
+  transition:transform .15s ease;
+}
+#menuLateral .menu-cabeza.abierta .menu-flecha{ transform:rotate(90deg) }
+#menuLateral a.hijo, #menuLateral .sin-pantalla.hijo{ padding-left:30px }
