@@ -73,6 +73,20 @@ const RAIZ = path.join(__dirname, '..');
    con el Chrome del usuario del otro lado) va sin el flag, o sea estricto. */
 const DESATENDIDO = process.argv.includes('--desatendido');
 
+/* `--solo <parte del nombre>` corre UNA puerta y la anota igual que las
+   demas.                                                      02/11/2026
+   POR QUE EXISTE. Hoy volvi a correr `node control/publicado.js` a mano
+   despues de un push, dio 48 de 48 sobre el commit nuevo, y la tabla
+   siguio mostrando el commit ANTERIOR: el que anota es el pre-push y el
+   reloj, nunca el control suelto (y esta bien que sea asi — una llamada a
+   anotar repartida adentro de cada control se queda corta en cuanto
+   aparezca la puerta trece). El agujero no era el control: era que una
+   medicion que paso a mano NO QUEDABA ESCRITA, y para esta tabla eso es
+   lo mismo que no haberla hecho. Ahora correr una puerta a mano se hace
+   por aca y queda anotada. */
+const iSolo = process.argv.indexOf('--solo');
+const SOLO = iSolo !== -1 ? (process.argv[iSolo + 1] || '').toLowerCase() : null;
+
 const PUERTAS = [
   ['el acceso',                          'node',    'control/acceso.js'],
   ['lo publicado',                       'node',    'control/publicado.js'],
@@ -111,9 +125,19 @@ function anotar(nombre, ok, midio, resumen){
 
 const pasaron = [], fallaron = [];
 
-console.log('LAS PUERTAS, UNA POR UNA — ' + new Date().toISOString() + '\n');
+const ELEGIDAS = SOLO
+  ? PUERTAS.filter(([n, , a]) => n.toLowerCase().includes(SOLO) || a.toLowerCase().includes(SOLO))
+  : PUERTAS;
+if (SOLO && !ELEGIDAS.length){
+  console.log('No hay ninguna puerta que diga "' + SOLO + '". Las que hay:');
+  for (const [n, , a] of PUERTAS) console.log('  ' + n + '   (' + a + ')');
+  process.exit(2);
+}
 
-for (const [nombre, interprete, archivo] of PUERTAS){
+console.log('LAS PUERTAS, UNA POR UNA — ' + new Date().toISOString() +
+            (SOLO ? '  ·  solo: ' + ELEGIDAS.map(x => x[0]).join(' · ') : '') + '\n');
+
+for (const [nombre, interprete, archivo] of ELEGIDAS){
   const t0 = Date.now();
   const r = spawnSync(interprete, [archivo], {
     cwd: RAIZ, encoding: 'utf8', timeout: 20 * 60 * 1000,
@@ -138,7 +162,7 @@ for (const [nombre, interprete, archivo] of PUERTAS){
 }
 
 console.log('\n' + (fallaron.length
-  ? 'FALLARON ' + fallaron.length + ' de ' + PUERTAS.length + ':' + fallaron.map(x => ' ' + x).join(' ·')
-  : 'LAS ' + PUERTAS.length + ' PASARON.'));
+  ? 'FALLARON ' + fallaron.length + ' de ' + ELEGIDAS.length + ':' + fallaron.map(x => ' ' + x).join(' ·')
+  : 'LAS ' + ELEGIDAS.length + ' PASARON.'));
 console.log('El estado quedo anotado: select * from api_estado_del_sistema();');
 process.exit(fallaron.length ? 1 : 0);
