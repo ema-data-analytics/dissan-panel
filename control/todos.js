@@ -75,6 +75,8 @@ const DESATENDIDO = process.argv.includes('--desatendido');
 
 const PUERTAS = [
   ['el acceso',                          'node',    'control/acceso.js'],
+  ['lo publicado',                       'node',    'control/publicado.js'],
+  ['el control del control de lo publicado', 'node','control/publicado-senuelos.js'],
   ['el alcance',                         'node',    'control/alcance.js'],
   ['el control del control del alcance', 'node',    'control/alcance-senuelos.js'],
   ['las edge functions',                 'node',    'control/edge.js'],

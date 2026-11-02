@@ -76,7 +76,20 @@ correr(){
 # cinco no se puede interpretar.
 correr "el acceso"          control/acceso.js     node control/acceso.js
 
-# EL ALCANCE VA SEGUNDO.                                      02/11/2026
+# LO PUBLICADO VA SEGUNDO, Y CIERRA EL DEFECTO MAS CARO.      02/11/2026
+# El 14/10 publique en la implementacion equivocada, dije que estaba listo, y
+# el panel siguio sirviendo codigo de nueve dias antes. De ahi salio la regla
+# "cerrar siempre abriendo la URL del panel". Una regla. Esto la hace puerta:
+# compara por SHA-256 cada archivo que github.io sirve AHORA contra ese mismo
+# archivo en origin/main. Si el push anterior nunca llego a servirse, EL
+# SIGUIENTE SE CORTA — no se apilan commits arriba de algo que no esta
+# publicado. Va justo despues del acceso porque usa lo que el acceso midio:
+# que se llega a github.io.
+correr "lo publicado"       control/publicado.js  node control/publicado.js
+correr "el control del control de lo publicado" control/publicado-senuelos.js \
+                                                  node control/publicado-senuelos.js
+
+# EL ALCANCE VA TERCERO.                                      02/11/2026
 # La cagada mas grande del proyecto no fue de codigo: el 21/10 porte DIECISEIS
 # pantallas porque esa lista estaba en mis notas, y nadie las habia pedido. El
 # alcance se mira en `modulos`, que es lo que el usuario tiene en la pantalla.
