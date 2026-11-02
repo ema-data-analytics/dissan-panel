@@ -561,4 +561,9 @@ td.num,th.num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-n
   display:block; padding:9px 14px; color:var(--gris);
   font-size:13px; cursor:default; opacity:1;
 }
-#menuLateral .sin-pantalla::after{ content:' · sin pantalla'; font-size:11px }
+/* 02/11: antes el CSS le pegaba " · sin pantalla" al final. Ahora el aviso va
+   en el NOMBRE del modulo, en la tabla `modulos` ("Sueldos (en construcción)"),
+   que es un solo lugar: lo lee el usuario en el menu y lo lee la puerta del
+   alcance para saber que ese modulo no tiene pantalla A PROPOSITO. Dos lugares
+   que dicen lo mismo se desincronizan y nadie se entera. */
+#menuLateral .sin-pantalla{ font-style:italic }

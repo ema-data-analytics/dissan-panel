@@ -236,8 +236,8 @@ async function armarMenu() {
         ? '<a href="' + PANTALLAS[x.clave].archivo + '"'
           + (x.clave === mio ? ' class="activo"' : '') + '>'
           + esc(x.nombre || PANTALLAS[x.clave].rotulo) + '</a>'
-        : '<span class="sin-pantalla" title="Habilitado en la base, pero todavía no '
-          + 'tiene pantalla en el panel: le falta su entrada en PANTALLAS de core.js.">'
+        : '<span class="sin-pantalla" title="En construcción: está en el plan y '
+          + 'todavía no tiene pantalla. Figura acá para que se vea qué viene.">'
           + esc(x.nombre || x.clave) + '</span>').join('')
     : '<span class="vacio">Sin módulos habilitados</span>';
 

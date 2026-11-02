@@ -90,7 +90,7 @@ const SUELTAS = {
 };
 
 const fallas = [];
-const medido = { pantallas: 0, declaran: 0, modulos: 0, activos: 0, sueltas: 0 };
+const medido = { pantallas: 0, declaran: 0, modulos: 0, activos: 0, sueltas: 0, enObra: 0 };
 function falla(clase, que){ fallas.push({ clase, que }); }
 
 async function rpc(fn, body){
@@ -195,14 +195,39 @@ async function main(){
     }
   }
 
+  /* EN CONSTRUCCION: el unico modo legitimo de estar activo sin pantalla.
+     02/11/2026. El usuario pidio "lo que no este hecho, ponele en
+     construccion", y tiene sentido: que el menu muestre lo que viene es
+     informacion, no un defecto. Lo que NO puede pasar es que eso sea una
+     puerta de atras para encender cualquier cosa sin pantalla.
+     Por eso el permiso no es una lista aparte: el modulo tiene que DECIRLO
+     EN SU NOMBRE, que es el mismo texto que el usuario lee en el menu. Un
+     permiso que el usuario no ve es un permiso que nadie controla. Y
+     core.js lo dibuja como renglon apagado y sin enlace, asi que no hay
+     404 posible — que es lo que esta regla existe para evitar. */
+  const EN_CONSTRUCCION = /\(\s*en construcci[oó]n\s*\)/i;
+
   for (const f of filas){
     if (f.activo !== true) continue;
+    const enObra = EN_CONSTRUCCION.test(String(f.nombre || ''));
     if (!declarados[f.clave]){
+      if (enObra){ medido.enObra++; continue; }
       falla('modulo_activo_sin_pantalla',
             'el modulo "' + f.clave + '" (' + (f.nombre || '') + ') esta ACTIVO '
-          + 'en `modulos` y ninguna pantalla lo declara. El menu sale de la base '
-          + 'al instante y la pantalla sale del codigo publicado: DISSAN ve la '
-          + 'opcion y le da un 404. Es la trampa del 14/10.');
+          + 'en `modulos`, ninguna pantalla lo declara, y su nombre NO dice '
+          + '"(en construcción)". El menu sale de la base al instante y la '
+          + 'pantalla sale del codigo publicado: DISSAN ve la opcion y le da un '
+          + '404. Es la trampa del 14/10. O se le hace la pantalla, o el nombre '
+          + 'dice que esta en construccion y el usuario lo ve apagado.');
+      continue;
+    }
+    if (enObra){
+      falla('modulo_en_construccion_que_si_tiene_pantalla',
+            'el modulo "' + f.clave + '" se llama "' + f.nombre + '" pero SI tiene '
+          + 'pantalla (' + declarados[f.clave].join(', ') + '). El nombre le miente '
+          + 'al usuario: le dice que no se puede usar algo que se puede usar, y '
+          + 'ademas core.js lo dibuja apagado y sin enlace, asi que la pantalla '
+          + 'queda inalcanzable. Si ya esta hecha, sacale el "(en construcción)".');
     }
   }
 
@@ -234,8 +259,10 @@ async function main(){
   console.log('CONTROL DE ALCANCE: 0 fallas.');
   console.log('  midio: ' + medido.pantallas + ' pantallas del panel, las '
             + medido.declaran + ' declarando su modulo · ' + medido.modulos
-            + ' filas en `modulos`, ' + medido.activos + ' activas, y las '
-            + medido.activos + ' con su pantalla · ' + medido.sueltas
+            + ' filas en `modulos`, ' + medido.activos + ' activas: '
+            + (medido.activos - medido.enObra) + ' con su pantalla y '
+            + medido.enObra + ' declaradas (en construcción), apagadas en el menu '
+            + 'y sin pantalla a proposito · ' + medido.sueltas
             + ' pagina(s) suelta(s) declarada(s) con su motivo · y el menu sale '
             + 'de api_mis_modulos().');
   console.log('  NO midio: que lo que hay ADENTRO de cada pantalla sea lo que el '

@@ -85,6 +85,20 @@ const SENUELOS = [
                '<body$1><div id="app" data-modulo="Agenda"></div>'));
    }],
 
+  /* 02/11: la regla nueva es que un modulo puede estar activo SIN pantalla
+     si su nombre dice "(en construcción)". Eso abre una puerta de atras que
+     hay que cerrar del otro lado: un modulo que dice estar en construccion y
+     SI tiene pantalla. Ahi el nombre le miente al usuario —le dice que no se
+     puede usar algo que si se puede— y encima core.js lo dibuja apagado y sin
+     enlace, asi que la pantalla queda inalcanzable.
+     Se planta agregando la pantalla a la COPIA: la base no se toca. */
+  ['un modulo "(en construcción)" que SI tiene pantalla',
+   'modulo_en_construccion_que_si_tiene_pantalla', (d) => {
+      escribir(d, 'sueldos.html',
+        '<!doctype html><html><body><div id="app" data-modulo="Sueldos"></div>'
+      + '</body></html>\n');
+   }],
+
   ['el menu armado con una lista fija en vez del portero',
    'el_menu_no_pasa_por_el_portero', (d) => {
       const t = leer(d, path.join('js', 'core.js'));
