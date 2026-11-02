@@ -16,10 +16,39 @@
 
    QUE HACE. Corre todas en el mismo orden del pre-push, anota cada
    una en ema.control_corrida con control/anotar.js, y al final imprime
-   el estado. Es lo que llama la tarea programada de cada mañana, y
-   tambien lo que se puede correr a mano en cualquier momento:
+   el estado. Se corre a mano en cualquier momento:
 
        node control/todos.js
+
+   OJO — LO QUE ESTE ARCHIVO DECIA Y NO ERA CIERTO.        02/11/2026
+   Hasta hoy este comentario decia "es lo que llama la tarea programada
+   de cada mañana". MEDIDO hoy con list_triggers: las unicas dos tareas
+   programadas de la cuenta son el refresco nocturno del costo (05:52) y
+   la revision semanal de la Ayuda (lunes 08:59). LA TAREA DE LA MAÑANA
+   NO EXISTE. Era una afirmacion sobre algo de afuera del repositorio,
+   escrita sin mirar — la misma clase que decir "lo probe" sin probarlo,
+   y encima adentro del sistema que existe para que eso no pase.
+
+   LO PRIMERO QUE HABIA QUE MEDIR, Y SE MIDIO: una tarea programada
+   arranca una sesion NUEVA en un contenedor nuevo, y las diez puertas no
+   corren con node pelado — `control/pantallas.js` necesita Chromium, y
+   `control/archivo-senuelos.py` y `control/pdf.py` necesitan openpyxl y
+   pdfplumber. Medido el 02/11 por la fecha de los paquetes:
+
+     openpyxl 3.1.5 y pdfplumber 0.11.10  -> Oct 30 20:17
+     el contenedor (/home/claude)         -> Oct 30 20:19
+     el pip del contenedor                -> Oct 30 20:38
+
+   Los dos son ANTERIORES al contenedor: vienen en la imagen, no los
+   instale yo. Playwright y Chromium tambien. Asi que la tarea es viable:
+   clonar el repo y correr `node control/todos.js --desatendido`.
+
+   POR QUE IGUAL NO LA CREE SOLO: cuesta plata todas las mañanas. Las
+   diez puertas son ~12 minutos de navegador y archivos, todos los dias,
+   en la cuenta de Anibal. El 22/10 se acabo el credito de la API porque
+   un gasto quedo invisible, y la regla que salio de ahi fue que un costo
+   no se mete sin que el lo sepa. La medicion esta hecha y escrita aca; la
+   decision de prenderla es suya.
 
    NO REEMPLAZA AL PRE-PUSH, y esto importa: el pre-push es la puerta
    —corta el push—, esto es el reloj. Si se usara esto en vez del hook,

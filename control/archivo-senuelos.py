@@ -250,6 +250,18 @@ def main():
     print('  %d de %d. %s' % (ok, ok + mal,
           'Las %d clases cortan y el limpio pasa.' % len(SENUELOS + EXTRA)
           if not mal else 'HAY %d CONTROL(ES) QUE NO SIRVEN.' % mal))
+    # La linea que queda en ema.control_corrida. Encontrado el 02/11 leyendo
+    # api_estado_del_sistema(): esta puerta quedaba con "que_midio: null" y de
+    # detalle la linea del par limpio, asi que el registro decia "paso" sin
+    # decir cuantas clases cortaron. Un registro que no dice QUE midio es
+    # media medicion, y media medicion no es una medicion.
+    print('  midio: %d defectos plantados de a uno en un .xlsx armado con el MISMO '
+          'js/bajar-formatos.js del panel, mas el par bien puesto: %d de %d se '
+          'portaron%s.'
+          % (len(SENUELOS + EXTRA), ok, ok + mal,
+             ' (las %d clases cortan nombrando su clase, y el limpio no dispara)'
+             % len(SENUELOS + EXTRA) if not mal
+             else ' — %d NO, el control no esta probado' % mal))
     sys.exit(0 if not mal else 1)
 
 

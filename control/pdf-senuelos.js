@@ -225,5 +225,16 @@ if (rl.codigo === 0){
 console.log('\n  ' + ok + ' de ' + (ok + mal) + '. '
           + (mal === 0 ? 'Las ' + SENUELOS.length + ' clases cortan y el limpio pasa.'
                        : 'HAY ' + mal + ' QUE NO SE PORTAN: el control no esta probado.'));
+/* LA LINEA QUE QUEDA EN LA BASE.                               02/11/2026
+   Encontrado leyendo api_estado_del_sistema() hoy: esta puerta quedaba
+   anotada con "que_midio: null" y de detalle la linea del par limpio, asi
+   que el registro decia "paso" sin decir cuantas clases cortaron. Un
+   registro que no dice QUE midio es media medicion. */
+console.log('  midio: ' + SENUELOS.length + ' defectos plantados de a uno en un PDF '
+          + 'armado con el MISMO js/bajar-formatos.js del panel, mas el par bien '
+          + 'puesto: ' + ok + ' de ' + (ok + mal) + ' se portaron'
+          + (mal === 0 ? ' (las ' + SENUELOS.length + ' clases cortan nombrando su '
+             + 'clase, y el limpio no dispara)'
+                       : ' — ' + mal + ' NO, el control no esta probado') + '.');
 console.log('  los senuelos quedaron en ' + base);
 process.exit(mal === 0 ? 0 : 1);

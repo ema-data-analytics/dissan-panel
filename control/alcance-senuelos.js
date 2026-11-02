@@ -140,5 +140,15 @@ if (rl.codigo === 0){
 console.log('\n  ' + ok + ' de ' + (ok + mal) + '. '
           + (mal === 0 ? 'Las ' + SENUELOS.length + ' clases cortan y el limpio pasa.'
                        : 'HAY ' + mal + ' QUE NO SE PORTAN: el control no esta probado.'));
+/* la linea que queda en ema.control_corrida: sin esto el registro decia
+   "paso" sin decir cuantas clases cortaron (encontrado el 02/11 leyendo
+   api_estado_del_sistema), y media medicion no es una medicion */
+console.log('  midio: ' + SENUELOS.length + ' defectos de alcance plantados de a uno '
+          + 'en una COPIA del arbol, con el control corrido de esa copia y `modulos` '
+          + 'leida de la base de verdad, mas el arbol limpio: ' + ok + ' de '
+          + (ok + mal) + ' se portaron'
+          + (mal === 0 ? ' (las ' + SENUELOS.length + ' clases cortan nombrando su '
+             + 'clase, y el arbol tal cual no dispara)'
+                       : ' — ' + mal + ' NO, el control no esta probado') + '.');
 console.log('  los senuelos quedaron en ' + base);
 process.exit(mal === 0 ? 0 : 1);
