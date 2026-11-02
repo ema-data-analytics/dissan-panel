@@ -569,9 +569,16 @@ td.num,th.num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-n
 /* Los dos estados que NO se abren: atenuados y sin enlace, pero con un
    rotulo distinto cada uno, porque no dicen lo mismo — uno esta hecho y
    falta habilitarlo, el otro todavia no existe. */
+/* SE ATENUA CON EL COLOR, NO CON `opacity`.                02/11/2026
+   Medido en el panel publicado: con `opacity:.6` el renglon se atenuaba
+   bien, pero esa opacidad la hereda TODO lo que esta adentro — incluido el
+   cartel del aviso, que quedaba transparente y dejaba leer el pie con el
+   usuario por atras. Ademas `opacity` menor a 1 crea un contexto de apilado
+   propio, asi que el `z-index` del cartel no le gana a nada de afuera.
+   Atenuando el color del texto se ve igual y el cartel queda opaco. */
 #menuLateral .menu-apagado{
-  display:block; padding:9px 14px; color:var(--gris);
-  font-size:13px; cursor:default; opacity:.6;
+  display:block; padding:9px 14px; color:#6f8798;
+  font-size:13px; cursor:default;
 }
 #menuLateral .en-desarrollo{ font-style:italic }
 /* El rotulo " · sin acceso" va como elemento de verdad, no como ::after:

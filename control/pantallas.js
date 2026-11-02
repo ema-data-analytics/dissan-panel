@@ -55,7 +55,7 @@ const JUGUETE = path.join(__dirname, 'supabase-de-juguete.js');
 const fallas = [];
 /* lo que el control MIDIO. Sin esto, "0 fallas" tambien es lo que
    imprime un control que no llego a mirar nada. */
-const medido = { grillas:0, paginas:0, botones:0, descargas:0, paginados:0 };
+const medido = { grillas:0, paginas:0, botones:0, descargas:0, paginados:0, avisos:0 };
 function falla(pantalla, clase, que){ fallas.push({ pantalla, clase, que }); }
 
 /* --------------------------------------------------------------- */
@@ -184,7 +184,12 @@ async function main(){
     }
   } catch (e) { console.log('AVISO: no pude revisar el pre-push: ' + e.message + '\n'); }
 
-  const pantallas = fs.readdirSync(RAIZ).filter(f => f.endsWith('.html')).sort();
+  /* Para el arnes del control: CONTROL_PANTALLAS_SOLO limita a una pantalla,
+     asi plantar un senuelo y ver si corta tarda segundos en vez de minutos.
+     Sin la variable corre las 15, que es como va en el pre-push. */
+  const soloUna = process.env.CONTROL_PANTALLAS_SOLO || '';
+  const pantallas = fs.readdirSync(RAIZ).filter(f => f.endsWith('.html'))
+    .filter(f => !soloUna || f === soloUna).sort();
   const b = await chromium.launch();
 
   for (const p of pantallas){
@@ -273,6 +278,114 @@ async function main(){
       for (const m of r.contraste) falla(quien, 'contraste_bajo',
         '"' + m.texto + '" · ' + m.color + ' sobre ' + m.fondo + ' = ' + m.ratio +
         ' a 1 (minimo ' + MINIMO_CONTRASTE + ') · .' + m.clase);
+
+      /* ---- 7 bis. EL AVISO DEL MENU SE TIENE QUE PODER LEER ----
+         Un modulo que se ve y no se abre tiene que decir POR QUE al pasar
+         el mouse. Y decirlo no alcanza: tiene que quedar LEGIBLE.
+         El 02/11, en el panel publicado, el cartel salia con el texto
+         correcto y se leia el pie con el usuario POR ATRAS: el renglon se
+         atenuaba con `opacity:.6`, y esa opacidad la hereda todo lo que
+         tiene adentro, el cartel incluido (y ademas le crea un contexto de
+         apilado propio, que le anula el z-index). Un aviso transparente es
+         un aviso a medias.
+         SOLO EN ESCRITORIO, y es a proposito: en el telefono no hay mouse,
+         asi que no hay "pasar el mouse" que medir. Ahi el mismo texto se lo
+         escribe el portero en la pantalla cuando intentan entrar, que es lo
+         que mide el control del alcance. */
+      if (rot === 'escritorio'){
+        const abierto = await pg.evaluate(() => {
+          if (!document.getElementById('menuLateral')) return { hay:false };
+          let ramas = 0;
+          document.querySelectorAll('#menuLateral .menu-cabeza').forEach(c => {
+            const r = c.nextElementSibling;
+            if (r && r.classList.contains('menu-rama') && r.hasAttribute('hidden')){
+              c.click(); ramas++;
+            }
+          });
+          return { hay:true, ramas };
+        });
+        if (!abierto.hay) falla(quien, 'sin_menu', 'La pantalla cargo sin #menuLateral.');
+        /* El texto del cartel sale de `attr(data-aviso)`, asi que compararlo
+           contra ese mismo atributo es compararlo consigo mismo: no puede
+           fallar nunca, y un control que no puede fallar no controla nada.
+           Se compara contra lo que DEVOLVIO la base para ese modulo. */
+        const deLaBaseMapa = await pg.evaluate(async () => {
+          if (typeof rpcTodo !== 'function') return null;
+          try {
+            const r = await rpcTodo('api_mis_modulos_v4', {});
+            const m = {};
+            for (const x of (r.data || [])) if (x.aviso) m[x.nombre] = x.aviso;
+            return m;
+          } catch (e) { return null; }
+        });
+        const deLaBase = (nombre, siNoHay) => {
+          if (!deLaBaseMapa) return siNoHay;
+          const limpio = nombre.replace(/\s*·\s*sin acceso\s*$/, '');
+          return (limpio in deLaBaseMapa) ? deLaBaseMapa[limpio] : siNoHay;
+        };
+        await pg.waitForTimeout(150);
+        const apagados = abierto.hay ? await pg.$$('#menuLateral .menu-apagado') : [];
+        for (const sp of apagados){
+          if (!(await sp.isVisible())){
+            falla(quien, 'apagado_que_no_se_ve',
+              'Un renglon apagado del menu sigue invisible con todas las ramas abiertas.');
+            continue;
+          }
+          const antes = await sp.evaluate(e => ({
+            aviso: e.getAttribute('data-aviso') || '',
+            nombre: (e.textContent || '').trim().replace(/\s+/g, ' '),
+            opRenglon: getComputedStyle(e).opacity,
+            vis: getComputedStyle(e, '::after').visibility,
+            anchoPagina: document.documentElement.scrollWidth
+          }));
+          if (!antes.aviso){
+            falla(quien, 'apagado_sin_aviso',
+              '"' + antes.nombre + '" no se puede abrir y no dice por que.');
+            continue;
+          }
+          if (antes.vis !== 'hidden')
+            falla(quien, 'aviso_siempre_a_la_vista',
+              '"' + antes.nombre + '": el cartel se ve sin pasar el mouse.');
+          if (antes.opRenglon !== '1')
+            falla(quien, 'aviso_transparente',
+              '"' + antes.nombre + '": el renglon tiene opacity ' + antes.opRenglon +
+              ', que la hereda el cartel y deja ver lo de atras. Se atenua con el color.');
+          await sp.hover();
+          /* el cartel entra con una transicion de .12s: leerlo en el mismo
+             instante del hover es leer el estado anterior. */
+          await pg.waitForTimeout(300);
+          const con = await sp.evaluate(e => {
+            const c = getComputedStyle(e, '::after');
+            const cajon = document.getElementById('sidebar') || e.offsetParent || document.body;
+            return { vis:c.visibility, op:c.opacity, texto:c.content,
+                     bg:c.backgroundColor, anchoPagina:document.documentElement.scrollWidth,
+                     anchoCajon:cajon.scrollWidth, visibleCajon:cajon.clientWidth };
+          });
+          if (con.vis !== 'visible' || con.op !== '1')
+            falla(quien, 'aviso_que_no_aparece',
+              '"' + antes.nombre + '": con el mouse encima el cartel sigue en ' +
+              con.vis + ' / opacidad ' + con.op + '.');
+          else if (con.texto.replace(/^"|"$/g, '') !== deLaBase(antes.nombre, antes.aviso))
+            falla(quien, 'aviso_con_otro_texto',
+              '"' + antes.nombre + '": el cartel dice ' + con.texto +
+              ' y la base dice "' + deLaBase(antes.nombre, antes.aviso) + '".');
+          else if (/rgba\([^)]*,\s*0?\.\d+\s*\)/.test(con.bg))
+            falla(quien, 'aviso_transparente',
+              '"' + antes.nombre + '": el fondo del cartel es ' + con.bg +
+              ', se lee lo de atras.');
+          else if (con.anchoCajon > con.visibleCajon)
+            falla(quien, 'aviso_recortado',
+              '"' + antes.nombre + '": el cartel mide ' + con.anchoCajon +
+              ' px dentro de un menu de ' + con.visibleCajon +
+              ' px, asi que se lee cortado.');
+          else if (con.anchoPagina > antes.anchoPagina)
+            falla(quien, 'aviso_que_empuja_la_pagina',
+              '"' + antes.nombre + '": el cartel ensancho la pagina de ' +
+              antes.anchoPagina + ' a ' + con.anchoPagina + ' px.');
+          else medido.avisos++;
+        }
+        await pg.mouse.move(5, 5);
+      }
 
       /* ---- 8. EL TOPE DEL SERVIDOR ----
          El "Max rows" de la API de Supabase viene en 1.000 y recorta
@@ -450,7 +563,8 @@ async function main(){
                 medido.grillas + ' grillas paginadas recorridas hasta la ultima pagina (' +
                 medido.paginas + ' paginas) · ' + medido.descargas +
                 ' con el archivo comprobado que baja TODAS las filas · ' + medido.paginados +
-                ' pantallas que traen las 5.108 filas enteras pese al tope de 1.000 del servidor.');
+                ' pantallas que traen las 5.108 filas enteras pese al tope de 1.000 del servidor \u00b7 ' +
+                medido.avisos + ' avisos del menu leidos con el mouse encima.');
     process.exit(0);
   }
   console.log('CONTROL DE PANTALLAS: ' + fallas.length + ' falla(s)\n');
