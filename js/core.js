@@ -206,7 +206,7 @@ async function armarMenu() {
        modulo. api_mis_modulos() quedo INTACTA: cambiar el tipo de retorno de
        una funcion no se reemplaza en el lugar, y un segundo overload deja a
        PostgREST sin saber cual elegir (la trampa del 08/10). */
-    const { data } = await rpcTodo('api_mis_modulos_v2', {});
+    const { data } = await rpcTodo('api_mis_modulos_v3', {});
     lista = data || [];
     const p = await rpcTodo('api_mi_perfil', {});
     yo = (p.data && p.data[0]) || {};
@@ -244,16 +244,38 @@ async function armarMenu() {
      cuelga de esa cabeza. Las cabezas NO son modulos: son rotulos, no se
      clickean y no tienen permisos propios — el permiso lo trae cada hijo,
      asi que una cabeza cuyos hijos no ve nadie no se dibuja sola. */
+  /* TRES ESTADOS, NO DOS.                                    02/11/2026
+     Hasta hoy un modulo estaba o no estaba. El usuario pidio el del medio:
+     "lo que esta hecho, lo mostremos, pero no acceden todavia hasta que
+     arreglemos con ellos... y lo que no esta hecho se muestre, atenuado, y
+     que se vea en desarrollo".
+
+       entra            -> enlace normal
+       ve y no entra    -> atenuado, sin enlace, dice POR QUE no se abre
+       en desarrollo    -> atenuado, sin enlace, y ademas no existe la pantalla
+
+     Los dos de abajo se dibujan parecido pero NO dicen lo mismo, y la
+     diferencia importa: uno esta hecho y falta acordarlo, el otro todavia
+     no existe. Si los dos dijeran lo mismo, el usuario no sabria a cual
+     puede pedir que le abran. */
   function renglon(x, hijo){
-    const clases = (hijo ? 'hijo' : '') + (x.clave === mio ? ' activo' : '');
-    const cls = clases.trim() ? ' class="' + clases.trim() + '"' : '';
-    return PANTALLAS[x.clave]
-      ? '<a href="' + PANTALLAS[x.clave].archivo + '"' + cls + '>'
-        + esc(x.nombre || PANTALLAS[x.clave].rotulo) + '</a>'
-      : '<span class="sin-pantalla' + (hijo ? ' hijo' : '') + '" title="En '
-        + 'construcción: está en el plan y todavía no tiene pantalla. Figura '
-        + 'acá para que se vea qué viene.">'
-        + esc(x.nombre || x.clave) + '</span>';
+    const hayPantalla = !!PANTALLAS[x.clave];
+    const nombre = esc(x.nombre || (hayPantalla ? PANTALLAS[x.clave].rotulo : x.clave));
+    const h = hijo ? ' hijo' : '';
+
+    if (x.puede_entrar && hayPantalla){
+      const clases = (hijo ? 'hijo' : '') + (x.clave === mio ? ' activo' : '');
+      const cls = clases.trim() ? ' class="' + clases.trim() + '"' : '';
+      return '<a href="' + PANTALLAS[x.clave].archivo + '"' + cls + '>' + nombre + '</a>';
+    }
+    if (!hayPantalla){
+      return '<span class="menu-apagado en-desarrollo' + h + '" title="En desarrollo: '
+           + 'está en el plan y todavía no tiene pantalla. Figura acá para que se '
+           + 'vea qué viene.">' + nombre + '</span>';
+    }
+    return '<span class="menu-apagado sin-acceso' + h + '" title="Está hecho, pero '
+         + 'tu usuario todavía no lo tiene habilitado. Lo habilita un administrador '
+         + 'desde Seguridad.">' + nombre + '</span>';
   }
   /* SE DESPLIEGA. Un menu con submenu muestra la cabeza y el submenu se abre
      al tocarla; si estuviera todo abierto no seria un submenu, seria una
@@ -336,6 +358,21 @@ async function armarMenu() {
       + (claves.length ? ': ' + claves.map(esc).join(', ') + '.'
                        : ', y no hay ninguno habilitado para tu usuario.')
       + ' Lo habilita un administrador desde Seguridad.');
+    return false;
+  }
+
+  /* VER NO ES ENTRAR, Y EL PORTERO TIENE QUE SABERLO.         02/11/2026
+     Con `roles_ven` hay modulos que aparecen en el menu y no se abren. Si
+     eso se resolviera sólo dibujando el renglón sin enlace, alcanzaría con
+     escribir la dirección a mano para entrar: sería decorativo, no un
+     permiso. Acá se tapa la pantalla igual, y la consulta no corre. */
+  const miModulo = lista.find(x => x.clave === mio);
+  if (miModulo && miModulo.puede_entrar === false) {
+    tapar('<b>Todavía no tenés acceso a este módulo.</b> '
+      + 'Lo ves en el menú porque está hecho, pero tu usuario'
+      + (MI_ROL ? ' (<b>' + esc(MI_ROL) + '</b>)' : '')
+      + ' no lo tiene habilitado para abrir. Lo habilita un administrador '
+      + 'desde Seguridad.');
     return false;
   }
   return true;

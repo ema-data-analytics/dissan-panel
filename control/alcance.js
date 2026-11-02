@@ -205,7 +205,9 @@ async function main(){
      permiso que el usuario no ve es un permiso que nadie controla. Y
      core.js lo dibuja como renglon apagado y sin enlace, asi que no hay
      404 posible — que es lo que esta regla existe para evitar. */
-  const EN_CONSTRUCCION = /\(\s*en construcci[oó]n\s*\)/i;
+  /* El usuario uso la palabra "en desarrollo" el 02/11 y asi se ve en la
+     pantalla; "en construcción" queda aceptada por si quedo alguno. */
+  const EN_CONSTRUCCION = /\(\s*en (construcci[oó]n|desarrollo)\s*\)/i;
 
   for (const f of filas){
     if (f.activo !== true) continue;
@@ -261,7 +263,7 @@ async function main(){
             + medido.declaran + ' declarando su modulo · ' + medido.modulos
             + ' filas en `modulos`, ' + medido.activos + ' activas: '
             + (medido.activos - medido.enObra) + ' con su pantalla y '
-            + medido.enObra + ' declaradas (en construcción), apagadas en el menu '
+            + medido.enObra + ' declaradas (en desarrollo), apagadas en el menu '
             + 'y sin pantalla a proposito · ' + medido.sueltas
             + ' pagina(s) suelta(s) declarada(s) con su motivo · y el menu sale '
             + 'de api_mis_modulos().');

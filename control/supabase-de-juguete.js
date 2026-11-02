@@ -34,7 +34,7 @@
      el renglon apagado tambien. */
   var MODULOS = [{clave:'Dashboard',nombre:'Tablero General',grupo:null},
                  {clave:'Ayuda',nombre:'Ayuda Inteligente',grupo:null},
-                 {clave:'Cotizador',nombre:'Cotizador (en construcción)',grupo:null},
+                 {clave:'Cotizador',nombre:'Cotizador (en desarrollo)',grupo:null},
                  {clave:'MargenDeVentas',nombre:'Márgenes de Ventas Reales (Pedidos – OC)',grupo:'CONSULTAS'},
                  {clave:'Ventas',nombre:'Ventas Facturadas y Costos (Detalle - Filtros)',grupo:'CONSULTAS'},
                  {clave:'Listas',nombre:'Listas de Precios Proveedores',grupo:'COMPRAS'},
@@ -58,6 +58,14 @@
   var RPC = {
     api_mis_modulos: MODULOS,
     api_mis_modulos_v2: MODULOS,
+    /* v3 agrega `puede_entrar`: el estado del medio, ver sin entrar.
+       El juguete devuelve uno de cada clase para que el control vea las
+       tres: enlace, 'sin acceso' y 'en desarrollo'. */
+    api_mis_modulos_v3: MODULOS.map(function(m){
+      var o = {clave:m.clave, nombre:m.nombre, grupo:m.grupo};
+      o.puede_entrar = (m.clave !== 'Bitacora' && m.clave !== 'Cotizador');
+      return o;
+    }),
     api_mi_perfil: [{nombre:'ANIBAL', email:'super@dissan.com.ar', rol:'pruebas'}],
     api_ventas_fact_resumen: RESUMEN,
     api_ventas_fact_detalle: DETALLE,

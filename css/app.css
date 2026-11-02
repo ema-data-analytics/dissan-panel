@@ -566,6 +566,19 @@ td.num,th.num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-n
    que es un solo lugar: lo lee el usuario en el menu y lo lee la puerta del
    alcance para saber que ese modulo no tiene pantalla A PROPOSITO. Dos lugares
    que dicen lo mismo se desincronizan y nadie se entera. */
+/* Los dos estados que NO se abren: atenuados y sin enlace, pero con un
+   rotulo distinto cada uno, porque no dicen lo mismo — uno esta hecho y
+   falta habilitarlo, el otro todavia no existe. */
+#menuLateral .menu-apagado{
+  display:block; padding:9px 14px; color:var(--gris);
+  font-size:13px; cursor:default; opacity:.6;
+}
+#menuLateral .en-desarrollo{ font-style:italic }
+#menuLateral .en-desarrollo::after{ content:''; }
+#menuLateral .sin-acceso::after{
+  content:' · sin acceso'; font-size:11px; opacity:.85;
+}
+/* compatibilidad con la clase anterior, por si queda algun HTML viejo */
 #menuLateral .sin-pantalla{ font-style:italic; opacity:.65 }
 
 /* EL ARBOL DEL MENU (02/11): la cabeza se toca y el submenu SE DESPLIEGA.
