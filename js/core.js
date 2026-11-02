@@ -206,7 +206,7 @@ async function armarMenu() {
        modulo. api_mis_modulos() quedo INTACTA: cambiar el tipo de retorno de
        una funcion no se reemplaza en el lugar, y un segundo overload deja a
        PostgREST sin saber cual elegir (la trampa del 08/10). */
-    const { data } = await rpcTodo('api_mis_modulos_v3', {});
+    const { data } = await rpcTodo('api_mis_modulos_v4', {});
     lista = data || [];
     const p = await rpcTodo('api_mi_perfil', {});
     yo = (p.data && p.data[0]) || {};
@@ -268,14 +268,19 @@ async function armarMenu() {
       const cls = clases.trim() ? ' class="' + clases.trim() + '"' : '';
       return '<a href="' + PANTALLAS[x.clave].archivo + '"' + cls + '>' + nombre + '</a>';
     }
-    if (!hayPantalla){
-      return '<span class="menu-apagado en-desarrollo' + h + '" title="En desarrollo: '
-           + 'está en el plan y todavía no tiene pantalla. Figura acá para que se '
-           + 'vea qué viene.">' + nombre + '</span>';
-    }
-    return '<span class="menu-apagado sin-acceso' + h + '" title="Está hecho, pero '
-         + 'tu usuario todavía no lo tiene habilitado. Lo habilita un administrador '
-         + 'desde Seguridad.">' + nombre + '</span>';
+    /* EL AVISO AL PASAR EL MOUSE.                           02/11/2026
+       No se usa el `title` del navegador: tarda un segundo en aparecer, se
+       va solo y no se puede leer con el teclado. Va un cartel propio, que
+       sale enseguida, tambien al llegar con Tab, y con el texto que trae el
+       modulo — que NO es el mismo para todos. El `aria-label` es para el
+       lector de pantalla; el `tabindex` para poder llegar sin mouse. */
+    const aviso = esc(x.aviso || 'No tenés acceso a este módulo. Tu usuario no lo permite.');
+    const clase = hayPantalla ? 'sin-acceso' : 'en-desarrollo';
+    const marca = hayPantalla
+      ? '<small class="marca-sin-acceso"> · sin acceso</small>' : '';
+    return '<span class="menu-apagado ' + clase + h + '" tabindex="0" '
+         + 'data-aviso="' + aviso + '" aria-label="' + nombre + '. ' + aviso + '">'
+         + nombre + marca + '</span>';
   }
   /* SE DESPLIEGA. Un menu con submenu muestra la cabeza y el submenu se abre
      al tocarla; si estuviera todo abierto no seria un submenu, seria una
@@ -368,11 +373,14 @@ async function armarMenu() {
      permiso. Acá se tapa la pantalla igual, y la consulta no corre. */
   const miModulo = lista.find(x => x.clave === mio);
   if (miModulo && miModulo.puede_entrar === false) {
-    tapar('<b>Todavía no tenés acceso a este módulo.</b> '
-      + 'Lo ves en el menú porque está hecho, pero tu usuario'
-      + (MI_ROL ? ' (<b>' + esc(MI_ROL) + '</b>)' : '')
-      + ' no lo tiene habilitado para abrir. Lo habilita un administrador '
-      + 'desde Seguridad.');
+    /* EL TEXTO SALE DE LA FILA DEL MODULO, NO DE ACA.       02/11/2026
+       No es el mismo aviso para todos: lo que esta hecho y esperando que lo
+       habiliten dice que esta pronto a activarse, y lo demas dice que el
+       usuario no lo permite. Escribir las dos frases en el javascript
+       obligaria a publicar para cambiar una palabra; en la fila se cambia
+       en un lugar y se ve al instante. */
+    tapar('<b>' + esc(miModulo.aviso
+            || 'No tenés acceso a este módulo. Tu usuario no lo permite.') + '</b>');
     return false;
   }
   return true;

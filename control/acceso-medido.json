@@ -1,9 +1,9 @@
 {
-  "cuando": "2026-11-02T12:52:00.000000+00:00",
-  "navegador": false,
-  "navegador_detalle": "NO. Medido llamando a tabs_context_mcp en esta corrida: 'Multiple Chrome browsers are connected to this account and none has been selected for this session' — Browser 1 (Windows, af847e60) y Browser 2 (Windows, b57ec6f4). No elijo yo cual: el usuario tiene que decir cual de los dos es el que usa, y hasta que lo diga esta sesion no tiene su Chrome. Ayer (01/11) si lo tenia; hoy no, y la diferencia esta medida, no recordada.",
+  "cuando": "2026-11-02T20:12:00.000000+00:00",
+  "navegador": true,
+  "navegador_detalle": "SI. Medido llamando a list_connected_browsers en esta corrida: dos Chrome conectados a la cuenta y 'Browser 1' (af847e60-454d-4f06-9cd9-8c1fdb891d48, Windows) figura inUse:true, elegido. A las 12:52 de hoy no habia ninguno elegido y lo anote como NO; ahora hay uno y lo anoto como SI. La diferencia esta medida en las dos corridas, no recordada.",
   "puente": false,
   "puente_detalle": "NO. get_device_info devolvio en esta corrida: 'The device this session is bound to is not connected to the bridge.' No puedo leer ni escribir archivos en su computadora, asi que el .xlsx que baja a SU disco sigue sin poder abrirse desde aca.",
-  "pantalla_leida": "NINGUNA en el Chrome del usuario, y por eso no afirmo nada sobre su pantalla. Lo que SI se midio en pantalla en esta corrida fue el Chromium del contenedor, por control/pantallas.js: 15 pantallas x 2 tamanos, 44 botones apretados con la mano, 4 grillas recorridas hasta la ultima pagina (684 paginas) y 4 con el archivo bajado comprobado adentro, todas contra la base en la misma corrida. Es un navegador de verdad contra la base de verdad; NO es el Chrome del usuario.",
-  "que_no_puedo_probar_hoy": "1) Nada en el Chrome del usuario hasta que diga cual de los dos Browser es el suyo. 2) El archivo que baja a su disco (puente caido). Las dos cosas dependen de el, no de mi, y estan dichas antes de entregar, no al cierre."
+  "pantalla_leida": "El Chrome del usuario esta disponible en esta corrida y la pantalla del panel publicado se lee ahi. Ademas se midio el Chromium del contenedor por control/pantallas.js contra la base en la misma corrida.",
+  "que_no_puedo_probar_hoy": "El archivo que baja a SU disco: el puente esta caido, asi que no puedo abrir lo que se descargue en su computadora. Depende de el, no de mi, y queda dicho antes de entregar, no al cierre."
 }

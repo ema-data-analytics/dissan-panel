@@ -61,6 +61,21 @@
     /* v3 agrega `puede_entrar`: el estado del medio, ver sin entrar.
        El juguete devuelve uno de cada clase para que el control vea las
        tres: enlace, 'sin acceso' y 'en desarrollo'. */
+    /* v4 agrega `aviso`: el cartel que ve el que NO puede entrar, que sale
+       de la fila del modulo y no es el mismo para todos. */
+    api_mis_modulos_v4: MODULOS.map(function(m){
+      var o = {clave:m.clave, nombre:m.nombre, grupo:m.grupo};
+      o.puede_entrar = (m.clave !== 'Bitacora' && m.clave !== 'Cotizador');
+      /* los tres textos que de verdad hay en la base: el que esta hecho y
+         espera, el que no existe todavia, y el que no le corresponde. */
+      o.aviso = o.puede_entrar ? null
+        : (m.clave === 'Bitacora'
+            ? 'Todavía no tenés acceso a este módulo. Está pronto a activarse.'
+            : m.clave === 'Cotizador'
+            ? 'En desarrollo: todavía no está hecho.'
+            : 'No tenés acceso a este módulo. Tu usuario no lo permite.');
+      return o;
+    }),
     api_mis_modulos_v3: MODULOS.map(function(m){
       var o = {clave:m.clave, nombre:m.nombre, grupo:m.grupo};
       o.puede_entrar = (m.clave !== 'Bitacora' && m.clave !== 'Cotizador');
