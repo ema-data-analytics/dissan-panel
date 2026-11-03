@@ -95,6 +95,11 @@ function laBase() {
    hace 90. raw.githubusercontent no tiene ese tope. La lista se genera
    con `git ls-files` al subir el script, asi que viene con el tamano de
    cada archivo y el control de tamano sigue existiendo sin la API. */
+/* OJO CON EL -1. La lista vive ADENTRO de este archivo, asi que este
+   archivo no puede declarar su propio tamano final: al escribirlo cambia.
+   La primera corrida con la lista adentro marco un MAL por eso —decia 5.890
+   y el archivo media 9.797— y era el control el que mentia, no el respaldo.
+   Con -1 se baja igual y se dice que a ese no se le controla el tamano. */
 var LISTA = [
   {p:'.claude/hooks/session-start.sh',n:2121},
   {p:'.claude/settings.json',n:252},
@@ -178,7 +183,7 @@ var LISTA = [
   {p:'pregunta.html',n:4049},
   {p:'pruebas.html',n:8587},
   {p:'pruebas/index.html',n:8608},
-  {p:'respaldo-drive.js',n:5890},
+  {p:'respaldo-drive.js',n:-1},
   {p:'seguridad.html',n:9349},
   {p:'stock.html',n:3927},
   {p:'tablero.html',n:5095},
@@ -210,7 +215,7 @@ function elRepo() {
        bajar: asi una corrida nueva arregla solo lo que esta mal y no
        vuelve a golpear 90 veces el origen. */
     var ya = carpetas[cual].getFilesByName(nombre);
-    if (ya.hasNext()) {
+    if (n.size >= 0 && ya.hasNext()) {
       var vieja = ya.next();
       if (!ya.hasNext() && vieja.getSize() === n.size) {
         out.push(cual + '/' + nombre + '   ' + vieja.getSize() + ' bytes   (ya estaba)');
@@ -228,12 +233,14 @@ function elRepo() {
       while (it.hasNext()) it.next().setTrashed(true);
       f = carpetas[cual].createFile(b);
       bytes = f.getSize();
-      if (bytes === n.size) break;
+      if (n.size < 0 || bytes === n.size) break;
       Utilities.sleep(700);
     }
     out.push(cual + '/' + nombre + '   ' + bytes + ' bytes'
-             + (bytes === n.size ? '' : '   MAL: en GitHub mide ' + n.size
-                + ' (se intento ' + intentos + ' veces)'));
+             + (n.size < 0 ? '   (no se le controla el tamano: es este mismo archivo)'
+                : bytes === n.size ? ''
+                : '   MAL: en el origen mide ' + n.size
+                  + ' (se intento ' + intentos + ' veces)'));
   }
   return out;
 }
