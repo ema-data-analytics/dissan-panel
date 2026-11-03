@@ -89,10 +89,105 @@ function laBase() {
   return out;
 }
 
+/* LA LISTA VA ADENTRO, NO SE LE PREGUNTA A LA API DE GITHUB.  02/11/2026
+   La segunda corrida murio con 403 "API rate limit exceeded": sin
+   autenticar, api.github.com deja 60 pedidos por hora y este respaldo
+   hace 90. raw.githubusercontent no tiene ese tope. La lista se genera
+   con `git ls-files` al subir el script, asi que viene con el tamano de
+   cada archivo y el control de tamano sigue existiendo sin la API. */
+var LISTA = [
+  {p:'.claude/hooks/session-start.sh',n:2121},
+  {p:'.claude/settings.json',n:252},
+  {p:'.githooks/pre-push',n:6449},
+  {p:'.nojekyll',n:0},
+  {p:'agenda/index.html',n:28966},
+  {p:'ayuda.html',n:3635},
+  {p:'bitacora.html',n:7252},
+  {p:'cartera.html',n:3708},
+  {p:'compras.html',n:3512},
+  {p:'control/acceso-medido.json',n:1175},
+  {p:'control/acceso.js',n:14927},
+  {p:'control/alcance-senuelos.js',n:7770},
+  {p:'control/alcance.js',n:13261},
+  {p:'control/anotar.js',n:3735},
+  {p:'control/archivo-senuelos.py',n:11414},
+  {p:'control/archivo.js',n:12702},
+  {p:'control/archivo.py',n:20590},
+  {p:'control/cifra.js',n:5741},
+  {p:'control/edge.js',n:14125},
+  {p:'control/enchufar.js',n:1925},
+  {p:'control/estado.js',n:6392},
+  {p:'control/pantallas.js',n:31544},
+  {p:'control/pdf-senuelos.js',n:10184},
+  {p:'control/pdf.py',n:14989},
+  {p:'control/publicado-senuelos.js',n:9213},
+  {p:'control/publicado.js',n:10951},
+  {p:'control/rotulo.js',n:17642},
+  {p:'control/supabase-de-juguete.js',n:55499},
+  {p:'control/todos.js',n:8388},
+  {p:'css/app.css',n:33140},
+  {p:'css/ayuda-ay.css',n:12641},
+  {p:'css/hilo-hil.css',n:2872},
+  {p:'css/informe-rt.css',n:7443},
+  {p:'css/listas-lp.css',n:6128},
+  {p:'css/margen-mv.css',n:10947},
+  {p:'css/pruebas.css',n:3677},
+  {p:'css/seguridad-seg.css',n:5434},
+  {p:'css/tablero-db.css',n:10469},
+  {p:'css/ventas-informe.css',n:9389},
+  {p:'edge/ayuda/index.ts',n:9369},
+  {p:'edge/bajar/index.ts',n:9153},
+  {p:'edge/carga-temporal/index.ts',n:487},
+  {p:'edge/diag-clave/index.ts',n:332},
+  {p:'edge/excel/index.ts',n:25495},
+  {p:'edge/leer/index.ts',n:29112},
+  {p:'edge/listas/index.ts',n:22461},
+  {p:'edge/preguntar/index.ts',n:26956},
+  {p:'edge/preguntar2/index.ts',n:26334},
+  {p:'edge/preguntar3/index.ts',n:29855},
+  {p:'edge/probe-pdf/index.ts',n:1462},
+  {p:'edge/probe-pdf/index.ts.prueba-desechable-retirada-01-11',n:5077},
+  {p:'edge/usuarios/index.ts',n:11165},
+  {p:'hilo.html',n:4652},
+  {p:'img/ema.png',n:3536},
+  {p:'img/macromanager.png',n:3129},
+  {p:'index.html',n:8144},
+  {p:'informe.html',n:4086},
+  {p:'js/ayuda.js',n:58279},
+  {p:'js/bajar-formatos.js',n:30912},
+  {p:'js/bajar.js',n:22609},
+  {p:'js/bitacora.js',n:9271},
+  {p:'js/cartera.js',n:15259},
+  {p:'js/compras.js',n:13991},
+  {p:'js/core.js',n:26205},
+  {p:'js/filas.js',n:6920},
+  {p:'js/hilo.js',n:8108},
+  {p:'js/informe.js',n:19474},
+  {p:'js/listas.js',n:36328},
+  {p:'js/margen.js',n:37834},
+  {p:'js/pregunta.js',n:26609},
+  {p:'js/pruebas.js',n:2605},
+  {p:'js/seguridad.js',n:17550},
+  {p:'js/stock.js',n:13424},
+  {p:'js/tablero.js',n:24116},
+  {p:'js/tesoreria.js',n:20620},
+  {p:'js/vendor/pdf.min.mjs',n:496989},
+  {p:'js/vendor/pdf.worker.min.mjs',n:1286284},
+  {p:'js/ventas.js',n:50689},
+  {p:'listas.html',n:4657},
+  {p:'pregunta.html',n:4049},
+  {p:'pruebas.html',n:8587},
+  {p:'pruebas/index.html',n:8608},
+  {p:'respaldo-drive.js',n:5890},
+  {p:'seguridad.html',n:9349},
+  {p:'stock.html',n:3927},
+  {p:'tablero.html',n:5095},
+  {p:'tesoreria.html',n:3523},
+  {p:'ventas.html',n:9607}
+];
+
 function elRepo() {
-  var lista = JSON.parse(UrlFetchApp.fetch(
-    'https://api.github.com/repos/' + REPO + '/git/trees/main?recursive=1'
-  ).getContentText()).tree;
+  var lista = LISTA.map(function(x){ return {path:x.p, size:x.n, type:'blob'}; });
   var donde = { 'control': '02-CONTROL', 'edge': '04-EDGE-FUNCTIONS' };
   var carpetas = {}, out = [];
   for (var i = 0; i < lista.length; i++) {
@@ -111,6 +206,17 @@ function elRepo() {
        el arbol de GitHub y, si no coincide, se vuelve a pedir hasta 3
        veces. Lo que despues de eso siga mal se escribe en el informe con
        la palabra MAL, no se tapa. */
+    /* lo que ya esta en Drive con el tamano correcto no se vuelve a
+       bajar: asi una corrida nueva arregla solo lo que esta mal y no
+       vuelve a golpear 90 veces el origen. */
+    var ya = carpetas[cual].getFilesByName(nombre);
+    if (ya.hasNext()) {
+      var vieja = ya.next();
+      if (!ya.hasNext() && vieja.getSize() === n.size) {
+        out.push(cual + '/' + nombre + '   ' + vieja.getSize() + ' bytes   (ya estaba)');
+        continue;
+      }
+    }
     var f = null, bytes = -1, intentos = 0;
     while (intentos < 3) {
       intentos++;
