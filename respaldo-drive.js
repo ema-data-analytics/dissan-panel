@@ -36,9 +36,14 @@ function principal() {
   var hecho = [];
   hecho = hecho.concat(laBase());
   hecho = hecho.concat(elRepo());
+  var mal = 0;
+  for (var k = 0; k < hecho.length; k++) if (hecho[k].indexOf('MAL:') >= 0) mal++;
   var txt = 'LO QUE SE BAJO — ' + new Date().toISOString() + '\n\n';
   for (var i = 0; i < hecho.length; i++) txt += hecho[i] + '\n';
   txt += '\nTotal: ' + hecho.length + ' archivos.\n';
+  txt += mal === 0
+    ? 'Los tamanos coinciden con el origen en todos.\n'
+    : 'OJO: ' + mal + ' archivo(s) NO coinciden con el origen. Buscar "MAL:" arriba.\n';
   escribir_(DriveApp.getFolderById(CARPETA), '00-LO-QUE-SE-BAJO.txt', txt);
   Logger.log(txt);
   return txt;
@@ -99,13 +104,30 @@ function elRepo() {
     /* el nombre lleva la ruta con __ para no perder en que carpeta
        estaba: js/core.js y control/core.js no son el mismo archivo */
     var nombre = n.path.replace(/\//g, '__');
-    var b = UrlFetchApp.fetch(
-      'https://raw.githubusercontent.com/' + REPO + '/main/' + n.path
-    ).getBlob().setName(nombre);
-    var it = carpetas[cual].getFilesByName(nombre);
-    while (it.hasNext()) it.next().setTrashed(true);
-    var f = carpetas[cual].createFile(b);
-    out.push(cual + '/' + nombre + '   ' + f.getSize() + ' bytes');
+    /* UN ARCHIVO QUE LLEGA VACIO NO ES UN RESPALDO.       02/11/2026
+       La primera corrida dejo 2 de 92 en 0 bytes (control/enchufar.js y
+       img/macromanager.png) y el resto bien: raw.githubusercontent
+       contesta vacio cada tanto. Se compara contra el tamano que declara
+       el arbol de GitHub y, si no coincide, se vuelve a pedir hasta 3
+       veces. Lo que despues de eso siga mal se escribe en el informe con
+       la palabra MAL, no se tapa. */
+    var f = null, bytes = -1, intentos = 0;
+    while (intentos < 3) {
+      intentos++;
+      var b = UrlFetchApp.fetch(
+        'https://raw.githubusercontent.com/' + REPO + '/main/' + n.path
+          + '?t=' + Date.now() + '-' + intentos
+      ).getBlob().setName(nombre);
+      var it = carpetas[cual].getFilesByName(nombre);
+      while (it.hasNext()) it.next().setTrashed(true);
+      f = carpetas[cual].createFile(b);
+      bytes = f.getSize();
+      if (bytes === n.size) break;
+      Utilities.sleep(700);
+    }
+    out.push(cual + '/' + nombre + '   ' + bytes + ' bytes'
+             + (bytes === n.size ? '' : '   MAL: en GitHub mide ' + n.size
+                + ' (se intento ' + intentos + ' veces)'));
   }
   return out;
 }
