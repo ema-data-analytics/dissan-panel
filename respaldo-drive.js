@@ -29,7 +29,16 @@
 var CARPETA = '1U6w6yQ2nnJLcj8FLl_-cy9IGcCGT0Fx9';
 var SB      = 'https://hwgfmpvszdohnzqtwscw.supabase.co';
 var KEY     = 'sb_publishable_7CfYchCqBdDnXJ63IblnTw_cjFCjvUl';
-var VALE    = '6dcdce2d32793fb4d4b23c37320ae8a8be7f75ab2752553b';
+/* EL VALE NO VIVE ACA, Y ES POR UNA CAGADA MIA.            03/11/2026
+   Lo escribi adentro de este archivo, que esta en el repositorio PUBLICO:
+   cualquiera que lo abriera podia pedirle el esquema entero a la base
+   hasta que venciera. Se retiro en el acto y el que haya quedado en la
+   historia de git ya no sirve para nada.
+   Ahora el vale lo define el PROYECTO de Apps Script, que es privado, en
+   una variable VALE de Codigo.gs. Si no esta, laBase() corta y lo dice:
+   un respaldo que se saltea la base en silencio es peor que ninguno. */
+var VALE = (typeof VALE_DEL_PROYECTO === 'string' && VALE_DEL_PROYECTO)
+         || (typeof VALE === 'string' && VALE) || '';
 var REPO    = 'ema-data-analytics/dissan-panel';
 
 function principal() {
@@ -64,6 +73,11 @@ function escribir_(carpeta, nombre, texto) {
 }
 
 function laBase() {
+  if (!VALE) {
+    throw new Error('Falta el vale. Va en Codigo.gs del proyecto (privado), ' +
+                    'como:  var VALE_DEL_PROYECTO = "...";  Sin eso la base no se respalda, ' +
+                    'y saltearla en silencio seria peor que no correr.');
+  }
   var c = carpeta_(CARPETA, '03-BASE-SQL');
   var partes = ['funciones', 'vistas', 'tablas', 'permisos'];
   var out = [];
