@@ -105,6 +105,15 @@ const HDR = new Set([
   "LISTA", "TOTAL", "BONIF", "CATEGORIA", "SSKKUU", "PAG", "PAGINA", "ITEM", "CANT",
   "MARCA", "MODELO", "MEDIDAS", "PRESENTACION", "UNIDADES", "CAJA", "IVA", "SIN", "CON",
   "MINORISTA", "INDICE", "MATERIAL", "COD_ARTIC",
+  /* LOS TITULOS EN INGLES.                                       05/11/2026
+     Sin estos, la fila de titulos de una lista en ingles no se reconoce como
+     titulo y entra como si fuera un articulo: un renglon de mas, con el
+     codigo "CODE" y sin precio. Son los titulos que de verdad traen las
+     listas de los laboratorios, no una lista de palabras inventada. */
+  "CODE", "REF", "PART", "PARTNUMBER", "PART_NUMBER", "CATALOG", "CAT", "CATNO",
+  "DESCRIPTION", "PRICE", "LISTPRICE", "UNITPRICE", "NETPRICE", "UNIT", "UOM",
+  "QTY", "QUANTITY", "PACK", "PACKSIZE", "BOX", "EACH", "EA", "CURRENCY", "USD",
+  "PRODUCTCODE", "ITEMCODE", "ITEMNO", "NO", "NUMBER", "AMOUNT", "DISCOUNT",
 ]);
 
 /* Las marcas combinantes van ESCAPADAS (\u0300-\u036f), no literales.  01/11/2026
@@ -316,12 +325,175 @@ function txt(v: any): string | null {
   const s = String(x).trim();
   return s === "" ? null : s;
 }
-function numeroCelda(v: any): number | null {
+/**
+ * UN PRECIO ESCRITO EN INGLES NO SE LEE CON LA REGLA CASTELLANA.  05/11/2026
+ *
+ * numeroCelda convertia TODO texto con `quitar los puntos y la coma al punto`,
+ * que es la regla castellana. Medido contra el codigo que estaba vivo:
+ *
+ *     "1,234.56" -> 1,23        (deberia ser 1.234,56)   mil veces menos
+ *     "0.75"     -> 75          (deberia ser 0,75)       cien veces mas
+ *     "2.56"     -> 256
+ *
+ * Y no avisa nada: entra como precio bueno. Es la clase de defecto que mas
+ * caro sale, porque la cifra es creible.
+ *
+ * LA REGLA, Y POR QUE NO HAY QUE ADIVINAR EN CASI NINGUN CASO:
+ *   1. Si el texto trae coma Y punto, el decimal es EL QUE ESTA MAS A LA
+ *      DERECHA. "1,234.56" ingles · "1.234,56" castellano. Sin ambiguedad.
+ *   2. Si trae un solo separador repetido, es de miles: "1.234.567".
+ *   3. Si trae un separador una sola vez:
+ *        - con 1, 2, 4 o mas digitos a la derecha es DECIMAL en los dos
+ *          idiomas: ningun separador de miles lleva 1 o 2 digitos.
+ *          Aca es donde "0.75" dejaba de valer 0,75 y pasaba a valer 75.
+ *        - con exactamente 3 digitos a la derecha SI es ambiguo ("1,234"
+ *          vale 1234 en ingles y 1,234 en castellano). SOLO ahi se usa el
+ *          formato declarado del proveedor (fmt), y si no esta declarado
+ *          se usa el castellano, que es lo que hacia hasta hoy: este
+ *          cambio NO mueve ninguna lista que hoy anda bien.
+ *
+ * El signo de moneda se saca antes: "US$ 1,998" es un precio, no un texto.
+ */
+function numeroDeTexto(s: string, fmt?: string): number | null {
+  let t = String(s).replace(/\s/g, "")
+                   .replace(/^(?:\$|USD|U\$S|US\$|ARS|EUR|€)/i, "")
+                   .replace(/(?:USD|U\$S|US\$|ARS|EUR|€)$/i, "");
+  if (!t) return null;
+  const negativo = /^\(.*\)$/.test(t);          /* (1,234.56) de contabilidad */
+  if (negativo) t = t.slice(1, -1);
+  if (!/^-?[0-9.,]+$/.test(t)) return null;
+  const signo = t.startsWith("-") ? -1 : 1;
+  t = t.replace(/^-/, "");
+
+  const ultComa = t.lastIndexOf(",");
+  const ultPunto = t.lastIndexOf(".");
+  let dec: string | null = null;
+
+  if (ultComa >= 0 && ultPunto >= 0) {
+    dec = ultComa > ultPunto ? "," : ".";
+  } else {
+    const sep = ultComa >= 0 ? "," : ultPunto >= 0 ? "." : null;
+    if (sep !== null) {
+      const veces = t.split(sep).length - 1;
+      const derecha = t.length - t.lastIndexOf(sep) - 1;
+      if (veces > 1) dec = null;                       /* 1.234.567 -> miles */
+      else if (derecha !== 3) dec = sep;               /* 0.75 · 2,5 · 1,2345 */
+      else dec = (fmt === "us") ? (sep === "." ? "." : null)
+                                : (sep === "," ? "," : null);
+    }
+  }
+
+  let limpio: string;
+  if (dec === null) limpio = t.replace(/[.,]/g, "");
+  else limpio = t.split(dec).map((p, i, a) =>
+         i === a.length - 1 ? p : p.replace(/[.,]/g, "")
+       ).join(".");
+  const v = Number(limpio);
+  if (!isFinite(v)) return null;
+  return signo * (negativo ? -v : v);
+}
+
+function numeroCelda(v: any, fmt?: string): number | null {
   const x = valorCelda(v);
   if (typeof x === "number" && isFinite(x)) return x;
-  if (typeof x === "string") {
-    const n = Number(x.replace(/\s/g, "").replace(/\./g, "").replace(/,/g, "."));
-    if (isFinite(n) && x.trim() !== "") return n;
+  if (typeof x === "string" && x.trim() !== "") return numeroDeTexto(x, fmt);
+  return null;
+}
+
+/**
+ * EL FORMATO LO DECIDE LA COLUMNA ENTERA, NO LA CELDA.           05/11/2026
+ * Una sola celda "1,234.56" en toda la lista alcanza para saber que la
+ * columna esta en ingles, y entonces "1,234" de dos renglones mas abajo vale
+ * 1234 y no 1,234. Mirando celda por celda, cada renglon decide distinto y la
+ * misma lista sale con dos criterios adentro.
+ * Devuelve 'us', 'ar' o null (la columna no alcanza para saberlo).
+ */
+function formatoDeColumna(textos: string[]): "us" | "ar" | null {
+  let us = 0, ar = 0;
+  for (const s of textos) {
+    const t = String(s).replace(/\s/g, "");
+    const c = t.lastIndexOf(","), p = t.lastIndexOf(".");
+    if (c >= 0 && p >= 0) { if (c > p) ar++; else us++; continue; }
+    if ((t.split(",").length - 1) > 1) us++;
+    else if ((t.split(".").length - 1) > 1) ar++;
+  }
+  if (us && !ar) return "us";
+  if (ar && !us) return "ar";
+  return null;                      /* vacia, ambigua, o las dos cosas */
+}
+
+/* Titulos con los que un laboratorio nombra cada columna, en los dos idiomas.
+   Se comparan SIN tildes, en mayuscula y sin espacios ni signos. */
+const T_COD = [
+  "CODIGO", "COD", "CODARTIC", "CODARTICULO", "CODPROVEEDOR", "ARTICULO", "SKU",
+  "MATERIAL", "REFERENCIA", "REF", "CODE", "ITEMCODE", "PRODUCTCODE", "ITEMNO",
+  "PARTNUMBER", "PARTNO", "CATALOG", "CATALOGNUMBER", "CATNO", "ITEM", "PRODUCTO",
+];
+const T_PRECIO = ["PRECIO", "COSTO", "IMPORTE", "VALOR", "PRICE", "COST", "AMOUNT", "LISTPRICE"];
+const T_DESC = ["DESCRIPCION", "DETALLE", "PRODUCTO", "ARTICULO", "DESCRIPTION", "PRODUCT", "NAME"];
+const T_CAJA = ["CAJA", "UNIDADES", "UNIDADESPORCAJA", "PORCAJA", "PACK", "PACKSIZE",
+                "BOX", "UNITSPERBOX", "EAPERBOX", "QTY", "UOM", "UNIT",
+                "QTYBOX", "QTYPERBOX", "UNITSBOX", "PERBOX", "PCSBOX", "PCS",
+                "UXCAJA", "UNIDADESCAJA", "CONTENIDO"];
+
+const llave = (s: string) =>
+  sinTildes(String(s)).toUpperCase().replace(/[^A-Z0-9]/g, "");
+
+/**
+ * EN INGLES EL SUSTANTIVO VA AL FINAL DEL TITULO.                05/11/2026
+ * "Precio neto" empieza con PRECIO; "Net Price" TERMINA en PRICE. Mirando solo
+ * el principio, la columna "Net Price" no se reconocia como precio y media
+ * lista en ingles quedaba sin leer. Lo encontro el banco, no yo.
+ *
+ * Las claves de 3 letras o menos (COD, REF, CAT, NO, EA) van SOLO por igualdad
+ * exacta: con ellas, "Reference Price" se tomaria como columna de codigo, y
+ * entonces la lista entera sale con el codigo equivocado.
+ */
+const pega = (titulo: string, lista: string[]) => {
+  const k = llave(titulo);
+  if (!k) return false;
+  return lista.some((t) => {
+    if (k === t) return true;
+    if (t.length < 4) return false;           /* COD, REF, CAT, NO, EA, PCS */
+    return k.startsWith(t) || k.endsWith(t) || (t.length >= 5 && k.includes(t));
+  });
+};
+
+/**
+ * UN EXCEL SE DESCRIBE SOLO: TIENE FILA DE TITULOS.              05/11/2026
+ * Si el laboratorio manda el Excel y no hay lectura cargada para Excel, se
+ * busca la primera fila que tenga un titulo de codigo Y uno de precio, y de
+ * ahi salen las columnas. Un PDF no se describe solo; por eso esto existe
+ * para Excel y no para PDF.
+ * Si hay MAS DE UNA columna de precio se toma la primera y SE DICEN LAS
+ * OTRAS POR SU TITULO: elegir a ciegas seria subir la lista entera con el
+ * precio equivocado.
+ */
+function detectarExcel(hoja: any): any | null {
+  const hasta = Math.min(hoja.rowCount || 0, 40);
+  for (let r = 1; r <= hasta; r++) {
+    const fila = hoja.getRow(r);
+    const n = Math.max(fila.cellCount || 0, 0);
+    if (n < 2) continue;
+    let cod = 0, desc = 0, caja = 0;
+    const precios: Array<{ col: number; titulo: string }> = [];
+    for (let c = 1; c <= n; c++) {
+      const t = txt(fila.getCell(c).value);
+      if (!t) continue;
+      if (!cod && pega(t, T_COD)) { cod = c; continue; }
+      if (pega(t, T_PRECIO)) { precios.push({ col: c, titulo: t }); continue; }
+      if (!desc && pega(t, T_DESC)) { desc = c; continue; }
+      if (!caja && pega(t, T_CAJA)) { caja = c; continue; }
+    }
+    if (cod && precios.length) {
+      return {
+        tipo: "excel", hoja: hoja.name, fila_datos: r + 1,
+        col_cod: cod, col_desc: desc || null, col_caja: caja || null,
+        col_precio: precios[0].col, titulo_precio: precios[0].titulo,
+        otras_precio: precios.slice(1).map((p) => p.titulo),
+        fila_titulos: r, detectada: true,
+      };
+    }
   }
   return null;
 }
@@ -329,11 +501,40 @@ function numeroCelda(v: any): number | null {
 async function leerExcel(bytes: Uint8Array, cfg: any, diag: boolean) {
   const wb = new ExcelJS.Workbook();
   await wb.xlsx.load(bytes as any);
-  const hojas: any[] = cfg.hojas ?? [{ hoja: cfg.hoja, fila_datos: cfg.fila_datos }];
   const filas: any[] = [];
   const descartes: any[] = [];
   const muestra: any[] = [];
+  const avisosLectura: string[] = [];
   const nombres = wb.worksheets.map((w: any) => w.name);
+
+  /* SIN COLUMNAS CARGADAS, SE BUSCAN LOS TITULOS. Antes, sin col_cod,
+     fila.getCell(undefined) tiraba una excepcion y la pantalla decia
+     "no se pudo leer el archivo" sin decir que era lo que faltaba. */
+  let cfgUsada = cfg;
+  if (!cfg.col_cod || !cfg.col_precio) {
+    const prim: any = wb.getWorksheet(cfg.hoja ?? nombres[0]) ?? wb.worksheets[0];
+    const det = prim ? detectarExcel(prim) : null;
+    if (!det) {
+      return { filas: [], descartes: [{ porque: "no se encontro la fila de titulos" }],
+               motor: "npm:exceljs@4.4.0", hojas: nombres, muestra: [],
+               avisos: ["No hay lectura de Excel cargada para este proveedor y tampoco se " +
+                        "encontro una fila de titulos con una columna de codigo y una de " +
+                        "precio. Hay que cargar la lectura antes de subir esta lista."] };
+    }
+    cfgUsada = Object.assign({}, cfg, det);
+    avisosLectura.push(
+      `No habia lectura de Excel cargada: se leyo por los TITULOS de la fila ${det.fila_titulos} ` +
+      `de la hoja "${det.hoja}" — codigo en la columna ${det.col_cod}, precio en la ${det.col_precio} ` +
+      `("${det.titulo_precio}").`);
+    if (det.otras_precio.length) {
+      avisosLectura.push(
+        `La lista tiene mas de una columna de precio. Se tomo "${det.titulo_precio}". ` +
+        `Las otras son: ${det.otras_precio.map((t: string) => `"${t}"`).join(", ")}. ` +
+        `Si el costo sale de otra, hay que cargarla antes de confirmar.`);
+    }
+  }
+
+  const hojas: any[] = cfgUsada.hojas ?? [{ hoja: cfgUsada.hoja, fila_datos: cfgUsada.fila_datos }];
 
   for (const h of hojas) {
     const nombre = h.hoja ?? nombres[0];
@@ -343,23 +544,52 @@ async function leerExcel(bytes: Uint8Array, cfg: any, diag: boolean) {
       continue;
     }
     const ultima = hoja.rowCount || 0;
+    const desde = Number(h.fila_datos ?? cfgUsada.fila_datos ?? 1);
+
+    /* PRIMERA PASADA: QUE FORMATO DE NUMERO USA ESTA COLUMNA.
+       Solo mira los precios que vienen como TEXTO: los que vienen como
+       numero de Excel ya estan bien y no dicen nada del idioma. */
+    const textos: string[] = [];
+    for (let r = desde; r <= ultima; r++) {
+      const v = valorCelda(hoja.getRow(r).getCell(cfgUsada.col_precio).value);
+      if (typeof v === "string" && v.trim() !== "") textos.push(v);
+    }
+    const fmtMedido = formatoDeColumna(textos);
+    const fmt = fmtMedido ?? (cfgUsada.fmt ? String(cfgUsada.fmt) : undefined);
+    if (textos.length) {
+      if (fmtMedido) {
+        avisosLectura.push(
+          `Los precios de la hoja "${nombre}" vienen escritos como texto. Medido sobre ` +
+          `${textos.length} renglones, estan en formato ` +
+          `${fmtMedido === "us" ? "INGLES (1,234.56)" : "CASTELLANO (1.234,56)"}, ` +
+          `y se leyeron asi.`);
+      } else {
+        avisosLectura.push(
+          `Los precios de la hoja "${nombre}" vienen como texto y la columna no alcanza ` +
+          `para saber el idioma del numero (no hay ningun valor con coma y punto juntos). ` +
+          `Se leyeron en formato ${cfgUsada.fmt === "us" ? "INGLES" : "CASTELLANO"}` +
+          `${cfgUsada.fmt ? " (declarado del laboratorio)" : " (el de siempre)"}. ` +
+          `Mirar la muestra antes de confirmar.`);
+      }
+    }
+
     let grupo: string | null = null;
-    for (let r = Number(h.fila_datos ?? 1); r <= ultima; r++) {
+    for (let r = desde; r <= ultima; r++) {
       const fila = hoja.getRow(r);
-      if (cfg.col_grupo) {
-        const g = txt(fila.getCell(cfg.col_grupo).value);
+      if (cfgUsada.col_grupo) {
+        const g = txt(fila.getCell(cfgUsada.col_grupo).value);
         if (g) grupo = g;
       }
-      const cod = txt(fila.getCell(cfg.col_cod).value);
+      const cod = txt(fila.getCell(cfgUsada.col_cod).value);
       if (cod === null) continue;
-      if (HDR.has(sinTildes(cod).toUpperCase())) continue;
-      const d1 = cfg.col_desc ? txt(fila.getCell(cfg.col_desc).value) : null;
-      const d2 = cfg.col_desc2 ? txt(fila.getCell(cfg.col_desc2).value) : null;
+      if (HDR.has(llave(cod))) continue;
+      const d1 = cfgUsada.col_desc ? txt(fila.getCell(cfgUsada.col_desc).value) : null;
+      const d2 = cfgUsada.col_desc2 ? txt(fila.getCell(cfgUsada.col_desc2).value) : null;
       const desc = [grupo, d1, d2].filter((x) => x).join(" ") || null;
-      const precio = numeroCelda(fila.getCell(cfg.col_precio).value);
+      const precio = numeroCelda(fila.getCell(cfgUsada.col_precio).value, fmt);
       let caja: number | null = null;
-      if (cfg.col_caja) {
-        const c = numeroCelda(fila.getCell(cfg.col_caja).value);
+      if (cfgUsada.col_caja) {
+        const c = numeroCelda(fila.getCell(cfgUsada.col_caja).value, fmt);
         caja = c !== null && c > 0 ? c : null;
       }
       if (precio === null || precio <= 0) descartes.push({ cod, porque: "sin precio en la lista", fila: r });
@@ -367,10 +597,21 @@ async function leerExcel(bytes: Uint8Array, cfg: any, diag: boolean) {
       if (diag && muestra.length < 12) muestra.push({ hoja: nombre, fila: r, cod, desc, precio, caja });
     }
   }
-  return { filas, descartes, motor: "npm:exceljs@4.4.0", hojas: nombres, muestra };
+  return { filas, descartes, motor: "npm:exceljs@4.4.0", hojas: nombres, muestra,
+           avisos: avisosLectura, lectura_usada: cfgUsada };
 }
 
 /* ------------------------------------------------------------------ servir */
+
+/* LA LECTURA GENERICA DE PDF.                                    05/11/2026
+   Es la que usan 5 de los 6 proveedores de PDF del padron, con las mismas
+   franjas. Sirve de respaldo cuando llega un PDF de un proveedor que no
+   tiene lectura propia: mejor leerlo y declarar que se uso la generica, que
+   rechazarlo y que el usuario crea que su archivo no sirve. */
+const PDF_GENERICO = {
+  cod: [30, 130], desc: [130, 330], precio: { modo: "moneda", ocurrencia: 1 },
+  y_tol: 2, fmt: "ar", max_cod: 22,
+};
 
 const IMAGEN = /\.(jpe?g|png|gif|bmp|webp|tiff?|heic)$/i;
 
@@ -428,20 +669,44 @@ Deno.serve(async (req) => {
       return json({ ok: false, filas: [],
         avisos: [`No se puede leer un archivo "${nombre.split(".").pop()}". Pedir la lista en Excel o PDF.`] });
     }
-    if (!cfg.tipo) {
-      return json({ ok: false, filas: [],
-        avisos: [`${prov.proveedor} no tiene cargada la configuracion de lectura ` +
-                 `(cotiza.lista_proveedor.lectura).`] });
-    }
-    if ((esPdf && cfg.tipo !== "pdf") || (esXls && cfg.tipo !== "excel")) {
-      return json({ ok: false, filas: [],
-        avisos: [`${prov.proveedor} manda la lista en ${String(cfg.tipo).toUpperCase()} y este ` +
-                 `archivo es ${esPdf ? "PDF" : "Excel"}. Si el laboratorio cambio el formato hay ` +
-                 `que actualizar la configuracion de lectura antes de cargarla.`] });
+    /* EL FORMATO LO DECLARA EL ARCHIVO, NO LA CONFIGURACION.       05/11/2026
+       Este candado estaba asi:
+           if ((esPdf && cfg.tipo !== "pdf") || (esXls && cfg.tipo !== "excel")) rechaza
+       o sea que miraba el tipo CONFIGURADO del proveedor y no el tipo REAL
+       del archivo. BECTON DICKINSON esta cargado como "pdf" porque la vez
+       anterior mandaron el PDF: con eso, su propio Excel se rechazaba.
+       Peor todavia, la pantalla ya le dice al usuario que puede subir
+       cualquiera de los dos — el cartel prometia lo que el servidor negaba.
+       Un laboratorio cambia de PDF a Excel sin avisarle a nadie.
+       Lo arregle el 30/10 y lo escribi SOLO aca, nunca en el repositorio:
+       el 01/11 volvi a desplegar desde el repositorio y me lo lleve puesto.
+       Por eso ahora vive en el archivo, no solo en el servidor. */
+    const cfgPdf   = cfg.tipo === "pdf"   ? cfg : (cfg.pdf   ?? null);
+    const cfgExcel = cfg.tipo === "excel" ? cfg : (cfg.excel ?? null);
+    const avisosFormato: string[] = [];
+    let cfgLeer: any;
+    if (esPdf) {
+      /* un PDF NO se describe solo: sin lectura propia va la generica, que
+         es la que usan 5 de los 6 proveedores de PDF. */
+      cfgLeer = cfgPdf ?? Object.assign({}, PDF_GENERICO, { tipo: "pdf" });
+      if (!cfgPdf) {
+        avisosFormato.push(
+          `${prov.proveedor} no tiene lectura de PDF cargada: se leyo con la lectura ` +
+          `generica. Si salen pocos renglones o precios raros, hay que medir las franjas ` +
+          `de esta lista antes de confirmarla.`);
+      }
+    } else {
+      cfgLeer = cfgExcel ?? { tipo: "excel" };
+      if (!cfgExcel) {
+        avisosFormato.push(
+          `${prov.proveedor} no tiene lectura de Excel cargada: el archivo se leyo ` +
+          `reconociendo los titulos de las columnas.`);
+      }
     }
 
     const bytes = decodeBase64(b64);
-    const leido: any = esPdf ? await leerPdf(bytes, cfg, diag) : await leerExcel(bytes, cfg, diag);
+    const leido: any = esPdf ? await leerPdf(bytes, cfgLeer, diag)
+                             : await leerExcel(bytes, cfgLeer, diag);
 
     /* ---- la regla de costeo del laboratorio ---- */
     const factor = prov.factor === null || prov.factor === undefined ? 1 : Number(prov.factor);
@@ -460,8 +725,14 @@ Deno.serve(async (req) => {
                   `columna Moneda dice DOLAR. No se inventa una cotizacion.`);
     }
     if (prov.tipo_regla === "columna") {
-      avisos.push(`El costo sale de la columna "${cfg.titulo_precio ?? "(sin titulo)"}" de la lista.`);
+      avisos.push(`El costo sale de la columna "${cfgLeer.titulo_precio ?? "(sin titulo)"}" de la lista.`);
     }
+    /* LO QUE LA LECTURA TUVO QUE RESOLVER SOLA SE DICE ARRIBA DE TODO.
+       Que columna se eligio, en que idioma estaban los numeros y que
+       lectura se uso: si eso no se declara, la pantalla muestra una lista
+       prolija sin decir de donde salio cada cosa. */
+    for (const a of avisosFormato) avisos.push(a);
+    for (const a of (leido.avisos ?? [])) avisos.push(a);
     if (!prov.codigo_lista) {
       avisos.push(`${prov.proveedor} no tiene lista de precios de compra en Tango (cpa43): ` +
                   `la columna Cod. Lista va vacia.`);
@@ -494,7 +765,12 @@ Deno.serve(async (req) => {
       archivo: nombre,
       regla: { tipo: prov.tipo_regla, factor, texto: prov.regla, moneda },
       lectura: {
-        motor: leido.motor, tipo: cfg.tipo,
+        /* COMO SE LEYO, no lo que dice la configuracion: informar el
+           configurado habiendo leido otra cosa es ponerle a la pantalla un
+           rotulo que no corresponde. */
+        motor: leido.motor, tipo: esPdf ? "pdf" : "excel",
+        tipo_configurado: cfg.tipo ?? null,
+        columna_precio: leido.lectura_usada?.titulo_precio ?? cfgLeer.titulo_precio ?? null,
         paginas: leido.paginas ?? null, hojas: leido.hojas ?? null,
         filas_leidas: filas.length, con_precio: conPrecio,
         con_unidades_caja: conCaja, descartes: leido.descartes.length,
