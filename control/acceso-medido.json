@@ -1,9 +1,9 @@
 {
-  "cuando": "2026-11-02T20:12:00.000000+00:00",
+  "cuando": "2026-11-05T11:35:00.000000+00:00",
   "navegador": true,
-  "navegador_detalle": "SI. Medido llamando a list_connected_browsers en esta corrida: dos Chrome conectados a la cuenta y 'Browser 1' (af847e60-454d-4f06-9cd9-8c1fdb891d48, Windows) figura inUse:true, elegido. A las 12:52 de hoy no habia ninguno elegido y lo anote como NO; ahora hay uno y lo anoto como SI. La diferencia esta medida en las dos corridas, no recordada.",
+  "navegador_detalle": "SI. Medido llamando a list_connected_browsers en esta corrida: dos Chrome conectados a la cuenta y 'Browser 1' (af847e60-454d-4f06-9cd9-8c1fdb891d48, Windows) figura inUse:true, elegido por el usuario. Y se uso de verdad: se abrio listas.html del panel publicado con SU sesion, se subio un Excel en ingles y se leyo el resultado en pantalla.",
   "puente": false,
-  "puente_detalle": "NO. get_device_info devolvio en esta corrida: 'The device this session is bound to is not connected to the bridge.' No puedo leer ni escribir archivos en su computadora, asi que el .xlsx que baja a SU disco sigue sin poder abrirse desde aca.",
-  "pantalla_leida": "El Chrome del usuario esta disponible en esta corrida y la pantalla del panel publicado se lee ahi. Ademas se midio el Chromium del contenedor por control/pantallas.js contra la base en la misma corrida.",
-  "que_no_puedo_probar_hoy": "El archivo que baja a SU disco: el puente esta caido, asi que no puedo abrir lo que se descargue en su computadora. Depende de el, no de mi, y queda dicho antes de entregar, no al cierre."
+  "puente_detalle": "NO. device_bash devolvio en esta corrida: 'The device this session is bound to is not connected to the bridge.' No puedo leer ni escribir archivos en su computadora, asi que no pude buscar la lista en ingles en su carpeta de DISSAN ni abrir el .xlsx que baje a su disco.",
+  "pantalla_leida": "El panel publicado se leyo en el Chrome del usuario en esta corrida: listas.html con sesion, el selector trajo los 14 proveedores desde la base, y la Edge Function listas contesto en 1.509 ms con los avisos nuevos. ADEMAS, al entrar por primera vez la pestana estaba SIN SESION y lo declare antes de seguir: la contrasena del usuario no la escribo yo.",
+  "que_no_puedo_probar_hoy": "Lo que vive en SU computadora: el puente esta caido. No puedo abrir el archivo que el baje ni buscar la lista del laboratorio en su carpeta. Depende de el, no de mi, y queda dicho antes de entregar, no al cierre."
 }
