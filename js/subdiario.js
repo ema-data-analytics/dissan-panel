@@ -67,7 +67,7 @@
 var SD_DEF = {
   SubdiarioCompras: {
     titulo: 'Subdiario de IVA — Compras',
-    fn: 'api_subdiario_compras_v2',
+    fn: 'api_subdiario_compras_v3',
     nota: 'Va por <b>fecha contable</b>, no por fecha de emisión: adentro hay comprobantes ' +
           'emitidos en meses anteriores que se registraron en este. Las órdenes de pago ' +
           '(O/P) no entran, y las notas de crédito <b>restan</b>. El neto se <b>deriva del ' +
@@ -105,7 +105,7 @@ var SD_DEF = {
   },
   SubdiarioVentas: {
     titulo: 'Subdiario de IVA — Ventas',
-    fn: 'api_subdiario_ventas_v3',
+    fn: 'api_subdiario_ventas_v4',
     nota: 'Va por <b>fecha de emisión</b>. Los recibos (REC) no entran: son cobranzas. ' +
           'El IVA sale del impuesto que guarda Tango por comprobante, no de multiplicar ' +
           'los renglones. <b>Mayor/Menor</b> y la jurisdicción corregida no vienen de Tango: ' +
@@ -254,9 +254,15 @@ function sdPintar(def, filas, ms, mes){
     for (var q = 0; q < def.cols.length; q++) h.push(sdCel(filas[r], def.cols[q]));
     h.push('</tr>');
   }
-  /* la fila de total lleva la clase `tot`: filas.js la deja visible en
-     TODAS las paginas. Un total que aparece solo en la ultima no se
-     encuentra. */
+  /* LA FILA DE TOTAL VA EN <tfoot>, NO EN <tbody>.           05/11/2026
+     Estaba adentro del tbody y bajar.js lee `tbody tr`, asi que el Excel y el
+     PDF se llevaban el TOTAL como si fuera un comprobante mas: un renglon con
+     la palabra TOTAL en la columna FECHA y vacias las de CUIT y NUMERO. Medido
+     apretando el boton: leia 213 renglones donde la pantalla decia 212.
+     Un subdiario que el contador importa no puede traer un renglon que no es
+     un comprobante. En tfoot queda visible en todas las paginas igual -que era
+     el motivo de tenerlo en tbody- y el pegado al pie sigue andando. */
+  h.push('</tbody><tfoot>');
   h.push('<tr class="tot">');
   for (var z = 0; z < def.cols.length; z++){
     var cz = def.cols[z];
@@ -267,7 +273,7 @@ function sdPintar(def, filas, ms, mes){
     else h.push('<td class="sd-num" data-v="' + tv + '"><b>' + esc(sdPlata(tv)) + '</b></td>');
   }
   h.push('</tr>');
-  h.push('</tbody></table></div>');
+  h.push('</tfoot></table></div>');
 
   /* ULTIMA LINEA: la que ESCRIBE. Una pintar() que corre y no escribe no
      da error y parece que anda (paso el 21/10 con Cartera). */

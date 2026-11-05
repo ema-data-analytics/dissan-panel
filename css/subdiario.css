@@ -71,7 +71,7 @@
    le transparentaba encima y se leian dos renglones superpuestos: el TOTAL y
    un comprobante. Medido en pantalla el 05/11. El tinte verde se consigue
    igual, apilandolo SOBRE un color opaco en vez de sobre lo que haya atras. */
-.sd-tb tr.tot td{background-color:var(--caja);
+.sd-tb tfoot tr.tot td,.sd-tb tr.tot td{background-color:var(--caja);
   background-image:linear-gradient(rgba(8,165,122,.12),rgba(8,165,122,.12));
   border-top:2px solid var(--verde);border-bottom:0;position:sticky;bottom:0}
 
