@@ -41,8 +41,19 @@
 /* LA CAJA ES LA QUE HACE SCROLL, NO LA TABLA. Si la regla de ancho minimo
    va en la tabla y la tabla es su propio contenedor, se anula el scroll y
    la grilla se aplasta en el telefono (23/10, table.rt-tb). */
-.sd-caja{overflow-x:auto;border:1px solid var(--borde);border-radius:10px;
-  background:var(--caja)}
+/* Y LA CAJA VA ACOTADA EN ALTO. Medido el 05/11 en el Chrome del usuario sobre
+   el panel publicado: con la caja SIN tope, la cabecera pegada y el renglon de
+   total pegado sobre una tabla de 2.036 px de ancho cuelgan el compositor -la
+   captura de pantalla se murio a los 30 s, tres veces seguidas, con el
+   javascript de la pagina contestando en 3 ms-. Con position:static andaba al
+   toque, y con el sticky puesto pero la caja en 70vh tambien. La causa es que
+   un elemento pegado dentro de un contenedor que se desplaza SIN LIMITE obliga
+   a rasterizar una capa tan ancha como la tabla por cada celda pegada: 23 th
+   mas 18 td del total. Acotando la caja, lo pegado se pega CONTRA LA CAJA y la
+   capa queda del tamano de la caja. Ademas queda mejor: la cabecera y el total
+   se ven siempre mientras se recorren los renglones, sin mover la pagina. */
+.sd-caja{overflow:auto;max-height:70vh;overscroll-behavior:contain;
+  border:1px solid var(--borde);border-radius:10px;background:var(--caja)}
 .sd-tb{border-collapse:collapse;width:100%;min-width:max-content;font-size:12px}
 .sd-tb th{position:sticky;top:0;background:var(--caja);z-index:1;
   text-align:left;font-size:10px;font-weight:700;color:var(--gris);
