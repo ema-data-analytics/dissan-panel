@@ -28,10 +28,14 @@
 .sd-tarjetas{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px}
 .sd-tj{background:var(--caja);border:1px solid var(--borde);border-radius:10px;
   padding:12px 16px;min-width:230px;display:flex;flex-direction:column;gap:3px}
-.sd-tj b{font-size:22px;font-weight:800;line-height:1}
-.sd-tj span{font-size:11px;color:var(--gris);line-height:1.35}
-.sd-tj-ok  b{color:var(--verde2)}
-.sd-tj-mal b{color:var(--rojo)}
+/* EL NUMERO GRANDE ES EL HIJO DIRECTO, NO CUALQUIER <b>. El texto de la
+   tarjeta lleva <b> adentro del <span> para nombrar contra que se midio; con
+   `.sd-tj b` esos salian a 22px y en verde, como si cada uno fuera una cifra. */
+.sd-tj > b{font-size:22px;font-weight:800;line-height:1}
+.sd-tj span{font-size:11px;color:var(--gris);line-height:1.45}
+.sd-tj span b{font-size:inherit;font-weight:700;color:var(--texto)}
+.sd-tj-ok  > b{color:var(--verde2)}
+.sd-tj-mal > b{color:var(--rojo)}
 .sd-tj-mal{border-color:rgba(255,139,143,.45)}
 
 /* LA CAJA ES LA QUE HACE SCROLL, NO LA TABLA. Si la regla de ancho minimo

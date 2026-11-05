@@ -16,12 +16,43 @@
      COMPRAS  403 de 403 renglones identicos   md5 9ae7cbcd...5461c
      VENTAS   250 de 250 renglones identicos   md5 77776dde...2b14
 
-   LAS COLUMNAS DE CONTROL SON DE EL, Y NO LE DAN CERO. En su planilla,
-   CONTROL IMPORTE no cierra en 152 de 250 renglones de ventas (suma
-   55,64, el peor $14,00) y CONTROL TOTAL FAC no cierra en 222 de 403 de
-   compras (suma 4,37, el peor $35,60). El IVA si le da bien en los dos.
-   Las nuestras dan cero, y por eso se muestran: un control que siempre
-   da cero parece decorativo hasta el dia que deja de darlo.
+   LOS CONTROLES, MEDIDOS Y NO SUPUESTOS. Primero escribi que "los
+   nuestros dan cero" sin medirlos. Medidos sobre septiembre 2026:
+
+   · CONTROL IVA no puede fallar, ni en su planilla ni aca. Es
+     iva - round(iva/0,21 , 2)*0,21: compara el IVA contra el IVA. Da
+     cero por construccion. Se muestra porque es la columna de el, para
+     poder poner las dos planillas lado a lado, no porque controle.
+   · CONTROL TOTAL FAC, restando el neto DERIVADO, no cerraba en 222 de
+     los 403 renglones de compras ($76,98 en valor absoluto, el peor
+     $35,60) ni en 152 de 250 de ventas. No es un error de los datos:
+     los tres peores de compras son los tres comprobantes EN DOLARES
+     (cotizaciones 1.780, 1.770 y 1.508,50). El IVA viene redondeado a
+     dos decimales en dolares y al dividirlo por 0,21 y multiplicar por
+     la cotizacion, dos centavos de dolar se vuelven $35,60.
+     Por eso compras llama a api_subdiario_compras_v2, que resta el
+     NETO PROPIO DE TANGO (importe_ne) -una fuente independiente del
+     calculo-: 402 de 403 cierran al centavo y uno queda en $0,01.
+     Las 20 columnas de datos de la v2 son identicas a las de la v1
+     (misma huella md5, d29e22e2...3b50): la v2 cambia SOLO controles.
+   · Y EN VENTAS ERA PEOR: control_importe era `0::numeric`, un cero
+     escrito a mano, y la tarjeta lo mostraba en verde. Medido contra
+     gva12.importe, el total propio de Tango: 152 de 250 renglones NO
+     CIERRAN, $75,51, el peor $14,00, y el mes difiere $55,67. SON LOS
+     MISMOS 152 QUE MARCA LA COLUMNA DEL CONTADOR: su control estaba
+     bien y nuestro cero lo tapaba. La causa, medida: los peores son
+     todos comprobantes B con total REDONDO (604.800,00 · 5.575.500,00 ·
+     3.730.000,00), donde el precio al consumidor final se fija redondo y
+     Tango despeja el neto hacia atras. Ventas llama a la v3, que es la
+     v2 con esos dos controles agregados y los datos sin tocar (misma
+     huella en las 15 columnas).
+   · CONTROL NETO es nuevo y nombra la deriva: neto derivado - neto de
+     Tango. Va en gris, no en rojo, porque esta explicada. Es la columna
+     que le explica al contador por que la suya no cierra.
+
+   Un control que grita 222 veces por un motivo que no es un error se
+   apaga solo; uno que no puede fallar es decoracion. Ninguno de los dos
+   controla, y los dos estaban puestos como si controlaran.
 
    EL MES, NO UN RANGO DE FECHAS. Un subdiario es mensual. Y ademas un
    input type=date en esta automatizacion tiene la trampa del tipeo con
@@ -36,10 +67,13 @@
 var SD_DEF = {
   SubdiarioCompras: {
     titulo: 'Subdiario de IVA — Compras',
-    fn: 'api_subdiario_compras',
+    fn: 'api_subdiario_compras_v2',
     nota: 'Va por <b>fecha contable</b>, no por fecha de emisión: adentro hay comprobantes ' +
           'emitidos en meses anteriores que se registraron en este. Las órdenes de pago ' +
-          '(O/P) no entran, y las notas de crédito <b>restan</b>.',
+          '(O/P) no entran, y las notas de crédito <b>restan</b>. El neto se <b>deriva del ' +
+          'IVA</b> (IVA ÷ alícuota), que es la forma en que lo pide el contador; en los ' +
+          'comprobantes en dólares eso deja centavos de deriva contra el neto propio de ' +
+          'Tango, y esa diferencia es la columna <b>CONTROL NETO</b>.',
     cols: [
       { k:'fecha',        r:'FECHA',             t:'fecha' },
       { k:'proveedor',    r:'PROVEEDOR',         t:'txt'   },
@@ -62,16 +96,22 @@ var SD_DEF = {
       { k:'otros_imp',    r:'OTROSIMP',          t:'num'   },
       { k:'imp_total',    r:'IMP_TOTAL',         t:'num'   },
       { k:'control_iva',  r:'CONTROL IVA',       t:'ctrl'  },
-      { k:'control_total',r:'CONTROL TOTAL FAC', t:'ctrl'  }
+      { k:'control_total',r:'CONTROL TOTAL FAC', t:'ctrl',   rojo:true,
+        card:'renglones donde el comprobante no cierra contra el <b>total propio de Tango</b>' },
+      { k:'control_neto', r:'CONTROL NETO',      t:'deriva', rojo:false,
+        card:'renglones con deriva del neto <b>derivado del IVA</b> contra el neto de Tango · ' +
+             'es el redondeo del IVA en los comprobantes en dólares, multiplicado por la cotización' }
     ]
   },
   SubdiarioVentas: {
     titulo: 'Subdiario de IVA — Ventas',
-    fn: 'api_subdiario_ventas_v2',
+    fn: 'api_subdiario_ventas_v3',
     nota: 'Va por <b>fecha de emisión</b>. Los recibos (REC) no entran: son cobranzas. ' +
           'El IVA sale del impuesto que guarda Tango por comprobante, no de multiplicar ' +
           'los renglones. <b>Mayor/Menor</b> y la jurisdicción corregida no vienen de Tango: ' +
-          'se cargan por cliente y se declaran.',
+          'se cargan por cliente y se declaran. En los comprobantes <b>B</b> el precio al ' +
+          'consumidor final se fija redondo y Tango despeja el neto hacia atrás, así que las ' +
+          'partes no vuelven a dar ese total redondo: esa diferencia es <b>CONTROL IMPORTE</b>.',
     cols: [
       { k:'fecha',          r:'FECHA',           t:'fecha' },
       { k:'jurisdiccion',   r:'Jurisdicción',    t:'txt'   },
@@ -89,7 +129,12 @@ var SD_DEF = {
       { k:'perc_iibb_mza',  r:'PERC IIBB MZA',   t:'num'   },
       { k:'importe',        r:'IMPORTE',         t:'num'   },
       { k:'control_iva',    r:'CONTROL IVA',     t:'ctrl'  },
-      { k:'control_importe',r:'CONTROL IMPORTE', t:'ctrl'  }
+      { k:'control_importe',r:'CONTROL IMPORTE', t:'deriva', rojo:false,
+        card:'renglones donde el total no cierra contra el <b>total propio de Tango</b> · ' +
+             'son los comprobantes <b>B</b> con total redondo, y son los mismos que marca ' +
+             'la columna del contador' },
+      { k:'control_neto',   r:'CONTROL NETO',    t:'deriva', rojo:false,
+        card:'renglones con deriva del neto <b>derivado del IVA</b> contra el gravado de Tango' }
     ]
   }
 };
@@ -131,6 +176,14 @@ function sdCel(fila, c){
       return '<td class="sd-num sd-ok" data-v="0">0,00</td>';
     return '<td class="sd-num sd-mal" data-v="' + n + '">' + esc(sdPlata(n)) + '</td>';
   }
+  if (c.t === 'deriva'){
+    /* LA DERIVA NO VA EN ROJO. Esta explicada -el redondeo del IVA en dolares-
+       y rojo en 222 de 403 renglones ensena a ignorar el color. Va en gris, se
+       ve, se suma y se puede bajar. */
+    if (Math.abs(n) < 0.005)
+      return '<td class="sd-num sd-ok" data-v="0">0,00</td>';
+    return '<td class="sd-num sd-ok" data-v="' + n + '">' + esc(sdPlata(n)) + '</td>';
+  }
   if (Math.abs(n) < 0.005) return '<td class="sd-num"></td>';
   return '<td class="sd-num" data-v="' + n + '">' + esc(sdPlata(n)) + '</td>';
 }
@@ -149,19 +202,27 @@ function sdMes(){
 
 function sdPintar(def, filas, ms, mes){
   var h = [];
-  var tot = {}, malIva = 0, malTot = 0;
+  /* UNA TARJETA POR COLUMNA QUE DECLARA `card`, Y NINGUNA MAS. Antes habia dos
+     tarjetas fijas: una del CONTROL IVA, que no puede fallar, y otra que leia
+     control_importe, que en ventas era un cero escrito a mano. Las dos daban
+     verde sin medir nada. Ahora la tarjeta sale de la columna, con su cuenta,
+     su suma en valor absoluto y su peor renglon, y solo se pone en rojo la que
+     declara rojo:true -las demas son derivas ya explicadas con su motivo. */
+  var tot = {}, ctrl = [];
   for (var i = 0; i < def.cols.length; i++){
     var c = def.cols[i];
-    if (c.t === 'num' || c.t === 'ctrl') tot[c.k] = 0;
+    if (c.t === 'num' || c.t === 'ctrl' || c.t === 'deriva') tot[c.k] = 0;
+    if (c.card) ctrl.push({ k:c.k, card:c.card, rojo:!!c.rojo, n:0, abs:0, peor:0 });
   }
   for (var f = 0; f < filas.length; f++){
     for (var j = 0; j < def.cols.length; j++){
       var cc = def.cols[j];
       if (tot.hasOwnProperty(cc.k)) tot[cc.k] += Number(filas[f][cc.k] || 0);
     }
-    if (Math.abs(Number(filas[f].control_iva || 0)) >= 0.005) malIva++;
-    var ct = filas[f].control_total !== undefined ? filas[f].control_total : filas[f].control_importe;
-    if (Math.abs(Number(ct || 0)) >= 0.005) malTot++;
+    for (var g = 0; g < ctrl.length; g++){
+      var a = Math.abs(Number(filas[f][ctrl[g].k] || 0));
+      if (a >= 0.005){ ctrl[g].n++; ctrl[g].abs += a; if (a > ctrl[g].peor) ctrl[g].peor = a; }
+    }
   }
 
   h.push('<div class="sd-sec">' + esc(def.titulo) + ' · ' + esc(mes.rotulo) + '</div>');
@@ -169,14 +230,19 @@ function sdPintar(def, filas, ms, mes){
        + sdMiles(ms) + ' ms contra la base</div>');
   h.push('<div class="sd-nota">' + def.nota + '</div>');
 
-  /* LOS DOS CONTROLES, ARRIBA Y CON SU NUMERO. Son los que dicen si el
-     subdiario se puede presentar. Si alguno no da cero, la pantalla lo
-     muestra en rojo con cuantos renglones, no en un pie que nadie lee. */
+  /* LOS CONTROLES, ARRIBA Y CON SU NUMERO, no en un pie que nadie lee. Cada
+     uno dice CONTRA QUE midio y cuanto dio: la cuenta de renglones, la suma en
+     valor absoluto y el peor renglon. Un control sin esos tres numeros no se
+     puede discutir con el contador. */
   h.push('<div class="sd-tarjetas">');
-  h.push('<div class="sd-tj ' + (malIva ? 'sd-tj-mal' : 'sd-tj-ok') + '"><b>'
-       + sdMiles(malIva) + '</b><span>renglones donde el IVA no cierra contra su neto</span></div>');
-  h.push('<div class="sd-tj ' + (malTot ? 'sd-tj-mal' : 'sd-tj-ok') + '"><b>'
-       + sdMiles(malTot) + '</b><span>renglones donde las partes no dan el total</span></div>');
+  for (var q = 0; q < ctrl.length; q++){
+    var x = ctrl[q];
+    h.push('<div class="sd-tj ' + ((x.n && x.rojo) ? 'sd-tj-mal' : 'sd-tj-ok') + '"><b>'
+         + sdMiles(x.n) + '</b><span>' + x.card
+         + (x.n ? ' · <b>' + esc(sdPlata(x.abs)) + '</b> en total, el peor '
+                  + esc(sdPlata(x.peor)) : '')
+         + '</span></div>');
+  }
   h.push('</div>');
 
   h.push('<div class="sd-caja"><table class="sd-tb"><thead><tr>');
