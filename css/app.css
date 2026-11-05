@@ -294,13 +294,23 @@ td.num,th.num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-n
 
 #sidebar{width:232px;flex-shrink:0;background:#09233A;display:flex;
   flex-direction:column;padding:22px 0;border-right:1px solid var(--borde)}
-.marca{padding:2px 20px 18px}
-.marca-logo{display:block;width:112px;height:auto}
-.marca-pie{margin-top:7px;font-size:10.5px;color:var(--gris);letter-spacing:1px;
-  text-transform:uppercase}
-.marca-socio{width:fit-content;margin:0 0 18px 20px;padding:6px 9px;background:#fff;
+/* LA MARCA DEL SISTEMA, ARRIBA DE TODO.                     05/11/2026
+   Pedido del usuario: el nombre del sistema primero, DISSAN abajo y los dos
+   logos al final. Antes el logo de EMA iba arriba y el sistema no tenia
+   nombre a la vista. */
+.marca{padding:16px 20px 12px}
+.marca-sistema{font-size:17.5px;font-weight:800;letter-spacing:.5px;line-height:1.12;
+  color:var(--texto);text-transform:uppercase}
+.marca-pie{margin-top:6px;font-size:11px;color:var(--verde2);letter-spacing:2.2px;
+  font-weight:700;text-transform:uppercase}
+.marca-logos{display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  margin:0 20px 18px}
+.marca-logo{display:block;width:92px;height:auto}
+/* la caja blanca es del logo del socio, que esta pensado para fondo claro;
+   el de EMA va sobre el fondo oscuro, como estaba. */
+.marca-socio{width:fit-content;margin:0;padding:5px 8px;background:#fff;
   border-radius:8px;display:flex}
-.marca-socio img{display:block;width:80px;height:auto}
+.marca-socio img{display:block;width:72px;height:auto}
 
 #menuLateral{flex:1;padding:6px 12px}
 #menuLateral a{display:flex;align-items:center;gap:11px;padding:10px 12px;margin-bottom:2px;
