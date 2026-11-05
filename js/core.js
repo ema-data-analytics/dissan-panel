@@ -189,7 +189,12 @@ const PANTALLAS = {
   Stock:          { archivo: 'stock.html',     rotulo: 'Stock' },
   Compras:        { archivo: 'compras.html',   rotulo: 'Compras' },
   Tesoreria:      { archivo: 'tesoreria.html', rotulo: 'Tesorería' },
-  Cartera:        { archivo: 'cartera.html',   rotulo: 'Cartera' }
+  Cartera:        { archivo: 'cartera.html',   rotulo: 'Cartera' },
+  /* los dos subdiarios de IVA, 05/11/2026. Esta lista es a mano y se queda
+     corta sin avisar: el modulo aparece apagado aunque tenga pantalla.
+     Lo frena control/alcance.js, que compara estas claves contra `modulos`. */
+  SubdiarioVentas:  { archivo: 'subdiario-ventas.html',  rotulo: 'Subdiario de Ventas' },
+  SubdiarioCompras: { archivo: 'subdiario-compras.html', rotulo: 'Subdiario de Compras' }
 };
 
 let MI_ROL = '', EMAIL_ENTRO = '';
