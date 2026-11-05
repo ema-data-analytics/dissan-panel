@@ -66,8 +66,14 @@
 .sd-tb .sd-cod{font-variant-numeric:tabular-nums}
 .sd-tb .sd-ok{color:var(--gris)}
 .sd-tb .sd-mal{color:var(--rojo);font-weight:700}
-.sd-tb tr.tot td{background:rgba(8,165,122,.12);border-top:2px solid var(--verde);
-  border-bottom:0;position:sticky;bottom:0}
+/* EL RENGLON DE TOTAL ESTA PEGADO, ASI QUE TIENE QUE SER OPACO. Con el fondo
+   translucido -rgba(8,165,122,.12)- el renglon de datos que pasa por debajo se
+   le transparentaba encima y se leian dos renglones superpuestos: el TOTAL y
+   un comprobante. Medido en pantalla el 05/11. El tinte verde se consigue
+   igual, apilandolo SOBRE un color opaco en vez de sobre lo que haya atras. */
+.sd-tb tr.tot td{background-color:var(--caja);
+  background-image:linear-gradient(rgba(8,165,122,.12),rgba(8,165,122,.12));
+  border-top:2px solid var(--verde);border-bottom:0;position:sticky;bottom:0}
 
 @media (max-width:900px){
   .sd-form{gap:10px}
