@@ -500,7 +500,7 @@ function ayLecturaMal(motivo, detalle){
   caja.className = 'ay-lectura nope';
   caja.innerHTML = '<div class="enc">La lectura no salió</div>' +
     '<div class="txt">' + esc(motivo) + ' Los datos de abajo sí están.' +
-    (detalle ? '<br><span style="color:#7C93A3;font-size:12px">' + esc(detalle) + '</span>' : '') +
+    (detalle ? '<br><span style="color:#9FB4C4;font-size:12px">' + esc(detalle) + '</span>' : '') +
     '</div>';
   ayAjustar();
 }

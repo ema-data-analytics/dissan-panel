@@ -7,7 +7,7 @@
    ==================================================================== */
 .mv{ --navy:#09233A; --navy-content:#0B2740; --navy-card:#123252;
      --off-white:#F2F5F3; --green:#08A57A; --green-hover:#0BC492;
-     --gray:#7C93A3; --red:#E5484D; }
+     --gray:#9FB4C4; --red:#E5484D; }
 
   /* ====================================================================
      Margen de ventas reales — revisión 5 (14/10/2026)
@@ -34,7 +34,7 @@
   /* pasteles sobrios, validados sobre fondo oscuro. Ninguna barra depende
      del color: todas llevan el número escrito al lado. */
   .mv{ --p1:#8FB8DE; --p2:#E3A987; --p3:#9ED3BC; --p4:#C9B6DC; --p5:#DCC48E;
-       --ok:#9ED3BC; --mal:#E6A3A3; --ojo:#DCC48E; --tx:#A8BACC; --tx2:#7E91A3; }
+       --ok:#9ED3BC; --mal:#E6A3A3; --ojo:#DCC48E; --tx:#A8BACC; --tx2:#9FB4C4; }
 
   .mv-cab p{ color:var(--tx); font-size:12px; line-height:1.55; max-width:900px; margin:5px 0 0; }
   .mv-cab b{ color:var(--off-white); font-weight:600; }
@@ -65,7 +65,7 @@
   .mv-chk input{ accent-color:var(--p1); }
 
   .mv-acciones{ display:flex; gap:8px; align-items:center; margin-top:11px; flex-wrap:wrap; }
-  .mv-btn{ background:var(--green); color:#fff; border:0; border-radius:5px; padding:7px 16px;
+  .mv-btn{ background:var(--green); color:#04121d; border:0; border-radius:5px; padding:7px 16px;
            font:inherit; font-size:12px; font-weight:600; cursor:pointer; height:30px; }
   .mv-btn:hover:not(:disabled){ background:var(--green-hover); }
   .mv-btn:disabled{ opacity:.45; cursor:not-allowed; }

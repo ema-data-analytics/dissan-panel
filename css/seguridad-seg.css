@@ -6,14 +6,14 @@
    de api_roles_v2(), que los lee de modulos.roles.
    =================================================================== */
   .seg-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 22px; gap: 16px; }
-  .seg-sub { font-size: 13px; color: #7C93A3; margin-top: 3px; }
+  .seg-sub { font-size: 13px; color: #9FB4C4; margin-top: 3px; }
   .seg-titulo-h { font-family: 'Sora', sans-serif; font-size: 19px; font-weight: 700; }
 
   .seg-buscador {
     flex: 1; max-width: 320px; display: flex; align-items: center; gap: 9px;
     background: #123252; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 9px 13px;
   }
-  .seg-buscador svg { width: 15px; height: 15px; color: #7C93A3; flex-shrink: 0; }
+  .seg-buscador svg { width: 15px; height: 15px; color: #9FB4C4; flex-shrink: 0; }
   .seg-buscador input { border: none; background: none; outline: none; color: #F2F5F3; font-size: 13.5px; width: 100%; }
 
   .btn-nuevo {
@@ -27,7 +27,7 @@
   .seg-tabla-wrap { background: #123252; border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; overflow: hidden; }
   .seg-tabla { width: 100%; border-collapse: collapse; }
   .seg-tabla th {
-    text-align: left; padding: 12px 18px; font-size: 11px; font-weight: 600; color: #7C93A3;
+    text-align: left; padding: 12px 18px; font-size: 11px; font-weight: 600; color: #9FB4C4;
     text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid rgba(255,255,255,0.08);
   }
   .seg-tabla td { padding: 13px 18px; font-size: 13.5px; border-bottom: 1px solid rgba(255,255,255,0.05); }
@@ -68,7 +68,7 @@
     padding: 26px 28px; width: 100%; max-width: 380px; box-shadow: 0 20px 60px rgba(0,0,0,0.5);
   }
   .modal-titulo { font-family: 'Sora', sans-serif; font-size: 16px; font-weight: 700; margin-bottom: 18px; }
-  .modal-caja label { display: block; font-size: 12px; font-weight: 600; color: #7C93A3; margin-bottom: 5px; margin-top: 14px; }
+  .modal-caja label { display: block; font-size: 12px; font-weight: 600; color: #9FB4C4; margin-bottom: 5px; margin-top: 14px; }
   .modal-caja input, .modal-caja select {
     width: 100%; padding: 10px 12px; border: 1.5px solid rgba(255,255,255,0.1); border-radius: 7px;
     font-size: 13.5px; background: #0B2740; color: #F2F5F3; outline: none;
