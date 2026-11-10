@@ -253,8 +253,14 @@ function sdPintar(def, filas, ms, mes){
      con huella md5 del conjunto ordenado-; las tres de CONTROL las agregue yo
      y en su planilla no existen. Se ven en pantalla, que es donde sirven para
      discutir con el, y `data-no-baja` las deja afuera del Excel y del PDF. */
+  /* `data-clave`: fecha, tipo y numero se REPITEN en la hoja de controles,
+     para poder ir a buscar el renglon en la hoja 1. Una hoja de control con
+     puros numeros y sin el comprobante al lado no sirve para nada. */
+  var CLAVE = { fecha:1, tipo:1, numero:1, comprobante:1 };
   for (var k = 0; k < def.cols.length; k++)
-    h.push('<th' + ((def.cols[k].t === 'ctrl' || def.cols[k].t === 'deriva') ? ' data-no-baja' : '')
+    h.push('<th'
+         + ((def.cols[k].t === 'ctrl' || def.cols[k].t === 'deriva') ? ' data-no-baja' : '')
+         + (CLAVE[def.cols[k].k] ? ' data-clave' : '')
          + '>' + esc(def.cols[k].r) + '</th>');
   h.push('</tr></thead><tbody>');
   for (var r = 0; r < filas.length; r++){

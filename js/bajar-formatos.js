@@ -140,22 +140,18 @@ function bajarCol(n){                /* 0 -> A, 26 -> AA */
   return s;
 }
 
-function bajarXlsx(hoja){
-  /* Los formatos que se usan, en el orden en que se declaran abajo.
-     El 0 es el General de Excel; los nuestros empiezan en 164. */
-  /* 'num4' se agregó el 27/10 para la planilla de precios de compra de Tango:
-     ahí el precio viene con CUATRO decimales (6162,4152) y mostrarlo con dos
-     haría creer que el archivo perdió los decimales. El valor guardado es el
-     mismo; lo que cambia es lo que se ve al abrirlo.
-     Los índices 0..6 NO se mueven: el nuevo va al final. */
+/* El envoltorio: acepta una hoja o un arreglo de hojas y arma el libro.
+   `bajarUnaHoja` devuelve el XML de una sola; aca se juntan y se escriben las
+   piezas del .xlsx con tantas sheetN.xml como hojas haya. */
+/* LOS ESTILOS SON LOS MISMOS PARA TODAS LAS HOJAS DEL LIBRO.  10/11/2026
+   Estaban adentro del armador de la hoja; al pasar a varias hojas tienen
+   que salir una sola vez, porque xl/styles.xml es uno solo para el libro. */
+function bajarEstilosXlsx(){
   var FMT = ['#,##0.00', '#,##0', '0.0"%"', 'dd/mm/yyyy', '#,##0.0000'];
-  var IDX = { num:1, ent:2, pct:3, fecha:4, texto:0, titulo:5, enc:6, num4:7 };
-
   var numFmts = FMT.map(function(f, i){
     return '<numFmt numFmtId="' + (164 + i) + '" formatCode="' + bajarXmlEsc(f) + '"/>';
   }).join('');
-
-  var estilos =
+  return
     '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
     '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
     '<numFmts count="' + FMT.length + '">' + numFmts + '</numFmts>' +
@@ -185,7 +181,82 @@ function bajarXlsx(hoja){
     '</cellXfs>' +
     '<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>' +
     '</styleSheet>';
+}
 
+function bajarXlsx(hojas){
+  var lista = Array.isArray(hojas) ? hojas.filter(function(h){ return h; }) : [hojas];
+  if (!lista.length) lista = [{ nombre:'Detalle', encabezados:[], filas:[], formatos:[] }];
+
+  var xmls = lista.map(function(h, i){
+    h.primera = (i === 0);
+    return bajarUnaHoja(h);
+  });
+  var nombres = lista.map(function(h, i){
+    return bajarXmlEsc(String(h.nombre || ('Hoja' + (i+1))).slice(0, 31)
+             .replace(/[\\\/\?\*\[\]:]/g, ' '));
+  });
+
+  var piezas = [
+    { nombre: '[Content_Types].xml', datos:
+      '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
+      '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' +
+      '<Default Extension="xml" ContentType="application/xml"/>' +
+      '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>' +
+      xmls.map(function(x, i){
+        return '<Override PartName="/xl/worksheets/sheet' + (i+1) + '.xml" ' +
+               'ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>';
+      }).join('') +
+      '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>' +
+      '</Types>' },
+    { nombre: '_rels/.rels', datos:
+      '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+      '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>' +
+      '</Relationships>' },
+    { nombre: 'xl/workbook.xml', datos:
+      '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" ' +
+      'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">' +
+      '<sheets>' + nombres.map(function(n, i){
+        return '<sheet name="' + n + '" sheetId="' + (i+1) + '" r:id="rId' + (i+1) + '"/>';
+      }).join('') + '</sheets></workbook>' },
+    { nombre: 'xl/_rels/workbook.xml.rels', datos:
+      '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+      xmls.map(function(x, i){
+        return '<Relationship Id="rId' + (i+1) + '" ' +
+               'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" ' +
+               'Target="worksheets/sheet' + (i+1) + '.xml"/>';
+      }).join('') +
+      '<Relationship Id="rId' + (xmls.length + 1) + '" ' +
+      'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>' +
+      '</Relationships>' },
+    { nombre: 'xl/styles.xml', datos: bajarEstilosXlsx() }
+  ];
+  xmls.forEach(function(x, i){
+    piezas.push({ nombre: 'xl/worksheets/sheet' + (i+1) + '.xml', datos: x });
+  });
+  return bajarZip(piezas);
+}
+
+function bajarUnaHoja(hoja){
+  /* Los formatos que se usan, en el orden en que se declaran abajo.
+     El 0 es el General de Excel; los nuestros empiezan en 164. */
+  /* 'num4' se agregó el 27/10 para la planilla de precios de compra de Tango:
+     ahí el precio viene con CUATRO decimales (6162,4152) y mostrarlo con dos
+     haría creer que el archivo perdió los decimales. El valor guardado es el
+     mismo; lo que cambia es lo que se ve al abrirlo.
+     Los índices 0..6 NO se mueven: el nuevo va al final. */
+  var IDX = { num:1, ent:2, pct:3, fecha:4, texto:0, titulo:5, enc:6, num4:7 };
+
+  /* UN LIBRO PUEDE TENER VARIAS HOJAS.                        10/11/2026
+     Hasta hoy esto armaba SIEMPRE una sola. Lo pidio el usuario para el
+     subdiario: la hoja 1 tiene que quedar columna por columna igual a la del
+     contador, y las columnas de CONTROL -que hoy encontraron $623.256,66 en
+     compras y $8.000 en ventas- van en una segunda hoja en vez de perderse.
+     Se acepta `bajarXlsx(hoja)` como siempre, o `bajarXlsx([hoja1, hoja2])`.
+     Lo de abajo arma UNA hoja; el envoltorio de arriba lo llama por cada una. */
   var filas = [], nf = 1;
 
   (hoja.titulo || []).forEach(function(t){
@@ -253,7 +324,10 @@ function bajarXlsx(hoja){
   var sheet =
     '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
     '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
-    '<sheetViews><sheetView workbookViewId="0" tabSelected="1">' +
+    /* `tabSelected` SOLO EN LA PRIMERA. Si dos hojas dicen que estan
+       seleccionadas, Excel abre el libro con las dos marcadas y cualquier cosa
+       que se escriba cae en las dos a la vez. */
+    '<sheetViews><sheetView workbookViewId="0"' + (hoja.primera ? ' tabSelected="1"' : '') + '>' +
       '<pane ySplit="' + filaEnc + '" topLeftCell="A' + (filaEnc + 1) +
       '" activePane="bottomLeft" state="frozen"/>' +
     '</sheetView></sheetViews>' +
@@ -263,39 +337,7 @@ function bajarXlsx(hoja){
     '<autoFilter ref="A' + filaEnc + ':' + ultima + (nf - 1) + '"/>' +
     '</worksheet>';
 
-  var nombreHoja = bajarXmlEsc(String(hoja.nombre || 'Detalle').slice(0, 31)
-                     .replace(/[\\\/\?\*\[\]:]/g, ' '));
-
-  return bajarZip([
-    { nombre: '[Content_Types].xml', datos:
-      '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
-      '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
-      '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' +
-      '<Default Extension="xml" ContentType="application/xml"/>' +
-      '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>' +
-      '<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>' +
-      '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>' +
-      '</Types>' },
-    { nombre: '_rels/.rels', datos:
-      '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
-      '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
-      '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>' +
-      '</Relationships>' },
-    { nombre: 'xl/workbook.xml', datos:
-      '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
-      '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" ' +
-      'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">' +
-      '<sheets><sheet name="' + nombreHoja + '" sheetId="1" r:id="rId1"/></sheets>' +
-      '</workbook>' },
-    { nombre: 'xl/_rels/workbook.xml.rels', datos:
-      '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
-      '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
-      '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>' +
-      '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>' +
-      '</Relationships>' },
-    { nombre: 'xl/styles.xml', datos: estilos },
-    { nombre: 'xl/worksheets/sheet1.xml', datos: sheet }
-  ]);
+  return sheet;
 }
 
 /* ===================================================================

@@ -114,23 +114,29 @@ function bajarLeerTabla(tabla){
      Los indices se saltean en el encabezado Y en cada fila, con el mismo
      corrimiento: si se saltearan solo en uno, el archivo saldria con las
      columnas corridas y cada numero debajo del titulo equivocado. */
-  var enc = [], saltar = {};
+  var enc = [], saltar = {}, iCtrl = [], encCtrl = [], iClave = [], encClave = [];
   var ths = tabla.querySelectorAll('thead th');
   for (var i = 0; i < ths.length; i++){
-    if (ths[i].hasAttribute('data-no-baja')) { saltar[i] = true; continue; }
-    var e = (ths[i].textContent || '').trim();
-    enc.push(e || ('Columna ' + (i + 1)));
+    var tx = (ths[i].textContent || '').trim() || ('Columna ' + (i + 1));
+    /* `data-clave` identifica el renglon y se REPITE en la hoja de controles:
+       una hoja de control sin fecha ni numero de comprobante no sirve para
+       ir a buscar el renglon en la otra hoja. */
+    if (ths[i].hasAttribute('data-clave')) { iClave.push(i); encClave.push(tx); }
+    if (ths[i].hasAttribute('data-no-baja')) { saltar[i] = true; iCtrl.push(i); encCtrl.push(tx); continue; }
+    enc.push(tx);
   }
-  var filas = [], trs = tabla.querySelectorAll('tbody tr');
+  var filas = [], ctrl = [], claves = [], trs = tabla.querySelectorAll('tbody tr');
   for (var r = 0; r < trs.length; r++){
-    var tds = trs[r].children, fila = [];
+    var tds = trs[r].children, fila = [], fc = [], fk = [];
     /* una fila de "no hay datos" ocupa una sola celda con colspan: no es dato */
     if (tds.length === 1 && ths.length > 1) continue;
     for (var c = 0; c < tds.length; c++){
       if (saltar[c]) continue;
       fila.push(bajarCelda(tds[c]));
     }
-    filas.push(fila);
+    for (var m = 0; m < iCtrl.length; m++)  fc.push(bajarCelda(tds[iCtrl[m]]));
+    for (var n2 = 0; n2 < iClave.length; n2++) fk.push(bajarCelda(tds[iClave[n2]]));
+    filas.push(fila); ctrl.push(fc); claves.push(fk);
   }
   /* el tipo de cada columna: el que más se repite entre sus celdas con valor */
   var tipos = [];
@@ -153,7 +159,8 @@ function bajarLeerTabla(tabla){
     tipos.push({ tipo: t, pct: con > 0 && pct >= con * 0.8,
                  cod: con > 0 && cods >= con * 0.8 });
   }
-  return { encabezados: enc, filas: filas, tipos: tipos };
+  return { encabezados: enc, filas: filas, tipos: tipos,
+           encCtrl: encCtrl, ctrl: ctrl, encClave: encClave, claves: claves };
 }
 
 /* ---------- qué filtros están puestos arriba ----------
@@ -279,6 +286,14 @@ function bajarNombreArchivo(t){
     .replace(/[^a-z0-9 ]/g, ' ').trim().replace(/\s+/g, '-').slice(0, 60) || 'detalle';
 }
 
+/* El importe para el texto del resumen de la hoja de controles. Va con
+   separador de miles y dos decimales, igual que la pantalla: un numero suelto
+   en un titulo se lee mal. */
+function bajarPlataTxt(n){
+  var v = Number(n) || 0;
+  return '$ ' + v.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+}
+
 function bajarHoy(){
   var d = new Date();
   return d.toLocaleDateString('es-AR', { day:'2-digit', month:'2-digit', year:'numeric' }) +
@@ -342,14 +357,78 @@ function bajarAExcel(tabla, boton){
       return Math.min(44, a);
     });
 
-    return bajarXlsx({
+    var libro = [{
       nombre: 'Detalle',
       titulo: ['DISSAN \u00b7 ' + modulo, titulo,
                filtros.length ? 'Filtros: ' + filtros.join('  \u00b7  ') : 'Sin filtros',
                d.filas.length + (d.filas.length === 1 ? ' rengl\u00f3n' : ' renglones') +
                ' \u00b7 bajado el ' + bajarHoy()],
       encabezados: d.encabezados, filas: filas, formatos: formatos, anchos: anchos
-    }).then(function(bytes){
+    }];
+
+    /* ---------- LA HOJA DE CONTROLES ----------                 10/11/2026
+       Las columnas marcadas `data-no-baja` salen de la hoja 1 -que tiene que
+       quedar igual a la planilla del contador- y vienen a parar aca, con las
+       columnas `data-clave` al lado para poder ir a buscar el renglon.
+       Pedido textual del usuario: "NO LAS SAQUES SI ES QUE SIRVEN, MANDALAS A
+       UN REPORTE EN OTRA HOJA DEL LIBRO EXCEL".
+       Arriba van SOLO los renglones que no cierran, del peor al mejor: una
+       hoja con 3.125 ceros no se mira. Si cierran todos, la hoja lo dice en
+       una linea en vez de quedar vacia -una hoja vacia no se distingue de una
+       hoja rota-. */
+    if (d.encCtrl.length){
+      var peor = function(fc){
+        var p = 0;
+        for (var i = 0; i < fc.length; i++)
+          if (fc[i] && fc[i].t === 'num' && Math.abs(fc[i].v) > p) p = Math.abs(fc[i].v);
+        return p;
+      };
+      var idx = [];
+      for (var i2 = 0; i2 < d.ctrl.length; i2++) if (peor(d.ctrl[i2]) >= 0.005) idx.push(i2);
+      idx.sort(function(a, b){ return peor(d.ctrl[b]) - peor(d.ctrl[a]); });
+
+      var sumas = d.encCtrl.map(function(){ return 0; });
+      var cuenta = d.encCtrl.map(function(){ return 0; });
+      for (var r2 = 0; r2 < d.ctrl.length; r2++){
+        for (var c2 = 0; c2 < d.encCtrl.length; c2++){
+          var ce = d.ctrl[r2][c2];
+          if (ce && ce.t === 'num' && Math.abs(ce.v) >= 0.005){
+            sumas[c2] += Math.abs(ce.v); cuenta[c2]++;
+          }
+        }
+      }
+      var resumen = d.encCtrl.map(function(e, k){
+        return e + ': ' + cuenta[k] + (cuenta[k] === 1 ? ' rengl\u00f3n' : ' renglones') +
+               ', ' + bajarPlataTxt(sumas[k]) + ' en valor absoluto';
+      });
+
+      var encC = d.encClave.concat(d.encCtrl);
+      var filC = idx.map(function(i3){
+        return d.claves[i3].concat(d.ctrl[i3]).map(function(cel){
+          return (cel && cel.t !== 'vacio') ? cel : { v:null, t:'vacio' };
+        });
+      });
+      if (!filC.length){
+        var vacio = encC.map(function(_, k){
+          return k === 0 ? { v:'Cierran todos los renglones', t:'texto' } : { v:null, t:'vacio' };
+        });
+        filC = [vacio];
+      }
+      libro.push({
+        nombre: 'Controles',
+        titulo: ['DISSAN \u00b7 ' + modulo + ' \u00b7 CONTROLES', titulo,
+                 'Renglones que NO cierran, del peor al mejor. Los que cierran no se listan.']
+                .concat(resumen)
+                .concat([d.filas.length + ' renglones controlados \u00b7 ' + idx.length +
+                         ' con diferencia \u00b7 bajado el ' + bajarHoy()]),
+        encabezados: encC,
+        filas: filC,
+        formatos: encC.map(function(_, k){ return k < d.encClave.length ? '' : 'num'; }),
+        anchos: encC.map(function(e){ return Math.min(32, Math.max(14, e.length + 4)); })
+      });
+    }
+
+    return bajarXlsx(libro).then(function(bytes){
       bajarArchivo(bytes,
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         bajarNombreArchivo(titulo) + '.xlsx');
