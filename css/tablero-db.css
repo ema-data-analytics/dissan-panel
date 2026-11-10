@@ -90,16 +90,31 @@
 
   .db-tarjetas{ display:grid; grid-template-columns:repeat(auto-fill, minmax(146px,1fr));
                 gap:9px; margin-bottom:6px; }
-  .db-t{ background:var(--navy-card); border-radius:8px; padding:11px 13px; }
+  /* min-width:0 — UNA CELDA DE GRILLA NO SE ENCOGE SOLA.  10/11/2026
+     El minimo por defecto de un item de grid es `auto`, o sea el ancho de su
+     contenido: una tarjeta con un subtitulo largo ensancha la grilla entera y
+     la PAGINA se desliza al costado. Medido: con el subtitulo
+     "$4.359.520.935 medidos de $7.051.595.064" el telefono daba 458 px de
+     scroll horizontal. El overflow-wrap de abajo no alcanza sin esto. */
+  .db-t{ background:var(--navy-card); border-radius:8px; padding:11px 13px; min-width:0; }
   /* overflow-wrap: un numero cortado por el ancho de la tarjeta se lee como otro
      numero. $3.549.541.334 se mostraba $3.549.541.33 — diez veces menos. */
   .db-t .n{ font-size:20px; font-weight:700; line-height:1.15; font-variant-numeric:tabular-nums;
             overflow-wrap:anywhere; }
   .db-t .n.mal{ color:var(--mal); } .db-t .n.ok{ color:var(--ok); } .db-t .n.ojo{ color:var(--ojo); }
-  .db-t .r{ font-size:11px; color:var(--tx); margin-top:3px; line-height:1.3; }
-  .db-t .p{ font-size:10px; color:var(--tx2); margin-top:4px; line-height:1.3; }
+  .db-t .r{ font-size:11px; color:var(--tx); margin-top:3px; line-height:1.3;
+            overflow-wrap:anywhere; }
+  .db-t .p{ font-size:10px; color:var(--tx2); margin-top:4px; line-height:1.3;
+            overflow-wrap:anywhere; }
 
+  /* `> *{min-width:0}` — LO MISMO QUE .db-t, Y ES EL QUE ROMPIA LA PAGINA.
+     Medido el 10/11: .db-dos media 336 px en el telefono y adentro tenia una
+     .db-tb-caja de 819. Un item de grilla no baja de su contenido salvo que se
+     le diga, asi que la tabla estiraba la columna, la columna al #shell y el
+     #shell a la pagina: 458 px de scroll horizontal. La tabla YA sabe
+     deslizarse sola dentro de .db-tb-caja; lo que faltaba era dejarla encoger. */
   .db-dos{ display:grid; grid-template-columns:repeat(auto-fit, minmax(330px,1fr)); gap:14px; }
+  .db-dos > *{ min-width:0; }
 
   .db-sec{ margin:20px 0 8px; font-size:11.5px; font-weight:700; color:var(--tx);
            text-transform:uppercase; letter-spacing:.07em; }
@@ -107,7 +122,16 @@
                  color:var(--tx2); font-size:11px; margin-top:3px; line-height:1.45; }
   .db-graf{ background:var(--navy-card); border-radius:8px; padding:12px 14px 7px;
             position:relative; max-width:660px; }
-  .db-graf svg{ display:block; width:100%; overflow:visible; }
+  /* SIN overflow:visible.  10/11/2026
+     app.css le da al svg `min-width:430px` y a .db-graf `overflow-x:auto`: la
+     idea es que el grafico se deslice ADENTRO de su caja. `overflow:visible`
+     en el svg rompia eso y el grafico empujaba la PAGINA entera: 458 px de
+     scroll horizontal en el telefono. Y no hacia falta: el viewBox mide
+     58+370+76 = 504 y el rotulo mas lejano llega a 461, asi que nada pinta
+     afuera. Se vio recien el 10/11, cuando el control de pantallas aprendio a
+     cargar el Tablero CON datos -el grafico mes a mes solo existe si hay mas
+     de un mes, y hasta ese dia el juguete no tenia respuesta del Tablero-. */
+  .db-graf svg{ display:block; width:100%; }
   .db-graf .et{ font-size:10px; fill:var(--tx); }
   .db-graf .val{ font-size:10px; fill:var(--off-white); font-weight:600;
                  font-variant-numeric:tabular-nums; }

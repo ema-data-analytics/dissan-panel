@@ -510,10 +510,23 @@ function mvDibujar(d, estado, cuerpo){
   }
   h.push('</div>');
 
-  /* 4. la cobertura, siempre declarada con su denominador */
-  h.push('<div class="mv-aviso ok"><b>Cobertura: ' + mvDec(r.cobertura_pct) + '%.</b> ' +
-         'De los ' + mvNum(r.renglones_totales) + ' renglones que entran en esos filtros se miden ' +
-         mvNum(r.medidos) + '. El resto no tiene costo confiable y queda afuera. ' +
+  /* 4. la cobertura, siempre declarada con su denominador
+     EL DENOMINADOR ES TODO LO FACTURADO, NO LO MEDIBLE.  10/11/2026
+     cobertura_pct divide lo medido por lo que YA pasó el filtro de calidad y
+     el de "solo productos": compara el grupo A contra el grupo A y por eso da
+     98,1%. Sobre todo lo facturado del período da 61,8%. Lo que falta no es
+     ruido: son $2.285.716.252 de consignación en 2026 —mercadería que DISSAN
+     no compra, así que el costo no existe— más $41.389.664 de stock propio
+     sin costo, que sí es un dato que falta. */
+  h.push('<div class="mv-aviso"><b>Cobertura sobre TODO lo facturado: ' +
+         mvDec(r.cobertura_sobre_todo_pct) + '%.</b> De ' + mvPesos(r.facturado_universo) +
+         ' facturados se miden ' + mvPesos(r.facturado) + ' — ' + mvNum(r.medidos) +
+         ' de ' + mvNum(r.renglones_universo) + ' renglones. Queda afuera <b>' +
+         mvPesos(r.consignacion_monto) + '</b> de consignación (' +
+         mvDec(r.consignacion_pct) + '%: el proveedor deja el material, DISSAN no lo compra, ' +
+         'y el costo de compra no existe) y <b>' + mvPesos(r.stock_propio_sin_costo) +
+         '</b> de mercadería propia sin costo. Dentro de lo medible la cobertura es ' +
+         mvDec(r.cobertura_pct) + '%. ' +
          '<b>No dice que el resto esté bien: dice que no se puede saber.</b>' +
          (Number(r.costo_posterior || 0) > 0
             ? ' <b style="color:var(--mal)">Atención: ' + mvNum(r.costo_posterior) +

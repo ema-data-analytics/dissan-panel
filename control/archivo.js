@@ -120,8 +120,20 @@ async function main(){
 
     /* los botones de Excel de cada grilla. El boton se declara con
        data-que, asi que no hay que adivinarlo por el texto. */
-    const botones = await pg.$$('.bajar-btn[data-que="excel"]');
+    let botones = await pg.$$('.bajar-btn[data-que="excel"]');
     for (let i = 0; i < botones.length; i++){
+      /* LOS BOTONES SE VUELVEN A BUSCAR EN CADA VUELTA.        10/11/2026
+         Este control agarraba los botones de Excel UNA SOLA VEZ, antes del
+         bucle, y los de PDF los rebuscaba en cada vuelta. Las barras se
+         rearman solas (bajarPonerBotones corre con un MutationObserver), asi
+         que despues de bajar el PDF de la grilla 5 el botón guardado de la 6
+         ya no era el de esa grilla: el clic no hacia nada, sin error de
+         consola, y la puerta cantaba "el boton no bajo nada" en ventas.html.
+         Medido: el mismo boton, rebuscado, baja en 100 ms. Era defecto DEL
+         CONTROL, no del panel — el botón, a mano, siempre funciono. Una
+         puerta que grita por lo que no importa entrena a ignorarla. */
+      botones = await pg.$$('.bajar-btn[data-que="excel"]');
+      if (!botones[i]) break;
       medido.grillas++;
 
       /* LO QUE MUESTRA LA PANTALLA, LEIDO EN CRUDO.

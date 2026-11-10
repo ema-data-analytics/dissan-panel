@@ -300,8 +300,22 @@ function dbDibujar(d, estado, cuerpo){
                    dbNum(r.renglones_totales) + ' renglones', ''));
   h.push(dbTarjeta(dbMillones(r.margen_bruto), 'ganancia bruta',
                    dbPesos(r.margen_bruto) + ' · costo ' + dbPesos(r.costo), 'ok'));
-  h.push(dbTarjeta(dbDec(r.cobertura_pct) + '%', 'cobertura',
-                   'lo que se puede medir', Number(r.cobertura_pct) < 60 ? 'ojo' : 'ok'));
+  /* LA COBERTURA VA SOBRE TODO LO FACTURADO, NO SOBRE SI MISMA.  10/11/2026
+     Hasta hoy esta tarjeta mostraba 98,1% y ese numero salia de dividir lo
+     medido por lo medible — el denominador ya tenia aplicado el filtro de
+     calidad y el de "solo productos", asi que se comparaba el grupo A contra
+     el grupo A. Sobre TODO lo que se facturo en el periodo da 61,8%. Es el
+     mismo defecto del 08/10 (92,8% que en realidad era 56,5%), que volvio
+     cuando la v3 empezo a recibir p_calidad. */
+  h.push(dbTarjeta(dbDec(r.cobertura_sobre_todo_pct) + '%', 'cobertura sobre TODO lo facturado',
+                   dbPesos(r.facturado) + ' medidos de ' + dbPesos(r.facturado_universo),
+                   Number(r.cobertura_sobre_todo_pct) < 60 ? 'mal' : 'ojo'));
+  if (Number(r.consignacion_monto || 0) > 0){
+    h.push(dbTarjeta(dbMillones(r.consignacion_monto), 'consignación — fuera del margen',
+                     dbPesos(r.consignacion_monto) + ' · ' + dbDec(r.consignacion_pct) +
+                     '% de lo facturado · ' + dbNum(r.consignacion_renglones) + ' renglones',
+                     'ojo'));
+  }
   h.push(dbTarjeta(dbNum(r.bajo_costo_n), 'renglones bajo el costo',
                    dbPesos(r.perdida) + ' perdidos ahí',
                    Number(r.bajo_costo_n) > 0 ? 'mal' : 'ok'));
@@ -311,12 +325,20 @@ function dbDibujar(d, estado, cuerpo){
   }
   h.push('</div>');
 
-  h.push('<div class="db-aviso ok"><b>Cobertura ' + dbDec(r.cobertura_pct) + '%.</b> ' +
-         'De los ' + dbNum(r.renglones_totales) + ' renglones del período se miden ' +
-         dbNum(r.medidos) + '; el resto no tiene costo confiable y queda afuera. ' +
-         '<b>No dice que el resto esté bien: dice que no se puede saber.</b> ' +
-         'La base no tiene stock inicial —se vendió más de lo que se compró según lo migrado— ' +
-         'y la consignación no tiene orden de compra, así que nunca va a llegar al 100%.</div>');
+  h.push('<div class="db-aviso"><b>El margen de arriba se mide sobre ' +
+         dbDec(r.cobertura_sobre_todo_pct) + '% de lo facturado del período, no sobre todo.</b> ' +
+         'De <b>' + dbPesos(r.facturado_universo) + '</b> facturados se miden <b>' +
+         dbPesos(r.facturado) + '</b> — ' + dbNum(r.medidos) + ' de ' +
+         dbNum(r.renglones_universo) + ' renglones. Queda afuera:<br>' +
+         '· <b>' + dbPesos(r.consignacion_monto) + '</b> de <b>consignación</b> (' +
+         dbDec(r.consignacion_pct) + '% de lo facturado, ' + dbNum(r.consignacion_renglones) +
+         ' renglones). El proveedor deja el material, DISSAN no lo compra: ' +
+         'no tiene costo de compra porque <b>ese costo no existe</b>, no porque falte el dato. ' +
+         'Son los sistemas e implantes que se facturan armados.<br>' +
+         '· <b>' + dbPesos(r.stock_propio_sin_costo) + '</b> de mercadería <b>propia</b> sin costo. ' +
+         'Eso sí es un dato que falta y se está resolviendo.<br>' +
+         'Dentro de lo medible la cobertura es ' + dbDec(r.cobertura_pct) + '%. ' +
+         '<b>Nada de esto dice que el resto esté bien: dice que no se puede saber.</b></div>');
 
   /* margen mes a mes */
   var pm = (d.por_mes || []).filter(function(m){ return Number(m.n || 0) > 0; });
