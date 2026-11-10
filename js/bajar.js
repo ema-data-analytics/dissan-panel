@@ -105,9 +105,19 @@ function bajarCelda(td){
 
 /* ---------- leer la tabla entera ---------- */
 function bajarLeerTabla(tabla){
-  var enc = [];
+  /* UNA COLUMNA PUEDE SER DE PANTALLA Y NO DE ARCHIVO.        10/11/2026
+     El `th` marcado con `data-no-baja` se ve en la grilla y NO entra al Excel
+     ni al PDF. Lo pidio el usuario para el subdiario: el archivo tiene que
+     quedar columna por columna igual al del contador, y las tres columnas de
+     CONTROL son nuestras, no suyas. Se lee del DOM y no de una lista escrita
+     al lado: si manana se agrega una columna de control, alcanza con marcarla.
+     Los indices se saltean en el encabezado Y en cada fila, con el mismo
+     corrimiento: si se saltearan solo en uno, el archivo saldria con las
+     columnas corridas y cada numero debajo del titulo equivocado. */
+  var enc = [], saltar = {};
   var ths = tabla.querySelectorAll('thead th');
   for (var i = 0; i < ths.length; i++){
+    if (ths[i].hasAttribute('data-no-baja')) { saltar[i] = true; continue; }
     var e = (ths[i].textContent || '').trim();
     enc.push(e || ('Columna ' + (i + 1)));
   }
@@ -115,8 +125,11 @@ function bajarLeerTabla(tabla){
   for (var r = 0; r < trs.length; r++){
     var tds = trs[r].children, fila = [];
     /* una fila de "no hay datos" ocupa una sola celda con colspan: no es dato */
-    if (tds.length === 1 && enc.length > 1) continue;
-    for (var c = 0; c < tds.length; c++) fila.push(bajarCelda(tds[c]));
+    if (tds.length === 1 && ths.length > 1) continue;
+    for (var c = 0; c < tds.length; c++){
+      if (saltar[c]) continue;
+      fila.push(bajarCelda(tds[c]));
+    }
     filas.push(fila);
   }
   /* el tipo de cada columna: el que más se repite entre sus celdas con valor */

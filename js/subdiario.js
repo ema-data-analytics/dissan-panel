@@ -246,8 +246,16 @@ function sdPintar(def, filas, ms, mes){
   h.push('</div>');
 
   h.push('<div class="sd-caja"><table class="sd-tb"><thead><tr>');
+  /* LAS COLUMNAS DE CONTROL NO VAN AL ARCHIVO.                10/11/2026
+     El usuario lo pidio textual: el Excel que baja tiene que tener las
+     columnas EXACTAMENTE como el del contador. Las de datos ya lo estan -la
+     v1 cerro 403 de 403 contra "2026.09 COMPRAS contador asi lo envio.xlsx",
+     con huella md5 del conjunto ordenado-; las tres de CONTROL las agregue yo
+     y en su planilla no existen. Se ven en pantalla, que es donde sirven para
+     discutir con el, y `data-no-baja` las deja afuera del Excel y del PDF. */
   for (var k = 0; k < def.cols.length; k++)
-    h.push('<th>' + esc(def.cols[k].r) + '</th>');
+    h.push('<th' + ((def.cols[k].t === 'ctrl' || def.cols[k].t === 'deriva') ? ' data-no-baja' : '')
+         + '>' + esc(def.cols[k].r) + '</th>');
   h.push('</tr></thead><tbody>');
   for (var r = 0; r < filas.length; r++){
     h.push('<tr>');

@@ -37,6 +37,14 @@
                  {clave:'Cotizador',nombre:'Cotizador (en desarrollo)',grupo:null},
                  {clave:'MargenDeVentas',nombre:'Márgenes de Ventas Reales (Pedidos – OC)',grupo:'CONSULTAS'},
                  {clave:'Ventas',nombre:'Ventas Facturadas y Costos (Detalle - Filtros)',grupo:'CONSULTAS'},
+                 /* LOS DOS DEL SUBDIARIO, agregados el 10/11/2026.
+                    No estaban, asi que el portero tapaba las dos pantallas y la
+                    puerta de pantallas las media como "abren limpias" sin haber
+                    pintado nunca una grilla. Estan apagadas para dissan y super
+                    en la base de verdad -eso lo decide `modulos`, no esto-; aca
+                    tienen que estar para poder PROBARLAS. */
+                 {clave:'SubdiarioCompras',nombre:'Subdiario de IVA — Compras',grupo:'IMPUESTOS'},
+                 {clave:'SubdiarioVentas',nombre:'Subdiario de IVA — Ventas',grupo:'IMPUESTOS'},
                  {clave:'Listas',nombre:'Listas de Precios Proveedores',grupo:'COMPRAS'},
                  {clave:'Informe',nombre:'Informe de Base Verificada',grupo:'HERRAMIENTAS DE CONTROL'},
                  {clave:'Hilo',nombre:'Hilo Conductor',grupo:'HERRAMIENTAS DE CONTROL'},
