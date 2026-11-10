@@ -151,7 +151,13 @@ function bajarEstilosXlsx(){
   var numFmts = FMT.map(function(f, i){
     return '<numFmt numFmtId="' + (164 + i) + '" formatCode="' + bajarXmlEsc(f) + '"/>';
   }).join('');
-  return
+  /* El '' + va PEGADO al return a proposito.  10/11/2026
+     Un `return` solo en su renglon devuelve undefined: JavaScript le inserta
+     el punto y coma antes de la cadena. `node --check` lo da por bueno porque
+     es sintaxis valida. Dejo asi los 13 Excel del panel con styles.xml en 0
+     bytes, y la puerta "el archivo bajado" los abrio con openpyxl y corto el
+     push. No se parte este renglon nunca. */
+  return '' +
     '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
     '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
     '<numFmts count="' + FMT.length + '">' + numFmts + '</numFmts>' +
