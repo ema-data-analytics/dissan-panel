@@ -55,6 +55,30 @@ function vtExacto(n){
   return vtSigno(n, Math.abs(Number(n)).toLocaleString('es-AR',
                   {minimumFractionDigits:2, maximumFractionDigits:2}));
 }
+/* POR QUE UN RENGLON NO TIENE PROVEEDOR — MEDIDO, NO AFIRMADO.  10/11/2026
+   Acá decía, escrito a mano: "casi todo es consignación, que nunca se compró".
+   El usuario lo vio en pantalla filtrando por DROGUERIA CENTRAL y lo mandé a
+   medir: de los 12 renglones, 11 eran STOCK PROPIO y la consignación era UNO,
+   $661.033,06 — el 1,6%, no "casi todo". La causa real es que al artículo le
+   falta el SINONIMO del proveedor en Tango.
+   Una afirmación fija sobre datos que cambian con cada filtro miente apenas
+   cambia el filtro. Ahora el texto sale de los dos números que devuelve
+   api_ventas_fact_resumen, así que no puede volver a mentir. */
+function vtSinProvPorQue(av){
+  var tot = Number(av.renglones_sin_proveedor || 0);
+  var con = Number(av.renglones_sin_prov_consig || 0);
+  if (!tot) return 'no hay ninguno en este período.';
+  var plata = vtExacto(av.plata_sin_prov_consig || 0);
+  if (con === 0)
+    return 'ninguno es consignación. A los ' + vtNum(tot) + ' les falta el ' +
+           '<b>sinónimo del proveedor</b> en Tango, que es de donde sale el nombre.';
+  if (con === tot)
+    return 'los ' + vtNum(tot) + ' son consignación (' + plata + '), que nunca se compró ' +
+           'y por eso no tiene proveedor de compra.';
+  return vtNum(con) + ' de ' + vtNum(tot) + ' son consignación (' + plata + '), que nunca ' +
+         'se compró. A los otros ' + vtNum(tot - con) + ' —mercadería propia— les falta el ' +
+         '<b>sinónimo del proveedor</b> en Tango.';
+}
 function vtMillones(n){
   var v = Number(n || 0);
   if (Math.abs(v) >= 1e6)
@@ -639,8 +663,8 @@ function vtDibujar(res, det, msTotal, msPartes){
          'en ' + vtNum(Number(tot.renglones) - Number(av.renglones_sin_proveedor || 0)) + ' de ' +
          vtNum(tot.renglones) + ' renglones hay <b>exactamente uno</b> y en ninguno hay dos. ' +
          'Los ' + vtNum(av.renglones_sin_proveedor) + ' renglones sin proveedor son ' +
-         vtExacto(av.plata_sin_proveedor) + ' y van en su propia fila: casi todo es ' +
-         'consignación, que nunca se compró.</small></div>');
+         vtExacto(av.plata_sin_proveedor) + ' y van en su propia fila: ' +
+         vtSinProvPorQue(av) + '</small></div>');
   h.push('<div class="db-tb-caja"><table class="db-tb"><thead><tr>' +
          '<th>Código</th><th>Proveedor</th>');
   for (var a5 = 0; a5 < anios.length; a5++) h.push('<th class="db-num">' + anios[a5] + '</th>');
