@@ -245,6 +245,36 @@ async function main(){
         continue;
       }
       medido.humo++;
+      /* UN 5xx NO ES "TE DEJO PASAR": ES QUE NO ARRANCO.           11/11/2026
+         Hoy esto corto un push acusando a diag-clave de abrirle la puerta a
+         la clave publishable. Medida a mano un minuto despues, la misma
+         funcion contesta 410 "fuera de servicio", sin datos y sin acceso:
+         esta correctamente apagada. Lo que habia contestado era HTTP 555,
+         el arranque en frio fallido de una edge function, y como 555 no
+         estaba en la lista de rechazos la puerta lo leyo como que entro.
+         Acusar de agujero de seguridad a algo que no lo es tiene el mismo
+         costo que no ver uno: la proxima vez se mira para otro lado. Un 5xx
+         se reintenta una vez y, si persiste, se informa por lo que es. */
+      if (st >= 500){
+        let st2 = st, cuerpo2 = cuerpoTxt;
+        await new Promise(r => setTimeout(r, 2500));
+        try {
+          const r2 = await fetch(URL_FN + s, {
+            method: 'POST',
+            headers: Object.assign({ 'Content-Type': 'application/json' }, cab),
+            body: JSON.stringify(CUERPOS[s] || {})
+          });
+          st2 = r2.status; cuerpo2 = (await r2.text()).slice(0, 200);
+        } catch (e){ /* se queda con lo primero */ }
+        if (st2 >= 500){
+          falla(s, 'la_funcion_no_arranca',
+                'con ' + como + ' contesto HTTP ' + st2 + ' dos veces seguidas: '
+              + cuerpo2.slice(0, 120) + ' — esto NO es que deje entrar, es que la '
+              + 'edge function no levanta.');
+          continue;
+        }
+        st = st2; cuerpoTxt = cuerpo2;   /* al segundo intento contesto bien */
+      }
       const rechazo = [401, 403, 410, 400].includes(st);
       const rechazaEnElCuerpo = /sin_sesion|sin permiso|no tenes permiso|Volv[eé] a entrar/i.test(cuerpoTxt);
       if (rechazo) continue;
