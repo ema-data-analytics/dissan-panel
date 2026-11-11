@@ -110,6 +110,11 @@ correr "el control del control del pdf" control/pdf-senuelos.js \
                                                   node control/pdf-senuelos.js
 correr "las pantallas"      control/pantallas.js  node control/pantallas.js
 correr "el archivo bajado"  control/archivo.js    node control/archivo.js
+# PUERTA 13, 10/11/2026. El Tablero estuvo nueve horas caido a 54 s y las doce
+# puertas de arriba no lo vieron, porque corren cuando yo pusheo. El panel
+# ahora avisa solo cuando una llamada pasa de 3 s o da error; esto controla
+# ese aviso, que si no es codigo que nadie mira.
+correr "el aviso en vivo"   control/envivo.js     node control/envivo.js
 
 echo ""
 if [ -z "$FALLARON" ]; then

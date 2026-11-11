@@ -59,13 +59,60 @@ function traducirError(e) {
   return m.replace(/^ERROR:\s*/, '');
 }
 
+/* EL QUE USA EL PANEL ES EL RELOJ.                           10/11/2026
+   El 10/11 el Tablero estuvo NUEVE HORAS caído a 54 s de timeout con doce
+   puertas alrededor, y ninguna lo vio: las puertas corren CUANDO YO PUSHEO, y
+   entre push y push no mide nadie. Lo encontré de casualidad probando otra
+   cosa.
+   El número ya estaba acá abajo —`ms`— y se tiraba a la basura. Ahora, cuando
+   una llamada MOLESTA (da error, o pasa de 3 s), el propio navegador la anota
+   en ema.panel_llamada, y api_estado_del_sistema() la muestra en rojo.
+
+   TRES FRENOS, porque esto corre en la máquina del usuario:
+     · sólo se anota lo que molesta — una pantalla sana no escribe una fila;
+     · de las lentas se manda UNA sola por carga, la peor, 2 s después de que
+       se calmó el panel (si no, una pantalla con ocho consultas lentas manda
+       ocho avisos del mismo problema);
+     · si el aviso falla, se traga en silencio. Un control que rompe la
+       pantalla que vigila es peor que no tener control. */
+const AVISO_LENTO_MS = 3000;
+let _peorLlamada = null, _avisoTimer = null, _avisosEnviados = 0;
+
+function pantallaActual() {
+  const p = (location.pathname || '').split('/').pop();
+  return (p && p !== '' ? p : 'index.html').slice(0, 60);
+}
+
+function avisarLlamada(fn, ms, error) {
+  if (fn === 'api_anotar_llamada') return;          /* nunca avisar del aviso */
+  if (_avisosEnviados >= 10) return;                /* freno duro por carga */
+  _avisosEnviados++;
+  try {
+    sb.rpc('api_anotar_llamada', {
+      p_pantalla: pantallaActual(), p_funcion: String(fn).slice(0, 80),
+      p_ms: Math.round(ms) || 0, p_error: error ? String(error).slice(0, 200) : null
+    }).then(() => {}, () => {});
+  } catch (_) { /* en silencio, a propósito */ }
+}
+
+function anotarLenta(fn, ms) {
+  if (fn === 'api_anotar_llamada' || ms < AVISO_LENTO_MS) return;
+  if (!_peorLlamada || ms > _peorLlamada.ms) _peorLlamada = { fn, ms };
+  clearTimeout(_avisoTimer);
+  _avisoTimer = setTimeout(() => {
+    if (_peorLlamada) { avisarLlamada(_peorLlamada.fn, _peorLlamada.ms, null); _peorLlamada = null; }
+  }, 2000);
+}
+
 /* El reloj es parte del control, no un adorno: la comparación contra Apps
    Script se hace con este número. */
 async function rpc(fn, args = {}) {
   const t0 = performance.now();
   const { data, error } = await sb.rpc(fn, args);
   const ms = Math.round(performance.now() - t0);
-  if (error) { const x = new Error(traducirError(error)); x.ms = ms; throw x; }
+  if (error) { const x = new Error(traducirError(error)); x.ms = ms;
+               avisarLlamada(fn, ms, error.message || x.message); throw x; }
+  anotarLenta(fn, ms);
   return { data, ms };
 }
 
@@ -97,6 +144,7 @@ async function rpcTodo(fn, args = {}) {
     if (error) {
       const x = new Error(traducirError(error));
       x.ms = Math.round(performance.now() - t0);
+      avisarLlamada(fn, x.ms, error.message || x.message);
       throw x;
     }
     const p = data || [];
@@ -107,7 +155,9 @@ async function rpcTodo(fn, args = {}) {
     desde += p.length;
     if (vueltas >= RPC_VUELTAS_MAX) { freno = true; break; }
   }
-  return { data: todo, ms: Math.round(performance.now() - t0),
+  const msTotal = Math.round(performance.now() - t0);
+  anotarLenta(fn, msTotal);
+  return { data: todo, ms: msTotal,
            paginas: vueltas, paso: paso, freno: freno };
 }
 

@@ -100,6 +100,7 @@ const PUERTAS = [
   ['el control del control del pdf',     'node',    'control/pdf-senuelos.js'],
   ['las pantallas',                      'node',    'control/pantallas.js'],
   ['el archivo bajado',                  'node',    'control/archivo.js'],
+  ['el aviso en vivo',                   'node',    'control/envivo.js'],
 ];
 
 /* la linea "midio:" de cada control, que es lo que se guarda como prueba
