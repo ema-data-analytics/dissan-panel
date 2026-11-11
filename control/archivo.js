@@ -105,6 +105,21 @@ async function main(){
 
   for (const p of pantallas){
     const ctx = await b.newContext({ viewport:{ width:1500, height:950 }, acceptDownloads:true });
+    /* POR QUE HAY UNA ESPERA ENTRE GRILLA Y GRILLA — Y QUE NO ERA.  10/11/2026
+       En ventas.html, despues de bajar 5 Excel y 5 PDF, el Excel de la grilla
+       6 "no bajaba" en 20 s. Clickeada sola, esa misma grilla baja en 100 ms,
+       y el boton llegaba a decir "Bajado · 2": el archivo SE ARMABA BIEN.
+       Primero crei que era el tope de descargas automaticas en cadena de
+       Chrome y le pedi el permiso por CDP. LA LLAMADA FALLO -Protocol error-
+       Y AUN ASI LA CORRIDA PASO: o sea que paso por suerte, no por el
+       arreglo, y ademas la hipotesis era falsa -si fuera un tope de 10, la
+       descarga 12 tampoco habria salido, y salio-.
+       Lo que si se sostiene con lo medido: armar un PDF deja el hilo de la
+       pagina ocupado, y el Excel de la grilla siguiente queda encolado detras.
+       Con 5 PDFs encima se pasaba de los 20 s de espera.
+       Asi que: se le da aire a la pagina entre grilla y grilla, y la espera de
+       la descarga sube a 45 s. Es mas lento y es deterministico, que es lo
+       unico que le sirve a una puerta. */
     const pg = await ctx.newPage();
     /* el juguete tiene que ganarle al CDN: el mismo defecto que el control
        de pantallas tenia el 31/10 y que lo dejaba midiendo contra la base real */
@@ -115,7 +130,28 @@ async function main(){
     try {
       await pg.goto('http://127.0.0.1:' + PUERTO + '/' + p + '?f=' + Date.now(), { waitUntil:'load' });
     } catch (e){ await ctx.close(); continue; }
-    await pg.waitForTimeout(2200);
+    /* SE ESPERA A QUE LA PANTALLA SE QUEDE QUIETA, NO 2,2 SEGUNDOS.  10/11/2026
+       Habia un waitForTimeout(2200) fijo. Una pantalla que tarda mas sigue
+       armando grillas mientras este control ya esta clickeando, y como las
+       barras se rearman solas (bajarPonerBotones con MutationObserver), el
+       boton que agarro queda huerfano: el clic no hace nada y la puerta canta
+       "el boton no bajo nada" sin que haya ningun defecto en el panel. Paso
+       hoy en ventas.html, y antes de esto ya habia pasado una vez: la nota de
+       mas abajo cuenta el mismo sintoma con otra causa.
+       Un control que depende de que la pantalla tarde menos que un numero
+       escrito a mano no mide el panel: mide la suerte. Ahora se espera a que
+       la cantidad de botones no cambie durante 1,2 s, con tope de 30 s. */
+    {
+      let antes = -1, iguales = 0, vueltas = 0;
+      while (vueltas++ < 100){
+        const ahora = (await pg.$$('.bajar-btn[data-que="excel"]')).length;
+        iguales = (ahora === antes && ahora > 0) ? iguales + 1 : 0;
+        antes = ahora;
+        if (iguales >= 4) break;              /* 4 x 300 ms = 1,2 s quieta */
+        await pg.waitForTimeout(300);
+      }
+      if (antes === 0) await pg.waitForTimeout(1500);  /* pantalla sin grillas */
+    }
     medido.pantallas++;
 
     /* los botones de Excel de cada grilla. El boton se declara con
@@ -132,6 +168,9 @@ async function main(){
          Medido: el mismo boton, rebuscado, baja en 100 ms. Era defecto DEL
          CONTROL, no del panel — el botón, a mano, siempre funciono. Una
          puerta que grita por lo que no importa entrena a ignorarla. */
+      /* aire para que la pagina termine lo de la grilla anterior -el PDF deja
+         el hilo ocupado- antes de pedirle el Excel de esta */
+      if (i > 0) await pg.waitForTimeout(700);
       botones = await pg.$$('.bajar-btn[data-que="excel"]');
       if (!botones[i]) break;
       medido.grillas++;
@@ -168,7 +207,7 @@ async function main(){
 
       let dl;
       try {
-        const esperar = pg.waitForEvent('download', { timeout: 20000 });
+        const esperar = pg.waitForEvent('download', { timeout: 45000 });
         await botones[i].click();
         dl = await esperar;
       } catch (e){
@@ -211,7 +250,7 @@ async function main(){
       if (botonesPdf[i]){
         medido.pdfs++;
         try {
-          const esperarPdf = pg.waitForEvent('download', { timeout: 20000 });
+          const esperarPdf = pg.waitForEvent('download', { timeout: 45000 });
           await botonesPdf[i].click();
           const dlp = await esperarPdf;
           await dlp.saveAs(destino.replace(/\.xlsx$/i, '') + '.pdf');
