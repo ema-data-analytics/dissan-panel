@@ -445,8 +445,10 @@ function dbDibujar(d, estado, cuerpo){
   var cal = d.calidad || [];
   if (cal.length){
     h.push('<div class="db-sec">De dónde sale el costo' +
-           '<small>Sólo se suman las filas que empiezan con A. Las B usan un costo de más de ' +
-           '180 días y en pesos nominales eso infla el margen. Las C no tienen ninguna compra ' +
+           '<small>Sólo se suman las filas que empiezan con A. Las B no entran: o usan un '  +
+           'costo de más de 180 días —en pesos nominales eso infla el margen— o lo '  +
+           'tomaron del precio de la última compra porque el PEPS se quedó sin capas, '+
+           'y ese no es el costo de lo que salió. Las C no tienen ninguna compra '     +
            'con la que medirse.</small></div>');
     h.push('<div class="db-tb-caja"><table class="db-tb"><thead><tr>' +
            '<th>Calidad del costo</th><th class="db-num">Renglones</th>' +

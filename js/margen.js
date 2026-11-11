@@ -538,9 +538,11 @@ function mvDibujar(d, estado, cuerpo){
   var cal = d.calidad || [];
   if (cal.length){
     h.push('<div class="mv-sec">De dónde sale el costo' +
-           '<small>Sólo se suman las filas que empiezan con A. Las B usan un costo de más de ' +
-           '180 días: en pesos nominales eso infla el margen y no se puede llamar rentabilidad. ' +
-           'Las C no tienen ninguna compra con la que medirse.</small></div>');
+           '<small>Sólo se suman las filas que empiezan con A. Las B no entran: o usan un '  +
+           'costo de más de 180 días —en pesos nominales eso infla el margen— o lo '  +
+           'tomaron del precio de la última compra porque el PEPS se quedó sin capas, '+
+           'y ese no es el costo de lo que salió. Las C no tienen ninguna compra '     +
+           'con la que medirse.</small></div>');
     h.push('<div class="mv-tb-caja" style="max-height:none"><table class="mv-tb"><thead><tr>' +
            '<th>Calidad del costo</th><th class="mv-num">Renglones</th>' +
            '<th class="mv-num">Venta</th><th class="mv-num">% de la venta</th>' +

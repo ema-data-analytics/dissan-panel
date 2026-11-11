@@ -115,6 +115,11 @@ correr "el archivo bajado"  control/archivo.js    node control/archivo.js
 # ahora avisa solo cuando una llamada pasa de 3 s o da error; esto controla
 # ese aviso, que si no es codigo que nadie mira.
 correr "el aviso en vivo"   control/envivo.js     node control/envivo.js
+# PUERTA 14, 11/11/2026. Las trece de arriba pasaron todas mientras
+# ventas.html estaba rota en produccion: el juguete contesta por NOMBRE de
+# funcion y nunca mira los argumentos. Esto le manda a PostgREST de verdad
+# las mismas firmas que manda el panel.
+correr "las firmas"         control/firmas.js     node control/firmas.js
 
 echo ""
 if [ -z "$FALLARON" ]; then

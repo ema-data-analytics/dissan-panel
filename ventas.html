@@ -89,9 +89,15 @@
       <div>
         <h3>De dónde sale el costo</h3>
         <p>De la mejor fuente que exista para ese renglón, en este orden: el <b>lote</b> de la
-        factura del proveedor, la <b>orden de compra</b> que Compras asoció al pedido,
-        <b>PEPS</b> con restricción de fecha, o el último costo reciente. Nunca de
+        factura del proveedor, la <b>orden de compra</b> que Compras asoció al pedido, o
+        <b>PEPS</b> con restricción de fecha. Nunca de
         <code>sta12</code>, el maestro de costos de Tango, que está abandonado.</p>
+        <p>Hasta el 10/11/2026 había un cuarto: cuando el PEPS se quedaba sin capas de compra,
+        el sistema tomaba <b>el precio de la última compra</b>, que no tiene nada que ver con
+        la mercadería que salió. Eso hacía aparecer pérdidas que no existían — $18,4 millones
+        en DROGUERÍA CENTRAL y $67,3 millones en O.S.E.P., entre otros. <b>Se sacó de la cifra
+        publicada</b>: esos renglones quedan declarados aparte, sin costo, en vez de con uno
+        inventado.</p>
       </div>
       <div>
         <h3>Margen % y MarkUp % no son lo mismo</h3>
