@@ -108,7 +108,13 @@
     api_bitacora: BITACORA,
     api_bitacora_resumen: BITRES,
     api_ventas_fact_informe: INFORME,
-    api_ventas_fact_por_mes_v2: PORMES
+    api_ventas_fact_por_mes_v2: PORMES,
+    /* Las _json devuelven lo MISMO en una sola fila: el 10/11 la pantalla paso
+       a pedirlas asi para no reejecutar la funcion una vez por pagina. El
+       juguete las sirve con los mismos datos, porque si no el control veria
+       la pantalla vacia y la daria por buena. */
+    api_ventas_fact_informe_json: INFORME,
+    api_ventas_fact_por_mes_v2_json: PORMES
   };
 
   window.__LLAMADAS = [];

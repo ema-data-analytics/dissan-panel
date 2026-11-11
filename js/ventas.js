@@ -292,9 +292,18 @@ function vtCargar(){
      salen de vista_margen_v2_oc y aplican la MISMA cuarentena que
      api_margen_tablero_v3, asi que esta pantalla y el Tablero no pueden decir
      numeros distintos. */
+  /* UNA LLAMADA, NO SEIS.                                      10/11/2026
+     Esto venia con rpcTodo, que pide DE A PAGINAS de 1.000 por el tope de
+     filas del servidor. Medido en la base: la funcion se vuelve a ejecutar
+     ENTERA en cada pagina -- 6 paginas 3.843 ms contra 1.692 ms de una sola
+     llamada. En el navegador de Anibal eran 6.008 ms, y lo delato el aviso
+     en vivo, no yo.
+     Las versiones _json devuelven UNA fila (un jsonb), asi que el tope de
+     filas no aplica: una ejecucion y un viaje. Las originales siguen vivas
+     al lado, sin tocar. */
   var pedidos = [ rpc('api_ventas_fact_resumen', f),
-                  rpcTodo('api_ventas_fact_informe', det),
-                  rpcTodo('api_ventas_fact_por_mes_v2',
+                  rpc('api_ventas_fact_informe_json', det),
+                  rpc('api_ventas_fact_por_mes_v2_json',
                       { p_desde:f.p_desde, p_hasta:f.p_hasta, p_clientes:f.p_clientes,
                         p_provincias:f.p_provincias, p_proveedores:f.p_proveedores }) ];
   if (!VT.opciones){
