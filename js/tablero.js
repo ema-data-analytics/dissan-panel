@@ -6,12 +6,16 @@
 var DB = { datos:null, cargando:false, listasCargadas:false, listas:{},
            elegido:{ Cliente:[], Zona:[] } };
 
-/* Las cuatro calidades firmes. 'A. orden de compra del pedido' es el
-   metodo que rige: dejarla afuera borra la mitad de lo facturado. */
+/* Las calidades firmes. 'A. orden de compra del pedido' es el metodo que
+   rige: dejarla afuera borra la mitad de lo facturado.
+   Eran cuatro; el 10/11 se cayo 'A. ultimo costo reciente', que no es un
+   costo medido sino el respaldo que inventa uno con el precio de la ultima
+   compra cuando el PEPS se queda sin capas. Medido en 2026: 38 renglones,
+   $24.646.475,71 facturados contra $55.794.012,63 de "costo". El detalle
+   esta en js/core.js, arriba de CALIDAD_FIRME. */
 var DB_CALIDAD = ['A. orden de compra del pedido',
                   'A. lote exacto',
-                  'A. peps',
-                  'A. ultimo costo reciente'];
+                  'A. peps'];
 
 var DB_MESES = ['', 'enero','febrero','marzo','abril','mayo','junio','julio',
                 'agosto','septiembre','octubre','noviembre','diciembre'];

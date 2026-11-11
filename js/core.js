@@ -16,13 +16,26 @@ const sb = window.supabase.createClient(SB_URL, SB_KEY, {
   auth: { persistSession: true, autoRefreshToken: true, storageKey: 'dissan_panel_v1' }
 });
 
-/* Las CUATRO calidades que manda la pantalla. Si se agrega un método de costeo
+/* Las calidades que manda la pantalla. Si se agrega un método de costeo
    nuevo a vista_margen_v2_oc hay que agregarlo acá también, o desaparece de la
-   medición sin avisar — es el error del 14/10 que borró media facturación. */
+   medición sin avisar — es el error del 14/10 que borró media facturación.
+
+   ERAN CUATRO Y AHORA SON TRES.                              10/11/2026
+   Se cayó 'A. ultimo costo reciente'. Ese método NO es un costo medido: es el
+   respaldo que usa el sistema cuando el PEPS se queda sin capas de compra, y
+   lo que agarra es el precio de la ÚLTIMA compra, que no tiene nada que ver
+   con la mercadería que salió. Es el defecto que el 06/11 hizo aparecer
+   $18.443.461,74 de pérdida falsa en DROGUERÍA CENTRAL.
+   Medido el 10/11 sobre 2026: 38 renglones, $24.646.475,71 facturados contra
+   un "costo" de $55.794.012,63 — MÁS DEL DOBLE DE LA VENTA. Un costo que
+   duplica al precio no es un costo.
+   En la base pasó a llamarse 'B. ultimo costo, sin capa de compra', así que
+   sale de la cifra publicada y queda declarado aparte, igual que los de más
+   de 180 días. Efecto medido sobre lo publicado: el margen 2026 sigue en
+   35,4% y la cobertura en 61,8%. */
 const CALIDAD_FIRME = [
   'A. lote exacto',
   'A. peps',
-  'A. ultimo costo reciente',
   'A. orden de compra del pedido'
 ];
 const CALIDAD_CON_180 = CALIDAD_FIRME.concat(['B. costo de mas de 180 dias']);
