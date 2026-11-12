@@ -8,9 +8,13 @@
    verbatim. Lo unico que cambia son los SIETE puentes que iban por
    google.script.run:
 
-     apiPreguntar      -> rpc api_preguntar
-     apiAyudaIA        -> Edge Function «preguntar»
+     apiPreguntar      -> rpc api_preguntar_estricto  (la lista, solo si cubre
+                          la pregunta entera; si no, devuelve entendio=false)
+     apiAyudaIA        -> Edge Function «preguntar4» (el circuito con el mapa,
+                          los ejemplos y la memoria. Trae la lectura adentro)
      apiAyudaLectura   -> Edge Function «leer»    (+ api_preguntar_todo)
+                          SOLO para lo que contesto la lista: lo del circuito
+                          ya viene con su lectura y pedirla seria pagar dos veces
      apiAyudaPulgar    -> rpc api_ayuda_pulgar
      apiAyudaExcelVale -> Edge Function «excel»   (+ api_preguntar_todo)
      apiAyudaHtmlVale  -> se arma y baja acá, sin servidor
@@ -234,19 +238,32 @@ function ayMontarGrafico(cont, datos, ej){
 
 /* ---------- preguntar ---------- */
 /* =====================================================================
-   PRIMERO LAS INTENCIONES, DESPUES EL MODELO        (14/10/2026)
+   CONTESTA LA IA. LA LISTA SOLO SI CUBRE LA PREGUNTA ENTERA.  11/11/2026
    =====================================================================
-   api_preguntar resuelve con las 49 intenciones cargadas: entiende el
-   96,8% de las 124 preguntas que se hicieron de verdad y contesta con
-   datos el 90,3%, SIN GASTAR UN TOKEN y sin poder inventar una consulta.
-   Recien si no entiende o no trae filas se llama al modelo (apiAyudaIA).
+   HASTA HOY ERA AL REVES, y estaba mal medido. Decia aca que las
+   intenciones entendian el 96,8%: eso media si CAIA en alguna intencion,
+   no si la respuesta contestaba la pregunta. Medido hoy sobre 64 preguntas
+   reales de 30 dias: 52 las intercepto la lista y SOLO 8 llegaron a la IA.
+   Y dos de cada seis que probe contestaban OTRA COSA con confianza alta:
 
-   Por que importa el orden: el 14/10 la pantalla iba directo al modelo y
-   servia de su memoria un SQL que ligaba cpa36.observaciones EN CRUDO
-   contra gva21.nro_pedido -- cero coincidencias, asi que las columnas de
-   orden de compra salian NULL en las 200 filas -- y filtraba
-   extract(month)=8 sin anio, mezclando cuatro agostos. Devolvia 200
-   filas con pinta de informe y los datos pedidos vacios.
+     "cuantos proveedores distintos nos facturaron en 2026"
+        -> "proveedores cargados: 999". Confianza ALTA.
+     "que articulo compramos mas caro este año"
+        -> "$ 936.965", sin nombrar ningun articulo.
+
+   AHORA: api_preguntar_estricto llama a la misma api_preguntar y despues
+   mide cuanto de la pregunta mira la intencion que gano. Si queda UNA sola
+   palabra de contenido sin mirar, la intencion no contesta y la pregunta
+   va a la IA. Gratis queda lo que calza entero ("cuanto facturamos en
+   2026" cubre el 100%) y lo que la IA ya contesto una vez, que
+   preguntar4 guarda y vuelve a servir SIN LLAMAR AL MODELO.
+
+   SIGUE SIENDO CIERTO lo que paso el 14/10 y por eso la IA de hoy NO es la
+   de entonces: aquella daba un tiro a ciegas y servia de su memoria un SQL
+   que ligaba cpa36.observaciones EN CRUDO contra gva21.nro_pedido -- cero
+   coincidencias -- y filtraba extract(month)=8 sin anio. preguntar4
+   ejecuta, MIRA EL RESULTADO y corrige, y ninguna cifra la escribe el
+   modelo: salen del resumen que calcula la base en SQL.
    ===================================================================== */
 
 function ayPreguntar(){
@@ -261,7 +278,7 @@ function ayPreguntar(){
   document.getElementById('ayCargando').hidden = false;
   document.getElementById('ayCargandoTxt').textContent = 'Buscando en lo que ya sé contestar…';
 
-  AY_RPC('api_preguntar', { p_texto: texto, p_contexto: null })
+  AY_RPC('api_preguntar_estricto', { p_texto: texto, p_contexto: null })
     .then(function(p){
       var sirve = p && p.entendio === true && Number(p.filas || 0) > 0;
       if (sirve){ ayTerminar(texto, ayDesdeIntencion(p)); return; }
@@ -291,7 +308,7 @@ function ayPreguntarModelo(texto, deIntencion){
   var lento = setTimeout(function(){
     document.getElementById('ayCargandoTxt').textContent = 'Armando la consulta…'; }, 1400);
 
-  AY_FN('preguntar', { pregunta: texto })
+  AY_FN('preguntar4', { pregunta: texto })
     .then(function(r){
       clearTimeout(lento);
       if (r && r.ok === false && (r.error === 'sin_sesion' || r.error === 'sin_permiso')){
@@ -364,6 +381,19 @@ function ayPedirLectura(item){
   var sello = ++AY.lectura;
   var caja  = document.getElementById('ayLectura');
   if (!caja) return;
+
+  /* PREGUNTAR4 YA TRAE LA LECTURA ESCRITA.                    11/11/2026
+     El circuito la escribe en el mismo recorrido, mirando el resumen que
+     calculo la base. Volver a pedirla a `leer` es pagar DOS VECES por lo
+     mismo: una llamada entera al modelo por pregunta, de gusto. Y cuando
+     la respuesta salio de la memoria, esa segunda llamada convertia en
+     pago una respuesta que no costaba nada. */
+  if (r.lectura && (r.origen === 'circuito' || r.origen === 'memoria')){
+    ayLecturaOk({ lectura: r.lectura, de_memoria: r.origen === 'memoria',
+                  filas_leidas: datos.length, filas_totales: r.filas || datos.length,
+                  total_medido: r.filas || datos.length });
+    return;
+  }
 
   caja.className = 'ay-lectura pensando';
   caja.innerHTML = '<div class="enc">La lectura<span class="de">leyendo ' +
@@ -590,7 +620,10 @@ function ayPintar(item){
       (ej ? '<div class="ay-panel" id="ayPGraf"'+(item.vista==='grafico'?'':' hidden')+'><div class="ay-graf" id="ayGraf"></div></div>' : '');
   }
 
-  var rec = r.origen === 'recordada';
+  /* `memoria` es preguntar4 sirviendo una respuesta que la IA ya dio: vuelve
+     a correr la consulta, asi que los datos son de ahora, y no cuesta nada.
+     Si no se dijera, parecería que se acaba de pagar.          11/11/2026 */
+  var rec = r.origen === 'recordada' || r.origen === 'memoria';
   var intn = r.origen === 'intencion';
   var sello = intn ? 'Resuelta sin costo — la sé contestar'
             : rec  ? 'Ya la sabía — sin costo'

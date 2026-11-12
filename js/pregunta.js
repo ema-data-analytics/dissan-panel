@@ -194,7 +194,7 @@ function pgPreguntar(forzarCircuito){
 
   if (forzarCircuito){ pgCircuito(texto, null, t0).then(listo, listo); return; }
 
-  rpc('api_preguntar', { p_texto: texto, p_contexto: null })
+  rpc('api_preguntar_estricto', { p_texto: texto, p_contexto: null })
     .then(function(r){
       var p = r.data || {};
       var sirve = p.entendio === true && Number(p.filas || 0) > 0;
@@ -211,18 +211,24 @@ function pgPreguntar(forzarCircuito){
     });
 }
 
-/* QUE CIRCUITO SE USA.                                           28/10/2026
-   Por defecto `preguntar2`, que es el que esta PROBADO en pantalla. Con
-   `?v=3` en la direccion se usa `preguntar3`, que es el mismo circuito con
-   los tres cambios de costo (cache sobre toda la conversacion, resumen
-   recortado y el gasto cobrado separando el cache).
-   Va con interruptor y no reemplazando, porque el barato todavia NO se probo
-   en pantalla: mientras no este medido, el que atiende es el probado. */
+/* QUE CIRCUITO SE USA.                                           11/11/2026
+   Por defecto `preguntar4`: trae los tres cambios de costo de preguntar3
+   (cache sobre toda la conversacion, resumen recortado, gasto cobrado
+   separando el cache) MAS el mapa de las 627 tablas, los ejemplos de las
+   8.961 preguntas que ya salieron bien, y la memoria que sirve una pregunta
+   repetida con CERO llamadas al modelo.
+   Medido en pantalla el 11/11 con "que articulo compramos mas caro este año":
+     1a vez  4 llamadas, 38 s, 64.659 de 94.023 tokens leidos del cache
+     2a vez  0 llamadas,  1 s, sin costo, misma respuesta y datos de ahora
+   Los anteriores quedan alcanzables con ?v=2 y ?v=3: no se tocan ni se
+   retiran, para poder volver en un segundo si algo sale mal. */
 function pgQueCircuito(){
   try {
     var v = new URLSearchParams(location.search).get('v');
-    return (v === '3') ? 'preguntar3' : 'preguntar2';
-  } catch (e) { return 'preguntar2'; }
+    if (v === '2') return 'preguntar2';
+    if (v === '3') return 'preguntar3';
+    return 'preguntar4';
+  } catch (e) { return 'preguntar4'; }
 }
 
 /* la Edge Function del circuito, con fetch crudo y el codigo HTTP a la vista:
