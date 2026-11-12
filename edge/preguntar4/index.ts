@@ -402,6 +402,72 @@ function construirBloques(pares: { b: any; f: any }[]) {
   });
 }
 
+/* ===========================================================================
+   NINGUNA CIFRA SALE SIN CONTROLARSE, O SALE DICIENDO QUE NO SE PUDO.
+   ===========================================================================
+   POR QUE EXISTE. Que la consulta corra no dice que la cifra sea la correcta.
+   Eso lo dice una FUENTE INDEPENDIENTE DEL CALCULO, que es lo unico que este
+   proyecto acepta como control. Las 22 identidades ya existian pero vivian
+   aparte: nadie las miraba EN EL MOMENTO de publicar un numero. Por eso la
+   Ayuda pudo contestar "cero notas de credito en octubre" cuando eran 6, con
+   cara de respuesta.
+
+   QUE HACE. Por cada tarjeta -que es donde vive la cifra que la persona lee-
+   le pregunta a api_ia_control_cifra contra que se puede controlar. Cuatro
+   veredictos, y los cuatro se dicen:
+     coincide     -> hay una fuente independiente y da lo mismo
+     no_coincide  -> hay una fuente independiente y NO da lo mismo  <-- el caro
+     no_cubierta  -> ninguna identidad habla de esto. NO es "esta bien":
+                     es "nadie lo controla". La diferencia importa.
+     no_se_pudo   -> la fuente no llego a correr a tiempo. No medido no es
+                     limpio, pero tampoco es rojo.
+
+   EL FRENO QUE IMPORTA: si una cifra sale `no_coincide`, la respuesta NO SE
+   MEMORIZA. Una respuesta mala memorizada se sirve gratis y para siempre, que
+   es peor que no tener memoria. Eso ya paso el 12/11 con el cero.
+
+   SE CONTROLAN LAS 3 PRIMERAS TARJETAS Y CON 5 SEGUNDOS CADA UNA: el control
+   corre SQL de verdad, y una pantalla que tarda veinte segundos en contestar
+   no la usa nadie. Un control que rompe la pantalla que vigila es peor que no
+   tenerlo.
+   =========================================================================== */
+const MAX_CIFRAS_CONTROLADAS = 3;
+const SEG_CONTROL = 5;
+
+async function controlarCifras(bloques: any[], jwt: string) {
+  let controladas = 0, coinciden = 0, chocan = 0, sinCubrir = 0, noSePudo = 0;
+  for (const b of bloques) {
+    for (const t of (b?.tarjetas ?? [])) {
+      if (controladas >= MAX_CIFRAS_CONTROLADAS) { t.control = null; continue; }
+      if (t.valor == null || !isFinite(Number(t.valor))) { t.control = null; continue; }
+      controladas++;
+      const c = await rpc("api_ia_control_cifra",
+        { p_etiqueta: String(t.etiqueta ?? ""), p_valor: Number(t.valor), p_seg: SEG_CONTROL },
+        jwt).catch(() => null);
+      t.control = c ?? { controlado: "no_se_pudo", motivo: "El control no contestó." };
+      switch (t.control?.controlado) {
+        case "coincide":    coinciden++; break;
+        case "no_coincide": chocan++;    break;
+        case "no_se_pudo":  noSePudo++;  break;
+        default:            sinCubrir++; break;
+      }
+    }
+  }
+  return {
+    cifras_controladas: controladas,
+    coinciden, chocan, sin_cubrir: sinCubrir, no_se_pudo: noSePudo,
+    /* la frase que la pantalla puede mostrar tal cual */
+    veredicto: chocan > 0
+      ? "CUIDADO: " + chocan + " cifra(s) NO coinciden con la fuente independiente que las controla."
+      : coinciden > 0
+        ? "Controlado: " + coinciden + " cifra(s) coinciden con una fuente independiente del cálculo."
+        : controladas > 0
+          ? "Sin controlar: ninguna identidad cubre estas cifras. No quiere decir que estén mal; "
+            + "quiere decir que nadie las controla contra otra fuente."
+          : null,
+  };
+}
+
 /** El sobre comun de la respuesta, para que memoria y circuito salgan iguales. */
 function respuestaConBloques(base: Record<string, unknown>, armado: any, bloques: any[]) {
   const conDatos = bloques.filter((b: any) => !b.sin_datos);
@@ -524,16 +590,23 @@ Deno.serve(async (req) => {
           pares.push({ b, f });
         }
         if (sirve && pares.length) {
+          /* La memoria TAMBIEN se controla, y no por simetria: sus consultas
+             se vuelven a correr sobre los datos de HOY, asi que una respuesta
+             que ayer cerraba puede no cerrar mas. Controlarla solo al
+             guardarla seria controlar una foto vieja. */
+          const bloquesMem = construirBloques(pares);
+          const controlMem = await controlarCifras(bloquesMem, jwt);
           return json(respuestaConBloques({
             origen: "memoria", pregunta, consultas: pares.map((p) => ({
               sql: p.f.sql, filas: p.f.filas, ms: p.f.ms })),
             pasos: [], llamadas: 0, modelo: null,
             tokens: { entrada: 0, salida: 0, leidos_del_cache: 0 },
             de_memoria: true,
+            control: controlMem,
             nota_memoria: "Esta pregunta ya se había contestado. Se volvieron a correr sus " +
                           "consultas, así que los datos son de ahora. No costó nada.",
             ms: Date.now() - arranque,
-          }, arm, construirBloques(pares)));
+          }, arm, bloquesMem));
         }
       }
     }
@@ -754,14 +827,20 @@ Deno.serve(async (req) => {
     }));
     const bloques = construirBloques(pares);
 
+    /* cada cifra, contra una fuente que no es la que la calculo */
+    const control = await controlarCifras(bloques, jwt);
+
     /* ---- SE GUARDA LO QUE SALIO BIEN ----
        Solo si TODOS los bloques trajeron datos: guardar una respuesta a medias
        haria que la proxima vez salga a medias y gratis, que es peor.
+       Y SOLO SI NINGUNA CIFRA CHOCA contra su fuente independiente: una
+       respuesta mala memorizada se sirve gratis y para siempre.
        Un fallo al guardar no puede romper la respuesta: va con catch y se
        declara en `guardado`. */
     let guardado: any = null;
     const todosConDatos = bloques.length > 0 && bloques.every((b: any) => !b.sin_datos);
-    if (todosConDatos) {
+    const sinChoques = control.chocan === 0;
+    if (todosConDatos && sinChoques) {
       guardado = await rpc("api_ia_armado_guardar",
         { p_pregunta: pregunta, p_armado: armado, p_modelo: MODELO }, jwt).catch(() => null);
       const principal = pares[0]?.f;
@@ -777,7 +856,12 @@ Deno.serve(async (req) => {
       consultas, pasos, llamadas,
       modelo: MODELO,
       tokens: { entrada: tIn, salida: tOut, leidos_del_cache: tCacheLee },
-      aprendio: todosConDatos && guardado?.guardado === true,
+      aprendio: todosConDatos && sinChoques && guardado?.guardado === true,
+      no_aprendio_por_que: (todosConDatos && !sinChoques)
+        ? "No se memorizó: " + control.chocan + " cifra(s) no coinciden con su fuente "
+          + "independiente. Una respuesta mala memorizada se serviría gratis y para siempre."
+        : null,
+      control,
       ejemplos_que_vio: Array.isArray(ejemplos) ? ejemplos.length : 0,
       tablas_del_mapa_que_vio: Array.isArray(mapa) ? mapa.length : 0,
       presupuesto: await rpc("api_ia_presupuesto", { p_estimado_usd: 0 }, jwt).catch(() => null),
