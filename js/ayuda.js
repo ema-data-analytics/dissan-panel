@@ -356,6 +356,74 @@ function ayTerminar2(pregunta, r){
   document.getElementById('ayQ').value = '';
   ayAjustar();
   ayPedirLectura(AY.item);
+  ayControlarCifras(AY.item);
+}
+
+/* =====================================================================
+   LA CIFRA SE CONTROLA CONTRA UNA FUENTE QUE NO ES LA QUE LA CALCULO
+   =====================================================================
+                                                           12/11/2026
+   Que la consulta corra no dice que la cifra sea la correcta. Lo unico
+   que este proyecto acepta como control es una FUENTE INDEPENDIENTE, y
+   esas ya existen: las 22 identidades, que comparan contra la
+   contabilidad de DISSAN, contra cpa63 y contra los saldos de Tango.
+   Vivian aparte y nadie las miraba al publicar un numero.
+
+   api_ia_control_cifra corre las dos fuentes EN EL MOMENTO -no lee la
+   corrida de anoche, porque las cifras se mueven durante el dia y eso
+   marcaba en rojo lo que estaba bien- y devuelve cuatro veredictos:
+   coincide · no_coincide · no_se_pudo · no_cubierta.
+
+   `no_cubierta` NO se esconde. Que ninguna identidad cubra una cifra no
+   quiere decir que este bien: quiere decir que nadie la controla, y el
+   que la lee tiene derecho a saberlo.
+
+   Corre DESPUES de pintar y nunca puede romper la pantalla: si falla,
+   no se muestra nada y la respuesta queda como estaba.
+   ===================================================================== */
+function ayControlarCifras(item){
+  var r = item && item.r;
+  if (!r || r.ok !== true) return;
+  var t = (r.tarjetas && r.tarjetas.length) ? r.tarjetas[0] : null;
+  if (!t || t.valor === null || t.valor === undefined) return;
+
+  var sello = AY.lectura;
+  var etiqueta = (t.etiqueta || '') + ' ' + (item.pregunta || '');
+
+  AY_RPC('api_ia_control_cifra', { p_etiqueta: etiqueta, p_valor: Number(t.valor), p_seg: 20 })
+    .then(function(c){
+      if (!c || sello !== AY.lectura) return;
+      var caja = document.getElementById('ayResp');
+      if (!caja || caja.querySelector('.ay-control')) return;
+
+      var clase = c.controlado === 'coincide'     ? 'ok'
+                : c.controlado === 'no_coincide'  ? 'mal'
+                : '';
+      var texto;
+      if (c.controlado === 'coincide'){
+        texto = '<b>Cifra controlada</b> contra ' + esc(c.fuente_b || c.fuente_a || 'una fuente independiente') +
+                ': coincide' + (Number(c.diferencia_mas_chica) ? ' (diferencia ' +
+                ayNum(c.diferencia_mas_chica, 2) + ')' : ' exacto') + '.';
+      } else if (c.controlado === 'no_coincide'){
+        texto = '<b>NO COINCIDE</b> con ' + esc(c.fuente_b || c.fuente_a || 'la fuente independiente') +
+                ', que da ' + ayNum(c.valor_b, 2) + '. Diferencia ' +
+                ayNum(c.diferencia_mas_chica, 2) + ' sobre una tolerancia de ' +
+                ayNum(c.tolerancia, 2) + '. <b>No publiques esta cifra sin mirarla.</b>';
+      } else if (c.controlado === 'no_se_pudo'){
+        texto = 'La fuente independiente no se pudo correr ahora, así que <b>esta cifra no está controlada</b>.';
+      } else {
+        texto = 'Esta cifra <b>no la controla ninguna fuente independiente</b>. No quiere decir que esté mal: ' +
+                'quiere decir que nadie la verifica contra otra cosa.';
+      }
+      var div = document.createElement('div');
+      div.className = 'ay-aviso ay-control ' + clase;
+      div.innerHTML = '<div>' + texto + '</div>' +
+        (c.identidad ? '<div class="det">Identidad: ' + esc(c.identidad) + '</div>' : '');
+      var lec = document.getElementById('ayLectura');
+      if (lec && lec.parentNode) lec.parentNode.insertBefore(div, lec.nextSibling);
+      else caja.appendChild(div);
+    })
+    .catch(function(){ /* un control que rompe la pantalla que vigila es peor que no tenerlo */ });
 }
 
 /* =====================================================================

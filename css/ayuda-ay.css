@@ -131,6 +131,10 @@
   .ay-aviso{ background:rgba(232,185,59,.10); border:1px solid rgba(232,185,59,.32);
              border-radius:9px; padding:13px 15px; font-size:13px; line-height:1.6; }
   .ay-aviso.mal{ background:rgba(255,90,90,.10); border-color:rgba(255,90,90,.32); }
+  /* verde para la cifra que SI se controlo contra una fuente independiente.
+     El amarillo de .ay-aviso queda para "nadie la controla", que no es un
+     error pero tampoco es una confirmacion.                   12/11/2026 */
+  .ay-aviso.ok{ background:rgba(45,200,130,.10); border-color:rgba(45,200,130,.34); }
   .ay-aviso .det{ color:#9FB3C8; font-size:12.5px; margin-top:6px; }
 
   /* ---- Opciones de salida: grafico, dashboard, pulgares ---- */
