@@ -322,6 +322,40 @@ function ayPreguntarModelo(texto, deIntencion){
           deIntencion.respuesta){
         ayTerminar(texto, ayDesdeIntencion(deIntencion)); return;
       }
+      /* =================================================================
+         SI LA IA NO PUEDE, CONTESTA LA LISTA GRATIS.        12/11/2026
+         =================================================================
+         El 12/11 se acabo el credito de la API a mitad del dia y la Ayuda
+         quedo MUDA: el portero estricto (api_preguntar_estricto) manda a la
+         IA todo lo que la lista no cubre entero -el 89,5% de las preguntas
+         reales-, asi que sin IA no contestaba casi nada.
+
+         Una pantalla muda es peor que una respuesta parcial declarada. Si la
+         IA falla por cualquier motivo -sin credito, sin presupuesto, la API
+         caida- se vuelve a preguntar SIN el portero estricto: contesta la
+         lista, GRATIS, y la respuesta sale rotulada diciendo que la contesto
+         la lista y que puede estar incompleta. Lo que no se hace nunca es
+         mostrarla como si fuera la respuesta de la IA. */
+      var seQuedoSinIA = r && r.ok === false &&
+        /sin_presupuesto|api|configuracion|excepcion/.test(String(r.origen || '')) ;
+      if (seQuedoSinIA){
+        var porQue = /credit|saldo|balance/i.test(JSON.stringify(r || {}))
+          ? 'No hay crédito en la API, así que la IA no pudo contestar.'
+          : 'La IA no pudo contestar (' + (r.respuesta || r.origen) + ').';
+        AY_RPC('api_preguntar', { p_texto: texto, p_contexto: null })
+          .then(function(p){
+            if (p && p.entendio === true && Number(p.filas || 0) > 0){
+              var q = ayDesdeIntencion(p);
+              q.aviso = porQue + ' Esto lo contestó la lista de siempre, sin costo. ' +
+                        'Puede quedarse corta: mirá qué entendió antes de usarla.';
+              ayTerminar(texto, q);
+            } else {
+              ayTerminar(texto, r);
+            }
+          })
+          .catch(function(){ ayTerminar(texto, r); });
+        return;
+      }
       ayTerminar(texto, r || { ok:false, origen:'api', respuesta:'No llegó respuesta.' });
     })
     .catch(function(err){
