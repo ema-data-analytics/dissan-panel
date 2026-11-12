@@ -30,7 +30,18 @@
 // ===========================================================================
 
 const MODELO = "claude-opus-5-5";
-const MAX_TOKENS = 8000;
+/* EL TOPE DE SALIDA CORTA LAS TABLAS GRANDES EN SILENCIO.     12/11/2026
+   Con 8.000 el modelo se quedaba sin espacio escribiendo los significados de
+   las tablas con mas de ~100 campos y devolvia la herramienta con la lista de
+   campos VACIA. Y lo peor: contestaba ok = true, origen = "analizada", con
+   que_registra escrito y campos_escritos = 0. O sea, pasaba por buena.
+   Medido: cpa04 (137 campos) -> 0 escritos en 70 s; sta16 (86) -> 76 escritos.
+   Las tres tablas mas grandes de la base -cpa04, sua29, sta16- son las unicas
+   que quedaron sin analizar de las 627, y cpa04 es la cabecera de facturas de
+   compra que usan todas las identidades.
+   No se paga por el tope sino por lo que se genera, asi que subirlo no cuesta
+   nada en las tablas chicas. */
+const MAX_TOKENS = 24000;
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -190,6 +201,26 @@ Deno.serve(async (req) => {
 
     const guardado = await rpc("api_mapa_guardar_analisis",
       { p_tabla: tabla, p_analisis: uso_h.input }, jwt);
+
+    /* CERO CAMPOS ESCRITOS SOBRE UNA TABLA QUE TIENE CAMPOS NO ES UN EXITO.
+       Asi paso cpa04 por buena: ok = true, origen = "analizada", que_registra
+       escrito y la lista de campos vacia porque el modelo se quedo sin tope de
+       salida. Un resultado vacio que se declara exitoso es la misma clase de
+       defecto que una cifra sin verificar: parece una respuesta. */
+    const escritos = Number(guardado?.campos_escritos ?? 0);
+    if (escritos === 0 && campos.length > 0) {
+      return json({
+        ok: false, origen: "no_escribio_ningun_campo", tabla,
+        campos_que_tenia: campos.length, campos_escritos: 0,
+        motivo_de_corte: salida?.stop_reason,
+        respuesta: "El modelo no escribió el significado de ningún campo" +
+                   (salida?.stop_reason === "max_tokens"
+                     ? ": se quedó sin tope de salida. La tabla es muy grande para una sola pasada."
+                     : "."),
+        que_registra: uso_h.input?.que_registra ?? null,
+        ms: Date.now() - t0,
+      });
+    }
 
     return json({
       ok: true, origen: "analizada", tabla,
