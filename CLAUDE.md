@@ -880,3 +880,96 @@ su sesión y el contenedor no llega a Supabase. Si se corta la luz, se corta la
 corrida — **pero no se pierde nada**: la cola vive en la base y cada tabla
 terminada queda marcada en el momento. Para que avance sin su máquina hay que
 engancharlo al reloj de Supabase, como el refresco de las 05:52.
+
+## 13/11/2026 — EL PERIODO PARCIAL, LA INFLACION, Y LOS PASOS QUE SE VEN
+
+**COMPARAR UN MES EN CURSO CONTRA UNO ENTERO DA UNA CAIDA DEL 60% QUE NO
+EXISTE.** `api_hasta_cuando_hay_datos()` dice hasta que DIA hay datos por fuente
+y **descarta el futuro**: `gva12` tiene una factura fechada **05/12/2202** —un
+anio tipeado mal en Tango— asi que un `max(fecha)` pelado contesta el anio 2202.
+Medido de punta a punta con una pregunta nueva real: el modelo corto los tres
+tramos al dia 12 (`< 2026-11-13`, `< 2026-10-13`, `< 2025-11-13`), y el tercero
+—el mismo mes del anio pasado— **no se lo pidio nadie**.
+
+**UN FACTOR DE INFLACION INVENTADO ES UNA CIFRA CREIBLE Y MAL.**
+`ema.indice_precios` tiene el IPC Nivel General del INDEC, base dic-2016=100,
+68 meses (2021-01 a 2026-08), bajado del portal de datos abiertos **desde el
+Chrome del usuario**: el contenedor no llega a `apis.datos.gob.ar`.
+El INDEC publica con atraso: el ultimo indice es **agosto 2026** y las ventas
+llegan al **12/11/2026**, asi que septiembre, octubre y noviembre **NO se pueden
+ajustar**. `api_pesos_constantes` contesta `se_puede = false` con el motivo
+escrito, en vez de devolver 1 —que seria decir "no hubo inflacion"— o `null`
+—que al multiplicar da cero—.
+**Y LA TRAMPA DEL JOIN:** con un join comun los meses sin indice **desaparecen
+de la suma en silencio** y el total ajustado queda mas chico que el nominal sin
+que se note. Va `left join`, y se contesta aparte cuantos quedaron sin ajustar.
+
+**ESCRIBIR 68 NUMEROS A MANO NO ES COPIAR, ES TRANSCRIBIR.** Se controlo fila
+por fila contra la API viva: **68 en la base, 68 en la API, 0 diferencias**. Y el
+archivo del repositorio contra la base por md5 de los 68 pares:
+`8a3a96ccb74395b32e52f9decc94d73e` de los dos lados. API -> base -> repositorio,
+la cadena entera cerrada. **Sin esa medicion no se entregaba.**
+
+**UN SHA QUE SALE DE VOLVER A TIPEAR 46 KB NO MIDE EL SERVIDOR: MIDE MI TIPEO.**
+`edge_verificada` exige `sha_vivo` y `bytes_vivos` NOT NULL, y el contenedor no
+llega a `api.supabase.com`. El unico digest MECANICO de lo vivo es el
+**`ezbr_sha256` que calcula el servidor**. Copiar el cuerpo a mano para hashearlo
+y "comparar" habria sido teatro: el diff probaria mi transcripcion, no el
+despliegue. Se asienta el del servidor **declarandolo en la nota**, mas la
+conducta medida (humo 401 sin JWT, y el JSON identico al de preguntar4).
+
+**A LOS 56 SEGUNDOS MIRANDO "BUSCANDO…" LA GENTE RECARGA Y LA PREGUNTA SE PAGA
+DOS VECES.** Eso deja de ser presentacion. `preguntar5` = `preguntar4` +
+`avisar()`: el cuerpo entero igual adentro de `manejar()`, y **sin la cabecera
+`Accept: text/event-stream` contesta el MISMO JSON** (medido: mismas claves, 0 de
+mas y 0 de menos, mismo valor). El cuerpo final **se lee de la `Response` que
+devuelve `manejar()`**, no se arma aparte: dos formas de armar la respuesta se
+separan con el tiempo, como paso el 30/10 con `listas`.
+**De preguntar4 no se toca nada mas: todo arreglo va a preguntar5.**
+
+**SI EL VIVO SE CORTA DESPUES DE ARRANCAR, NO SE REINTENTA.** Ahi el modelo ya
+corrio y reintentar **paga la pregunta dos veces** — el 12/11 otra vez. Si no
+llego ningun evento, se vuelve solo a `preguntar4`: una mejora de presentacion no
+puede dejar la pantalla muda.
+
+**PUERTA 15 `los pasos en vivo` y PUERTA 16 `el dictado`.** Los pasos se apagan
+**en silencio**: si el stream deja de llegar la pantalla no se rompe y nadie se
+entera de que la mejora dejo de existir — el mismo golpe del 10/11.
+**Y el arnes de la voz encontro DOS cagadas mias en mi propio control el primer
+dia:** (1) **Chromium trae `webkitSpeechRecognition` aunque no funcione**, asi
+que la corrida "sin soporte" estaba midiendo otra cosa; hay que sacarlo de
+verdad. (2) **Un boton que no se puede tocar reventaba el control entero**:
+`pg.click` se colgaba 30 s y mataba la corrida. Un control que se muere no es un
+control que detecta.
+
+**UN BOTON QUE ESTA Y NO ANDA ES PEOR QUE NO TENERLO.** El microfono arranca
+`[hidden]` y solo se prende si hay `SpeechRecognition` de verdad. No manda la
+pregunta sola al terminar de dictar —una frase mal escuchada no la paga nadie— y
+se corta a los 45 segundos. **Y Chrome manda el audio a los servidores de
+Google: la pregunta dictada sale de la empresa.** Queda escrito para que nadie se
+entere despues.
+
+**CASI ACUSO AL TABLERO DE ESTAR LENTO, POR TERCERA VEZ EN TRES DIAS.** El Chrome
+se colgo a mitad de la sesion y la conclusion facil era "volvio lo del 10/11".
+Medido antes de decirlo: `api_margen_tablero_v3` tarda **2.018 ms** y devuelve
+98.235 bytes, y el servidor corta a los 8 s. **El Tablero esta bien.** Era el
+navegador, y se resolvio pidiendo el contexto de pestanias de nuevo.
+
+**Y CASI DOY POR ROTA UNA RESPUESTA QUE ESTABA BIEN.** La Ayuda contesto
+**11 vendedores**; yo conte `gva18`, me dieron 20, y estuve por reportarlo.
+**`gva18` es el maestro de PROVINCIAS.** Los vendedores son **`gva23`: 11**. Lo
+resolvio el mapa en diez segundos. Antes de decir que una cifra esta mal, mirar
+QUE TABLA la calcula.
+
+**"CARA" DICHO POR EL TRABAJO SE LEE COMO DICHO POR LA PLATA.** Escribi que los
+pasos en vivo eran "la mas cara de construir", hablando de esfuerzo, y el usuario
+freno todo creyendo que era gasto. **Cuando se habla de plata con alguien a quien
+ya le gastaste credito sin permiso, la palabra tiene una sola lectura.** El gasto
+real del dia fue **una sola pregunta paga: ~$0,14**.
+
+**EL SLOGAN, PARA TODO LO QUE SE MUESTRE DE ACA EN ADELANTE:**
+**«Ningun numero viaja solo.»** Sale textual del documento del Timon del 31/10.
+La bajada: *"No te pedimos que confies en el numero. Te mostramos contra que lo
+controlamos."* **Prohibido escribir "datos confiables" o "confianza en el dato":
+lo dice todo el mercado y ninguno lo prueba.** El detalle esta en
+`claude/MARCA-EMA-prompt-para-armar-piezas.md`.

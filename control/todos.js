@@ -102,6 +102,8 @@ const PUERTAS = [
   ['el archivo bajado',                  'node',    'control/archivo.js'],
   ['el aviso en vivo',                   'node',    'control/envivo.js'],
   ['las firmas',                         'node',    'control/firmas.js'],
+  ['los pasos en vivo',                  'node',    'control/vivo.js'],
+  ['el dictado',                         'node',    'control/voz.js'],
 ];
 
 /* la linea "midio:" de cada control, que es lo que se guarda como prueba

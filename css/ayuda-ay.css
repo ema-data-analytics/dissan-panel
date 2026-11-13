@@ -35,6 +35,19 @@
   .ay-btn.sec[aria-pressed="true"]{ background:var(--s1); border-color:var(--s1); color:#fff; cursor:default; }
   .ay-pista{ color:#9FB4C4; font-size:12px; margin:0 0 18px 3px; }
 
+  /* ---- dictar la pregunta (13/11/2026) ----------------------------------
+     El boton arranca con [hidden] y SOLO lo prende el javascript si el
+     navegador tiene de verdad SpeechRecognition. Un boton que esta pero no
+     anda es peor que no tenerlo. */
+  .ay-mic{ flex:0 0 auto; width:42px; background:transparent; border:0; border-radius:7px;
+           color:#9FB4C4; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+  .ay-mic svg{ width:19px; height:19px; }
+  .ay-mic:hover{ color:var(--off-white); background:rgba(255,255,255,.07); }
+  .ay-mic[aria-pressed="true"]{ color:#04121d; background:var(--rojo);
+                                animation:ayLatir 1.15s ease-in-out infinite; }
+  @keyframes ayLatir{ 0%,100%{ opacity:1 } 50%{ opacity:.5 } }
+  .ay-pista.escuchando{ color:var(--rojo); }
+
   /* ---- ejemplos ---- */
   .ay-grupo{ color:#9FB4C4; font-size:12px; margin:0 0 7px; }
   .ay-chips{ display:flex; flex-wrap:wrap; gap:7px; margin-bottom:15px; }

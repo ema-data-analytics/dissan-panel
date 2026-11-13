@@ -120,6 +120,17 @@ correr "el aviso en vivo"   control/envivo.js     node control/envivo.js
 # funcion y nunca mira los argumentos. Esto le manda a PostgREST de verdad
 # las mismas firmas que manda el panel.
 correr "las firmas"         control/firmas.js     node control/firmas.js
+# PUERTA 15, 13/11/2026. Los pasos en vivo se apagan EN SILENCIO: si el stream
+# deja de llegar, la pantalla no se rompe -vuelve sola a preguntar4- y nadie se
+# entera nunca de que la mejora dejo de existir. Una funcion que se apaga en
+# silencio es peor que una que falla fuerte. Controla ademas los dos frenos:
+# que vuelva al viejo si el vivo no abre, y que NO reintente si se corta a
+# mitad, porque ahi el modelo ya corrio y reintentar paga dos veces.
+correr "los pasos en vivo"  control/vivo.js       node control/vivo.js
+# PUERTA 16, 13/11/2026. El boton del microfono: que NO aparezca donde no hay
+# reconocedor, que lo dictado no pise lo que la persona ya escribio, y que si
+# Chrome niega el microfono lo diga y suelte el boton.
+correr "el dictado"         control/voz.js        node control/voz.js
 
 echo ""
 if [ -z "$FALLARON" ]; then

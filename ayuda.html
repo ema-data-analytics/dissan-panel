@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/app.css?v=29">
-<link rel="stylesheet" href="css/ayuda-ay.css?v=3">
+<link rel="stylesheet" href="css/ayuda-ay.css?v=4">
 </head>
 <body>
 
@@ -72,9 +72,13 @@
 
   <div class="ay-caja">
     <textarea id="ayQ" rows="1" placeholder="Por ejemplo: cuáles son los 10 artículos más vendidos"></textarea>
+    <button class="ay-mic" id="ayMic" type="button" hidden
+            aria-label="Dictar la pregunta" aria-pressed="false" title="Dictar la pregunta">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><path d="M12 19v3"/></svg>
+    </button>
     <button class="ay-btn" id="ayEnviar">Preguntar</button>
   </div>
-  <p class="ay-pista">Enter para preguntar · Shift + Enter para bajar un renglón</p>
+  <p class="ay-pista" id="ayPista">Enter para preguntar · Shift + Enter para bajar un renglón</p>
 
   <div id="ayEjemplos"></div>
   <div id="ayCargando" hidden class="ay-cargando"><span class="ay-giro"></span><span id="ayCargandoTxt">Buscando…</span></div>
@@ -89,6 +93,6 @@
 <script src="js/filas.js?v=4"></script>
 <script src="js/bajar-formatos.js?v=5"></script>
 <script src="js/bajar.js?v=6"></script>
-<script src="js/ayuda.js?v=16"></script>
+<script src="js/ayuda.js?v=17"></script>
 </body>
 </html>

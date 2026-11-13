@@ -71,6 +71,118 @@ function AY_FN(nombre, cuerpo, intento){
   });
 }
 
+/* =====================================================================
+   LA MISMA LLAMADA, PERO PINTANDO LOS PASOS MIENTRAS TRABAJA
+   =====================================================================
+   POR QUE. Medido el 13/11 con una pregunta real: 56 SEGUNDOS, 5 llamadas
+   al modelo, 3 bloques. Hoy la persona mira un cartel que dice "Buscando..."
+   los 56 segundos sin saber si se colgo. A esa altura RECARGA LA PAGINA, y
+   la pregunta se paga dos veces. O sea que esto no es adorno.
+
+   DOS FRENOS, los dos aprendidos a los golpes:
+
+   1. SI EL VIVO NO ARRANCA, SE VUELVE SOLO A preguntar4. Navegador sin
+      ReadableStream, un proxy que corta el stream, la funcion que no
+      levanta: cualquiera de esas y se contesta por el camino de siempre.
+      Una mejora de presentacion no puede dejar la pantalla muda.
+
+   2. SI SE CORTA A MITAD, NO SE REINTENTA. Un reintento despues de que el
+      modelo ya corrio PAGA LA PREGUNTA DOS VECES. En cuanto llego un solo
+      evento, el modelo ya esta trabajando: ahi se informa el corte y se
+      dice que la respuesta pudo haber quedado guardada. Reintentar seria
+      el 12/11 otra vez, cuando el conductor siguio 92 llamadas despues
+      del primer error.
+   ===================================================================== */
+function AY_FN_VIVO(nombre, cuerpo, alPaso){
+  if (!window.ReadableStream || !window.TextDecoder) return AY_FN('preguntar4', cuerpo);
+
+  var hubo = false;   /* ¿llego algun evento? = ¿el modelo ya arranco? */
+
+  return sb.auth.getSession().then(function(s){
+    var ses = s && s.data ? s.data.session : null;
+    if (!ses) throw new Error('La sesion vencio. Volve a entrar.');
+    return fetch(SB_URL + '/functions/v1/' + nombre, {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json',
+                 'Authorization':'Bearer ' + ses.access_token,
+                 'apikey': SB_KEY,
+                 'Accept': 'text/event-stream' },
+      body: JSON.stringify(cuerpo)
+    });
+  }).then(function(r){
+    if (!r.ok || !r.body) throw new Error('el vivo no abrio');
+    var lec = r.body.getReader(), dec = new TextDecoder(), buf = '', fin = null;
+    function vuelta(){
+      return lec.read().then(function(res){
+        if (res.value) buf += dec.decode(res.value, { stream: true });
+        var partes = buf.split('\n\n');
+        buf = partes.pop();
+        for (var i = 0; i < partes.length; i++){
+          var t = (partes[i].match(/^event: (.+)$/m) || [])[1];
+          var d = (partes[i].match(/^data: (.+)$/m) || [])[1];
+          var x = null; try { x = JSON.parse(d); } catch(e){}
+          if (t === 'fin') { fin = x; continue; }
+          hubo = true;
+          /* si pintar un paso rompe, se traga: el aviso no puede llevarse
+             puesta la respuesta que el modelo ya pago */
+          if (alPaso && t) { try { alPaso(t, x || {}); } catch(e){} }
+        }
+        if (res.done) return fin;
+        return vuelta();
+      });
+    }
+    return vuelta();
+  }).then(function(fin){
+    if (!fin) throw new Error('el vivo no trajo la respuesta');
+    return fin;
+  }).catch(function(e){
+    if (!hubo) return AY_FN('preguntar4', cuerpo);   /* freno 1 */
+    return {                                          /* freno 2 */
+      ok: false, origen: 'vivo_cortado',
+      respuesta: 'Se cortó la conexión mientras se armaba la respuesta. ' +
+                 'Volvé a preguntar lo mismo: si el modelo llegó a contestar, ' +
+                 'la respuesta ya quedó guardada y no se cobra de nuevo.',
+      detalle: String((e && e.message) || e)
+    };
+  });
+}
+
+/* Los pasos, dichos como los diria una persona. El del control va con todas
+   las letras a proposito: es lo unico que este sistema hace y los demas no. */
+var AY_NOMBRE_PASO = {
+  consultar_base:    'Consultando la base',
+  buscar_en_el_mapa: 'Buscando en el mapa de las 627 tablas',
+  ver_columnas:      'Confirmando los nombres de las columnas',
+  contestar:         'Armando la respuesta'
+};
+
+function ayPintarPaso(tipo, d){
+  var c = document.getElementById('ayCargandoTxt');
+  if (!c) return;
+  if (tipo === 'arranca'){ c.textContent = 'Mirando si ya lo sé contestar…'; return; }
+  if (tipo === 'controla'){
+    c.textContent = (d && d.de === 'la memoria')
+      ? 'Ya lo sabía. Controlando las cifras…'
+      : 'Controlando cada cifra contra su fuente independiente…';
+    return;
+  }
+  if (tipo === 'piensa'){
+    c.textContent = 'Pensando…' + (d && d.paso > 1 ? ' (paso ' + d.paso + ' de ' + d.de + ')' : '');
+    return;
+  }
+  if (tipo === 'usa'){
+    var h = (d && d.herramientas) || [];
+    if (!h.length) return;
+    var nombres = [], vistos = {};
+    for (var i = 0; i < h.length; i++){
+      var n = AY_NOMBRE_PASO[h[i]] || h[i];
+      if (!vistos[n]){ vistos[n] = true; nombres.push(n); }
+    }
+    var cuantas = h.filter(function(x){ return x === 'consultar_base'; }).length;
+    c.textContent = nombres.join(' · ') + (cuantas > 1 ? ' (' + cuantas + ' a la vez)' : '') + '…';
+  }
+}
+
 /* Las filas COMPLETAS de una pregunta que resolvio una intencion.
    api_preguntar_todo es igual a api_preguntar salvo el tope, y NO anota en
    ayuda.registro: la pantalla ya anoto la pregunta. */
@@ -268,6 +380,9 @@ function ayMontarGrafico(cont, datos, ej){
 
 function ayPreguntar(){
   if (AY.enviando) return;
+  /* Si estaba dictando, se corta: un microfono abierto mientras se contesta
+     sigue escribiendo arriba de la pregunta que ya se mando. */
+  if (typeof ayVozParar === 'function' && AY_VOZ && AY_VOZ.escuchando) ayVozParar();
   var texto = document.getElementById('ayQ').value.trim();
   if (!texto){ document.getElementById('ayQ').focus(); return; }
 
@@ -305,10 +420,16 @@ function ayDesdeIntencion(p){
 
 function ayPreguntarModelo(texto, deIntencion){
   document.getElementById('ayCargandoTxt').textContent = 'Buscando entre las 580 tablas…';
+  /* El cartel de antes era un reloj de mentira: cambiaba a los 1,4 s dijera
+     lo que dijera el servidor. Ahora los pasos son los de verdad, asi que el
+     temporizador se queda SOLO como respaldo: si el vivo no arranca y se
+     vuelve a preguntar4, algo tiene que moverse igual. 13/11/2026 */
   var lento = setTimeout(function(){
-    document.getElementById('ayCargandoTxt').textContent = 'Armando la consulta…'; }, 1400);
+    var c = document.getElementById('ayCargandoTxt');
+    if (c && /Buscando entre/.test(c.textContent)) c.textContent = 'Armando la consulta…';
+  }, 1400);
 
-  AY_FN('preguntar4', { pregunta: texto })
+  AY_FN_VIVO('preguntar5', { pregunta: texto }, ayPintarPaso)
     .then(function(r){
       clearTimeout(lento);
       if (r && r.ok === false && (r.error === 'sin_sesion' || r.error === 'sin_permiso')){
@@ -1309,6 +1430,121 @@ function ayAjustar(){
   t.style.height = Math.min(t.scrollHeight, 150) + 'px';
 }
 
+/* =====================================================================
+   DICTAR LA PREGUNTA                                       13/11/2026
+   =====================================================================
+   LO QUE HAY QUE SABER ANTES DE PRENDERLO: el reconocimiento de voz de
+   Chrome NO corre en la maquina. Chrome manda el audio a los servidores
+   de Google y devuelve el texto. O sea que la pregunta dictada sale de
+   la empresa. Para "cuanto facturamos en octubre" da igual, pero esta
+   escrito aca para que nadie se entere despues.
+
+   TRES FRENOS, porque esto corre en la maquina del usuario:
+     1. El boton arranca [hidden] y solo se prende si SpeechRecognition
+        existe DE VERDAD. Un boton que esta y no anda es peor que nada.
+     2. NO se manda la pregunta sola al terminar de dictar. El texto cae
+        en el campo y la manda el. Una pregunta nueva cuesta plata y una
+        frase mal escuchada no la va a pagar nadie.
+     3. Se corta sola a los 45 segundos. Un microfono abierto que nadie
+        cerro es un problema, no una funcion.
+   ===================================================================== */
+var AY_VOZ = { rec:null, escuchando:false, base:'', reloj:null, pista:'' };
+
+function ayVozHay(){
+  return typeof window.SpeechRecognition === 'function' ||
+         typeof window.webkitSpeechRecognition === 'function';
+}
+
+function ayVozPista(txt, alerta){
+  var p = document.getElementById('ayPista');
+  if (!p) return;
+  if (txt === null){ p.textContent = AY_VOZ.pista; p.classList.remove('escuchando'); return; }
+  p.textContent = txt;
+  if (alerta) p.classList.add('escuchando'); else p.classList.remove('escuchando');
+}
+
+function ayVozParar(){
+  if (AY_VOZ.reloj){ clearTimeout(AY_VOZ.reloj); AY_VOZ.reloj = null; }
+  if (AY_VOZ.rec && AY_VOZ.escuchando){
+    try { AY_VOZ.rec.stop(); } catch (e) {}
+  }
+}
+
+function ayVozFin(){
+  AY_VOZ.escuchando = false;
+  if (AY_VOZ.reloj){ clearTimeout(AY_VOZ.reloj); AY_VOZ.reloj = null; }
+  var b = document.getElementById('ayMic');
+  if (b) b.setAttribute('aria-pressed','false');
+}
+
+function ayVozArrancar(){
+  var Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
+  var r   = new Rec();
+  r.lang            = 'es-AR';
+  r.continuous      = true;
+  r.interimResults  = true;
+  r.maxAlternatives = 1;
+
+  r.onstart = function(){
+    AY_VOZ.escuchando = true;
+    document.getElementById('ayMic').setAttribute('aria-pressed','true');
+    ayVozPista('Escuchando… tocá el micrófono otra vez para terminar', true);
+  };
+
+  r.onresult = function(ev){
+    /* El texto que ya estaba escrito NO se pisa: se le suma lo dictado. */
+    var dicho = '';
+    for (var i = 0; i < ev.results.length; i++) dicho += ev.results[i][0].transcript;
+    var q = document.getElementById('ayQ');
+    q.value = (AY_VOZ.base ? AY_VOZ.base + ' ' : '') + dicho.replace(/^\s+/,'');
+    ayAjustar();
+  };
+
+  r.onerror = function(ev){
+    ayVozFin();
+    var m = ev && ev.error;
+    if (m === 'not-allowed' || m === 'service-not-allowed')
+      ayVozPista('Chrome no dio permiso al micrófono. Se habilita en el candado de la barra de direcciones.', true);
+    else if (m === 'no-speech')
+      ayVozPista('No se escuchó nada. Probá de nuevo.', true);
+    else if (m === 'network')
+      ayVozPista('El dictado necesita internet y no pudo salir. Escribí la pregunta.', true);
+    else if (m !== 'aborted')
+      ayVozPista('No se pudo dictar (' + (m || 'motivo desconocido') + '). Escribí la pregunta.', true);
+    else
+      ayVozPista(null);
+  };
+
+  r.onend = function(){
+    var habia = AY_VOZ.escuchando;
+    ayVozFin();
+    if (habia) ayVozPista(null);
+    document.getElementById('ayQ').focus();
+  };
+
+  AY_VOZ.rec  = r;
+  AY_VOZ.base = document.getElementById('ayQ').value.trim();
+  try { r.start(); }
+  catch (e){ ayVozFin(); ayVozPista('No se pudo abrir el micrófono. Escribí la pregunta.', true); }
+
+  /* El freno de los 45 segundos. */
+  AY_VOZ.reloj = setTimeout(function(){
+    if (AY_VOZ.escuchando){ ayVozParar(); ayVozPista('Se cortó el dictado a los 45 segundos.', false); }
+  }, 45000);
+}
+
+function ayVozArmar(){
+  var b = document.getElementById('ayMic');
+  if (!b) return;
+  var p = document.getElementById('ayPista');
+  AY_VOZ.pista = p ? p.textContent : '';
+  if (!ayVozHay()) return;          /* queda [hidden]: no existe el boton */
+  b.hidden = false;
+  b.onclick = function(){
+    if (AY_VOZ.escuchando) ayVozParar(); else ayVozArrancar();
+  };
+}
+
 function iniciarAyuda(){
   document.getElementById('ayEjemplos').innerHTML = AY_EJEMPLOS.map(function(g){
     return '<p class="ay-grupo">'+esc(g[0])+'</p><div class="ay-chips">' +
@@ -1325,5 +1561,6 @@ function iniciarAyuda(){
     if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); ayPreguntar(); }
   });
   document.getElementById('ayEnviar').onclick = ayPreguntar;
+  ayVozArmar();
   q.focus();
 }
