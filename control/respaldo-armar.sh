@@ -101,37 +101,18 @@ cp "$REPO/CLAUDE.md" "$RESP/documentos/00-CLAUDE-md-LAS-REGLAS.md"
 verde "OK  panel/ rearmado desde HEAD ${COMMIT:0:7} — $(find "$RESP/panel" -type f | wc -l) archivos"
 
 # ---------------------------------------------------------------- 5 secretos
-ESC="$(mktemp -d)/buscar-claves.py"
-cat > "$ESC" <<'PY'
-import os, re, sys, json
-RAIZ = sys.argv[1]
-PATRONES = [
- ("PEM en claro",      re.compile(rb'-----BEGIN [A-Z ]*PRIVATE KEY-----[^A-Za-z0-9+/]{0,8}[A-Za-z0-9+/]{40,}')),
- ("PEM en HEXA",       re.compile(rb'2[dD]2[dD]2[dD]2[dD]2[dD]424547494[eE]')),
- ("JWT",               re.compile(rb'eyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{10,}')),
- ("clave Anthropic",   re.compile(rb'sk-ant-[A-Za-z0-9_-]{10,}')),
- ("service_role nuevo",re.compile(rb'sb_secret_[A-Za-z0-9_-]{10,}')),
- ("token GitHub",      re.compile(rb'gh[pousr]_[A-Za-z0-9]{20,}')),
- ("clave AWS",         re.compile(rb'AKIA[0-9A-Z]{16}')),
- ("service_role viejo",re.compile(rb'"role"\s*:\s*"service_role"')),
-]
-PERMITIDO = re.compile(rb'sb_publishable_')   # esta SI va en el repo
-hall = []
-for dirp, dirs, files in os.walk(RAIZ):
-    dirs[:] = [d for d in dirs if d not in ('.git','node_modules','__pycache__')]
-    for f in files:
-        p = os.path.join(dirp, f)
-        try: b = open(p,'rb').read()
-        except Exception: continue
-        for nombre, rx in PATRONES:
-            for m in rx.finditer(b):
-                if PERMITIDO.search(b[max(0,m.start()-40):m.start()+60]): continue
-                hall.append((os.path.relpath(p,RAIZ), nombre))
-print(json.dumps(hall))
-PY
-HALL="$(python3 -I "$ESC" "$RESP")"
-if [ "$HALL" != "[]" ]; then
-  rojo "CORTA: el escáner de secretos encontró algo:"; echo "$HALL"; exit 1
+# UNA SOLA COPIA DEL ESCANER, en control/buscar-claves.py. Antes estaba
+# embebido aca Y suelto en mi carpeta de trabajo: dos copias de la misma cosa
+# se separan con el tiempo — paso el 30/10 con la Edge Function `listas`.
+#
+# Y PRIMERO SU ARNES: un escaner que no se probo puede dar cero porque no ve.
+if ! python3 -I "$REPO/control/buscar-claves-arnes.py"; then
+  rojo "CORTA: el arnes del escaner de secretos no pasa. El escaner no ve."
+  exit 1
+fi
+if ! python3 -I "$REPO/control/buscar-claves.py" "$RESP"; then
+  rojo "CORTA: el escaner de secretos encontro algo (detalle arriba)."
+  exit 1
 fi
 verde "OK  escáner de secretos (8 clases): cero"
 

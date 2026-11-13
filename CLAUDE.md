@@ -1026,3 +1026,52 @@ archivo contra el original: **0 diferencias**. Lleva el panel entero, `base/`
 mapa de 10.642 campos— y los documentos clave con el **indice de los 171**. Los
 datos de Tango no van: son de esta empresa. **`base/` es lo unico que no esta en
 ningun otro lado.**
+
+## 13/11/2026 (cierre) — UN PAQUETE INTEGRO PUEDE ESTAR ENTERO Y VIEJO
+
+**LA INTEGRIDAD NO DICE NADA SOBRE LA FRESCURA.** Entregue el respaldo con DOS
+archivos viejos adentro: el volcado de identidades de las 12:39 —anterior al
+arreglo de `mapa_sin_secretos` de las 12:58— y el `panel/` sacado de
+`git archive` ANTES del commit. Las dos veces el paquete **se abria bien,
+pesaba lo mismo y pasaba el escaner de secretos**. Volque la base y despues
+segui tocandola. De ahi salio **`control/respaldo-armar.sh`**, que corta si el
+repo esta sucio, si hay commits sin pushear, si **algun `base/*.sql` es mas
+viejo que el commit de HEAD**, si falta un archivo obligatorio o si el escaner
+encuentra algo — y al final **abre el tar.gz y lo compara** contra el original.
+
+**UN ESCANER QUE GRITA SIEMPRE SE TERMINA APAGANDO, Y EL MIO GRITO 19 VECES.**
+La v1 confundia la MENCION con la COSA: marcaba el marcador
+`2d2d2d2d2d424547494e` citado en la documentacion, el JWT de mentira de un
+arnes (firma: `zz`) y `sk-ant-api03-ZZZZ`. **Es el mismo defecto de la manana**
+—tapar una advertencia creyendola un secreto— en el otro lado del sistema.
+La regla que lo arregla **es medible: un secreto de verdad es largo.** Clave RSA
+en hexa ~6.588 · en PEM ~1.600 base64 sin cortar · firma de un JWT 43+ · clave
+de Anthropic ~108. Un marcador citado en prosa son 20.
+
+**Y ANTES DE DESCARTAR LOS 19 LOS MEDI, porque descartar una alarma real es la
+misma falta que acusar de agujero a algo que no lo es.** Dos mediciones lo
+cerraron: **no hay un solo `-----END ... PRIVATE KEY-----`** en el paquete —una
+clave exportada siempre lo trae— y **la tirada de base64 sin cortar mas larga
+es de 32 caracteres**, un md5 del documento, contra los ~1.600 de una clave.
+
+**DOS COPIAS DE LA MISMA COSA SE SEPARAN CON EL TIEMPO.** Habia escrito el
+escaner embebido en `respaldo-armar.sh` **y** suelto en mi carpeta de trabajo, y
+arregle el suelto. Es el 30/10 con `listas` otra vez. Quedo **una sola copia en
+el repositorio**: `control/buscar-claves.py`, con su arnes al lado
+(`control/buscar-claves-arnes.py`), que el armador corre **antes** de escanear:
+*un escaner que no se probo puede dar cero porque no ve*. Medido: **8 de 8
+secretos de verdad agarrados, 6 de 6 menciones en silencio.**
+
+**EL CONECTOR CAIDO NO ES EL SISTEMA CAIDO.** Los dos conectores de Supabase y
+el de Drive dieron `Service Unavailable` media hora seguida. Antes de decirle al
+usuario que algo estaba mal, lo medi por otro camino: `control/acceso.js` dio
+**la base HTTP 401 en 542 ms y el panel HTTP 200 en 355 ms**, y
+`control/estado.js` imprimio las 105 filas del semaforo. **El sistema estaba
+intacto.** Es la misma clase que el 13/11 a la manana, cuando el Chrome colgado
+casi me hace acusar al Tablero de estar lento.
+
+**Y UN `tail -60` SOBRE UN PUSH ME TAPO LA EVIDENCIA.** El push anterior se
+corto en `lo publicado`, y el detalle de por que se habia perdido: el `tail` se
+quedo con el final. Corrida sola un minuto despues, esa puerta dio **0 fallas,
+53 de 53 archivos identicos**. Era un tropiezo de red. **La salida de un push se
+guarda entera en un archivo; recortarla es tirar justo lo que se va a necesitar.**
