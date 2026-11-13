@@ -973,3 +973,56 @@ La bajada: *"No te pedimos que confies en el numero. Te mostramos contra que lo
 controlamos."* **Prohibido escribir "datos confiables" o "confianza en el dato":
 lo dice todo el mercado y ninguno lo prueba.** El detalle esta en
 `claude/MARCA-EMA-prompt-para-armar-piezas.md`.
+
+## 13/11/2026 (tarde) — EL MAPA LE MANDABA LA CLAVE DE AFIP AL MODELO
+
+**EL MAPA GUARDA MUESTRAS DE CADA COLUMNA, Y ESAS MUESTRAS VIAJAN AL MODELO.**
+`ema.diccionario` guarda `minimo`, `maximo` y `ejemplos` de cada campo, y
+`api_ia_mapa_buscar` manda `que_es` y `significado` a la API de Anthropic;
+`api_mapa_para_analizar` manda ademas `ejemplos`. En una tabla de UNA fila, el
+minimo y el maximo **son el valor entero**. Adentro estaban: la **clave privada
+RSA de DISSAN ante AFIP** (6.588 caracteres), el **certificado X.509**, y un
+**JWT real** de `sesiones.access_token`. Tapadas 16 columnas con un UPDATE, con
+el motivo escrito en `fundamento`. **Hay que rotar la contrasenia de la sesion
+expuesta.**
+
+**UN SECRETO NO VIAJA COMO UNO ESPERA: LA CLAVE DE AFIP ESTA EN HEXADECIMAL.**
+Mi regex buscaba `-----BEGIN [A-Z ]*PRIVATE KEY` y el valor real empieza
+`2D2D2D2D2D424547494E2052`, que es ese mismo encabezado en hexa. **La regex no
+lo habria agarrado nunca**: lo que sono fue la regla por nombre de columna. Un
+control que solo reconoce la forma en que YO imagino el secreto no es un
+control. Ahora `2d2d2d2d2d424547494e` esta en el patron.
+
+**UNA IDENTIDAD QUE ENUMERA COLUMNAS A MANO TIENE EL MISMO DEFECTO QUE LA LISTA
+FIJA DE CALIDADES DEL 14/10.** `mapa_sin_secretos` miraba cuatro columnas de
+trece y se le escapaba `significado`. Va **`to_jsonb(d)::text`**, la fila
+entera: una columna que se agregue maniana queda cubierta sola. Medido con las
+dos caras: la vieja NO sonaba en dos casos plantados, la nueva si, y la fila
+limpia no suena en ninguna.
+
+**TAPE DE MAS UNA ADVERTENCIA UTIL, CONFUNDIENDO LA PROSA CON EL SECRETO.** Lo
+que habia en `significado` no era la clave: era la IA avisando *"si se decodifica
+empieza con -----BEGIN RSA PRIVATE KEY-----"*. **Acusar de agujero a algo que no
+lo es cuesta lo mismo que no ver uno** — tercera vez en tres dias. El patron
+ahora exige **cuerpo** despues del encabezado (40+ caracteres base64), asi que la
+prosa que lo menciona no suena.
+
+**`secret` SUELTO HACE SONAR `secretaria`.** La identidad marco
+`juzgado_dgi.secretaria` —un codigo del 1 al 16— porque mi lista de nombres
+tenia `secret`. En castellano esa es una palabra comun. Va
+`client_secret|secret_key|app_secret`. *Una puerta que grita siempre se apaga.*
+
+**Y EL ESCANER DE SECRETOS SE PRUEBA PLANTANDOLE LAS CLASES, NO CORRIENDOLO.**
+Dio cero sobre 127 archivos; despues se le plantaron las **8 clases** (PEM en
+claro, PEM en hexa, JWT, `sk-ant-`, `sb_secret_`, `ghp_`, `AKIA`,
+`"role":"service_role"`) y las agarro las 8, sin sonar con la clave
+**publishable** —que SI va en el repo— ni con prosa. Un cero sin eso es el cero
+del 10/11: parece una respuesta.
+
+**EL RESPALDO DEL 13/11: `RESPALDO-DISSAN-2026-11-13.tar.gz`**, 127 archivos,
+2.475.455 bytes, en Drive adentro de `DISSAN/`. Abierto y comparado archivo por
+archivo contra el original: **0 diferencias**. Lleva el panel entero, `base/`
+—las 85 identidades, las 233 funciones `api_`, la estructura de 563 tablas y el
+mapa de 10.642 campos— y los documentos clave con el **indice de los 171**. Los
+datos de Tango no van: son de esta empresa. **`base/` es lo unico que no esta en
+ningun otro lado.**
