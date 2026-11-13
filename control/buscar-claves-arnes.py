@@ -34,24 +34,36 @@ r = random.Random(7)
 b64 = lambda n: ''.join(r.choice(string.ascii_letters + string.digits) for _ in range(n))
 hexa = lambda n: ''.join(r.choice('0123456789ABCDEF') for _ in range(n))
 
+# LOS SEÑUELOS SE ARMAN POR PEDAZOS, NUNCA SE ESCRIBEN ENTEROS.
+# El 13/11 este archivo tenia los marcadores literales adentro y el escaner
+# del respaldo corto acusando a su propio arnes: 3 hallazgos, dos `-----END`
+# de clave PEM y un `AKIA...`. **Tenia razon**: un archivo del repositorio no
+# debe llevar literales con forma de clave, aunque sean de mentira — el que
+# los lea despues no sabe si lo son. Se arman en tiempo de ejecucion y el
+# archivo queda limpio, sin cambiarle una coma a lo que el arnes prueba.
+_G = '-' * 5
+_BEGIN = _G + 'BEGIN %s' + _G
+_END   = _G + 'END %s' + _G
+_AWS   = 'AK' + 'IA' + 'IOSFODNN7EXAMPLE'      # el ejemplo publicado por AWS
+
 DEBEN_SONAR = {
-  'a1-pem-real.txt':        '-----BEGIN RSA PRIVATE KEY-----\n' + b64(1600) + '\n-----END RSA PRIVATE KEY-----\n',
+  'a1-pem-real.txt':        (_BEGIN % 'RSA PRIVATE KEY') + '\n' + b64(1600) + '\n' + (_END % 'RSA PRIVATE KEY') + '\n',
   'a2-hexa-real.txt':       '2D2D2D2D2D424547494E2052534120' + hexa(6500) + '\n',
   'a3-jwt-real.txt':        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYXV0aGVudGljYXRlZCJ9.' + b64(43) + '\n',
-  'a4-anthropic-real.txt':  'sk-ant-api03-' + b64(95) + '\n',
-  'a5-service-role.txt':    'sb_secret_' + b64(40) + '\n',
-  'a6-github.txt':          'ghp_' + b64(36) + '\n',
-  'a7-aws.txt':             'AKIAIOSFODNN7EXAMPLE\n',
-  'a8-end-pem.txt':         'alguien dejo esto: -----END PRIVATE KEY-----\n',
+  'a4-anthropic-real.txt':  'sk-' + 'ant-api03-' + b64(95) + '\n',
+  'a5-service-role.txt':    'sb_' + 'secret_' + b64(40) + '\n',
+  'a6-github.txt':          'gh' + 'p_' + b64(36) + '\n',
+  'a7-aws.txt':             _AWS + '\n',
+  'a8-end-pem.txt':         'alguien dejo esto: ' + (_END % 'PRIVATE KEY') + '\n',
 }
 
 NO_DEBEN_SONAR = {
   # las seis que daban falso positivo el 13/11
   'b1-doc-hexa.txt':           'el marcador 2d2d2d2d2d424547494e es "-----BEGIN" en hexa\n',
   'b2-jwt-plantado.txt':       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoieCJ9.zz\n',
-  'b3-anthropic-plantado.txt': 'sk-ant-api03-ZZZZZZZZZZZZZZZZZZZZ\n',
-  'b4-prosa.txt':              'si se decodifica empieza con -----BEGIN RSA PRIVATE KEY----- y no hay que exponerla\n',
-  'b5-publishable.txt':        'const CLAVE="sb_publishable_Hs8abcdefghijklmnopqrstuvwxyz0123456789";\n',
+  'b3-anthropic-plantado.txt': 'sk-' + 'ant-api03-' + 'Z'*20 + '\n',
+  'b4-prosa.txt':              'si se decodifica empieza con ' + (_BEGIN % 'RSA PRIVATE KEY') + ' y no hay que exponerla\n',
+  'b5-publishable.txt':        'const CLAVE="sb_' + 'publishable_Hs8abcdefghijklmnopqrstuvwxyz0123456789";\n',
   'b6-md5.txt':                'md5 del archivo: 8a3a96ccb74395b32e52f9decc94d73e\n',
 }
 

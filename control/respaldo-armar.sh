@@ -59,20 +59,44 @@ COMMIT_EPOCH="$(git log -1 --format=%ct HEAD)"
 verde "OK  el repositorio está limpio y pusheado — HEAD ${COMMIT:0:7}"
 
 # ---------------------------------------------------------------- 3
-# LA QUE ME FALTABA: un volcado de la base anterior al último commit es viejo.
+# LA QUE ME FALTABA: un volcado de la base anterior al último cambio de la
+# base es viejo.
+#
+# LA PRIMERA VERSIÓN COMPARABA CONTRA CUALQUIER COMMIT, y eso estaba mal:
+# un commit de documentación no envejece un volcado de la base. Me dejó
+# encerrado en un círculo —pushear un markdown movía HEAD, HEAD invalidaba
+# los cinco volcados, volver a volcarlos ensuciaba el repo— y una puerta que
+# corta por algo que no pasó es la misma clase que una que grita en falso:
+# se termina salteando.
+#
+# AHORA SE COMPARA CONTRA EL ÚLTIMO COMMIT QUE TOCÓ `sql/` o `edge/`, que es
+# lo único del repositorio que puede haber cambiado la base. Sigue agarrando
+# el defecto real del 13/11 —volcado 12:39, identidad cambiada 12:58, commit
+# de `sql/` 13:08— y su arnés lo prueba: control/respaldo-armar-arnes.sh.
+#
+# Y si `sql/` o `edge/` tienen cambios SIN COMMITEAR, la puerta 1 ya cortó
+# antes: el repositorio sucio no pasa.
+BASE_EPOCH="$(git log -1 --format=%ct HEAD -- sql edge 2>/dev/null)"
+if [ -z "$BASE_EPOCH" ]; then
+  rojo "CORTA: no se pudo leer el último commit que tocó sql/ o edge/."
+  rojo "       No medido no es limpio."
+  exit 1
+fi
+echo "    (los volcados de base/ se comparan contra el último commit de sql/ o edge/:"
+echo "     $(git log -1 --format=%h HEAD -- sql edge) del $(date -d "@$BASE_EPOCH" '+%d/%m %H:%M:%S'))"
 viejos=0
 shopt -s nullglob
 for f in "$RESP"/base/*.sql "$RESP"/base/*.md; do
   f_epoch="$(stat -c %Y "$f")"
-  if [ "$f_epoch" -lt "$COMMIT_EPOCH" ]; then
-    rojo "CORTA: $(basename "$f") se volcó ANTES del commit de HEAD."
-    rojo "       volcado: $(date -d "@$f_epoch" '+%d/%m %H:%M:%S')  ·  commit: $(date -d "@$COMMIT_EPOCH" '+%d/%m %H:%M:%S')"
+  if [ "$f_epoch" -lt "$BASE_EPOCH" ]; then
+    rojo "CORTA: $(basename "$f") se volcó ANTES del último cambio de la base."
+    rojo "       volcado: $(date -d "@$f_epoch" '+%d/%m %H:%M:%S')  ·  cambio: $(date -d "@$BASE_EPOCH" '+%d/%m %H:%M:%S')"
     viejos=$((viejos+1))
   fi
 done
 if [ "$viejos" -gt 0 ]; then
   rojo ""
-  rojo "$viejos archivo(s) de base/ más viejos que el último commit."
+  rojo "$viejos archivo(s) de base/ más viejos que el último cambio de la base."
   rojo "Volver a volcarlos ANTES de empaquetar. Un paquete entero puede estar viejo."
   exit 1
 fi
