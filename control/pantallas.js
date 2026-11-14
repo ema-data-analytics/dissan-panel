@@ -52,6 +52,11 @@ const TIPOS = { '.html':'text/html', '.js':'text/javascript', '.css':'text/css',
 /* el juguete: supabase-js de mentira, para que las pantallas pinten sin base */
 const JUGUETE = path.join(__dirname, 'supabase-de-juguete.js');
 
+/* el arnes: con CONTROL_PLANTAR=sin_barra se le planta a esta puerta el
+   defecto que tiene que agarrar, sirviendo un js/filas.js sin la barra de
+   paginado. No toca el archivo del repositorio: intercepta el pedido. */
+const PLANTAR = process.env.CONTROL_PLANTAR || '';
+
 const fallas = [];
 /* lo que el control MIDIO. Sin esto, "0 fallas" tambien es lo que
    imprime un control que no llego a mirar nada. */
@@ -213,6 +218,37 @@ async function main(){
         body: '/* supabase-js real cortado por el control: manda el juguete */'
       }));
       if (fs.existsSync(JUGUETE)) await pg.addInitScript({ path: JUGUETE });
+
+      /* EL ARNES DE «FILAS INALCANZABLES».                       14/11/2026
+         Hoy este control canto 12 veces sobre dos pantallas que SI tienen
+         paginado: buscaba la barra con una lista de clases escrita a mano y
+         `.sd-caja` no estaba. Lo arregle, dejo de gritar... y ahi esta la
+         trampa: una puerta que deja de gritar puede estar ARREGLADA o
+         CIEGA, y las dos se ven igual desde afuera. Es textual lo del 12/11
+         con la identidad mal emparejada: probar solo que dejo de sonar es
+         apagar la alarma y entregarla rota.
+         Asi que con CONTROL_PLANTAR=sin_barra se sirve un js/filas.js al que
+         se le saco la barra -las filas se siguen tapando con hidden, pero no
+         queda ningun control para llegar a ellas: EXACTAMENTE el defecto que
+         esta puerta tiene que agarrar- y al final se exige que haya gritado.
+         El archivo del repositorio no se toca: se intercepta el pedido. */
+      if (PLANTAR === 'sin_barra'){
+        await pg.route('**/js/filas.js*', async r => {
+          let cuerpo = fs.readFileSync(path.join(RAIZ, 'js', 'filas.js'), 'utf8');
+          const antes = cuerpo;
+          cuerpo = cuerpo
+            .replace('envoltorio.parentNode.insertBefore(barra, envoltorio.nextSibling);',
+                     '/* ARNES: barra no insertada */;')
+            .replace('envoltorio.parentNode.appendChild(barra);',
+                     '/* ARNES: barra no insertada */;');
+          if (cuerpo === antes)
+            throw new Error('EL ARNES NO PUDO PLANTAR EL DEFECTO: no encontro donde '
+                          + 'filas.js inserta la barra. Un arnes que no planta nada '
+                          + 'da verde sin haber probado.');
+          r.fulfill({ status:200, contentType:'application/javascript', body: cuerpo });
+        });
+      }
+
       await pg.goto('http://127.0.0.1:' + PUERTO + '/' + p + '?f=' + Date.now(),
                     { waitUntil: 'load' });
       await pg.waitForTimeout(2200);
@@ -419,9 +455,28 @@ async function main(){
         const ts = [...document.querySelectorAll('#contenido table')];
         return ts.map((t, i) => {
           t.dataset.ctrl = i;
-          const caja = t.closest('.vi-tb-caja,.db-tb-caja,.rt-tb,.marco') || t;
-          const sig = caja.nextElementSibling;
-          if (sig && /fl-barra/.test(sig.className || '')) sig.dataset.ctrl = i;
+          /* LA BARRA SE BUSCA SUBIENDO, NO CON UNA LISTA DE CLASES. 14/11/2026
+             Aca habia escrito a mano `.vi-tb-caja,.db-tb-caja,.rt-tb,.marco`.
+             Los subdiarios envuelven la tabla en `.sd-caja`, que no estaba en
+             esa lista, asi que esta puerta no encontraba el paginado y canto
+             12 veces "no hay ningun control para llegar al resto" sobre dos
+             pantallas que SI lo tienen -medido en el panel publicado con la
+             sesion del usuario: 30 visibles, 259 con hidden, y la `fl-barra`
+             ahi puesta-.
+             Es la lista fija de calidades del 14/10 otra vez: una lista
+             escrita a mano se queda corta sin avisar, y la pantalla nueva de
+             manana nace sin el control. La regla que la reemplaza no nombra
+             ninguna clase de envoltorio: se sube desde la tabla y se mira el
+             hermano siguiente de cada nivel, hasta el contenedor. Si manana
+             alguien envuelve la tabla en otra cosa, esto la sigue
+             encontrando. */
+          let sig = null, nodo = t;
+          for (let v = 0; v < 5 && nodo && nodo.id !== 'contenido'; v++){
+            const h = nodo.nextElementSibling;
+            if (h && /fl-barra/.test(h.className || '')){ sig = h; break; }
+            nodo = nodo.parentElement;
+          }
+          if (sig) sig.dataset.ctrl = i;
           const trs = [...t.querySelectorAll('tbody tr')];
           const datos = trs.filter(tr => !/tot\b|\btot/.test(tr.className || '') &&
                                          !(tr.children.length === 1 && trs.length > 1));
@@ -556,6 +611,23 @@ async function main(){
   await b.close(); srv.close();
 
   /* ---- el informe ---- */
+  /* EL ARNES CONTESTA AL REVES QUE LA PUERTA.                   14/11/2026
+     Con el defecto plantado, 0 fallas NO es un pase: es la prueba de que
+     esta puerta esta ciega. */
+  if (PLANTAR === 'sin_barra'){
+    const agarro = fallas.filter(f => f.clase === 'filas_inalcanzables').length;
+    console.log('\nARNES «sin_barra» — se sirvio un js/filas.js SIN la barra de paginado.');
+    if (agarro){
+      console.log('  OK  la puerta lo agarro: ' + agarro + ' falla(s) filas_inalcanzables.');
+      console.log('  midio: el defecto plantado se detecto en las grillas que esconden '
+                + 'filas, y la puerta nombro su clase.');
+      process.exit(0);
+    }
+    console.log('  LA PUERTA NO LO AGARRO: con la barra sacada no canto ni una vez.');
+    console.log('  Una puerta que no ve el defecto plantado no es una puerta.');
+    process.exit(1);
+  }
+
   if (!fallas.length){
     console.log('CONTROL DE PANTALLAS: ' + pantallas.length +
                 ' pantallas x 2 tamanos, 0 fallas.');
