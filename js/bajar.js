@@ -264,17 +264,50 @@ function bajarTitulo(tabla){
      LA BUSQUEDA NO PUEDE SALIRSE DE #contenido: la primera version
      trepaba hasta el <h1> de la caja de login y los archivos salian
      llamados "ingresar-al-panel-dissan". */
+  /* LA LISTA DE CLASES ESCRITA A MANO SE QUEDO CORTA.         14/11/2026
+     Decia `.mv-sec,.db-sec,.rt-sec,.seg-titulo-h,.mv-titulo` y `.sd-sec`
+     —el rotulo de los subdiarios— NO estaba. Con una sola grilla eso no se
+     notaba: caia al nombre del modulo y el archivo salia
+     "subdiario-de-iva-compras". Con DOS grillas en la misma pantalla se
+     vuelve un defecto de verdad, medido hoy en el panel publicado: las dos
+     bajaban con EL MISMO NOMBRE, y el PDF del detalle por tipo de gasto
+     salia titulado "Subdiario de IVA — Compras". Un rotulo que miente sobre
+     lo que hay abajo es de la misma clase que la columna mal rotulada del
+     14/10 —"gano $70 M vendiendo $4,9 M"—.
+     Es la TERCERA lista escrita a mano que muerde hoy, despues de la de
+     control/pantallas.js. Asi que no se le agrega `.sd-sec`: se saca la
+     lista. La regla pasa a ser la CONVENCION de la casa —una clase que
+     termina en `-sec` o en `-titulo` es un rotulo de seccion— y asi la
+     pantalla que se escriba manana nace con el nombre bien.
+     `sd-sec-pie` NO entra, y por eso la regla exige que TERMINE ahi: el pie
+     ("289 renglones · leidos en 1.589 ms") esta mas cerca de la tabla que el
+     rotulo, asi que una regla floja lo agarraria primero y el archivo se
+     llamaria con el pie. */
   var ROTULOS = 'h1,h2,h3,h4,h5,h6,.mv-sec,.db-sec,.rt-sec,.seg-titulo-h,.mv-titulo';
+  function esRotulo(el){
+    if (!el || !el.matches) return false;
+    if (el.matches(ROTULOS)) return true;
+    var cs = String(el.className || '').split(/\s+/);
+    for (var i = 0; i < cs.length; i++)
+      if (/(^|-)(sec|titulo)$/.test(cs[i])) return true;
+    return false;
+  }
+  function buscarAdentro(el){
+    if (!el || !el.querySelectorAll) return null;
+    var todos = el.querySelectorAll('*');
+    for (var i = 0; i < todos.length; i++) if (esRotulo(todos[i])) return todos[i];
+    return null;
+  }
   var tope = document.getElementById('contenido');
   var n = tabla, pasos = 0;
   while (n && n !== tope && pasos++ < 10){
     var a = n.previousElementSibling;
     while (a){
-      if (a.matches && a.matches(ROTULOS)){
+      if (esRotulo(a)){
         var t = bajarPrimeraLinea(a);
         if (t) return t;
       }
-      var h = a.querySelector ? a.querySelector(ROTULOS) : null;
+      var h = buscarAdentro(a);
       if (h){
         var t2 = bajarPrimeraLinea(h);
         if (t2) return t2;

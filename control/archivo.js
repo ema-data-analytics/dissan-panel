@@ -62,6 +62,11 @@ const { chromium } = require('playwright');
 const RAIZ    = path.join(__dirname, '..');
 const JUGUETE = path.join(__dirname, 'supabase-de-juguete.js');
 const SALIDA  = path.join('/tmp', 'control-archivos');
+
+/* el arnes: con CONTROL_PLANTAR=mismo_nombre se le planta a esta puerta el
+   defecto que tiene que agarrar, sirviendo un js/bajar.js con el reconocedor
+   de rotulos roto. No toca el archivo del repositorio. */
+const PLANTAR = process.env.CONTROL_PLANTAR || '';
 const PUERTO  = 8099;
 
 const fallas = [];
@@ -126,6 +131,28 @@ async function main(){
     await pg.route('**/supabase-js@*/**', r => r.fulfill({
       status:200, contentType:'application/javascript', body:'/* cortado: manda el juguete */' }));
     if (fs.existsSync(JUGUETE)) await pg.addInitScript({ path: JUGUETE });
+
+    /* EL ARNES DE «DOS ARCHIVOS CON EL MISMO NOMBRE».          14/11/2026
+       El detector de colision nacio hoy, y un detector que nunca vio una
+       colision puede estar bien o estar ciego: desde afuera se ven igual.
+       Con CONTROL_PLANTAR=mismo_nombre se sirve un js/bajar.js al que se le
+       rompe el reconocedor de rotulos —`esRotulo` devuelve siempre false—,
+       que es EXACTAMENTE el defecto medido hoy en el panel publicado: las
+       dos grillas de compras caen al nombre del modulo y bajan como
+       "subdiario-de-iva-compras.xlsx" las dos. Al final se exige que la
+       puerta haya gritado. El archivo del repositorio no se toca. */
+    if (PLANTAR === 'mismo_nombre'){
+      await pg.route('**/js/bajar.js*', async r => {
+        let cuerpo = fs.readFileSync(path.join(RAIZ, 'js', 'bajar.js'), 'utf8');
+        const antes = cuerpo;
+        cuerpo = cuerpo.replace('function esRotulo(el){',
+                                'function esRotulo(el){ return false; /* ARNES */');
+        if (cuerpo === antes)
+          throw new Error('EL ARNES NO PUDO PLANTAR EL DEFECTO: no encontro esRotulo en '
+                        + 'js/bajar.js. Un arnes que no planta nada da verde sin probar.');
+        r.fulfill({ status:200, contentType:'application/javascript', body: cuerpo });
+      });
+    }
 
     try {
       await pg.goto('http://127.0.0.1:' + PUERTO + '/' + p + '?f=' + Date.now(), { waitUntil:'load' });
@@ -287,6 +314,24 @@ async function main(){
       }
       const nombre = dl.suggestedFilename();
       const destino = path.join(SALIDA, p.replace('.html','') + '__' + nombre);
+      /* DOS GRILLAS QUE BAJAN CON EL MISMO NOMBRE SE PISAN, Y ESTA PUERTA
+         CONTABA UNA SOLA.                                     14/11/2026
+         Hoy subdiario-compras quedo con dos grillas y las dos bajaron como
+         "Subdiario de IVA - Compras.xlsx": el segundo archivo sobreescribio
+         al primero en la carpeta, y la puerta lo comparo contra SU propia
+         pantalla, que tambien era la segunda. 0 fallas, un archivo menos, y
+         la grilla nueva sin controlar — y encima el PDF de la segunda salia
+         titulado con el nombre de la primera: un rotulo que miente.
+         Para el usuario son dos archivos con el mismo nombre en Descargas.
+         Un control que mide lo que quedo despues de pisarse no mide lo que
+         bajo. */
+      if (fs.existsSync(destino)){
+        falla(p, 'dos_archivos_con_el_mismo_nombre',
+              'la grilla ' + (i + 1) + ' bajo "' + nombre + '", que ya habia bajado otra '
+            + 'grilla de esta misma pantalla. Dos archivos con el mismo nombre se pisan: '
+            + 'en Descargas quedan como (1) y (2), y el titulo del PDF nombra la grilla '
+            + 'equivocada. Cada grilla tiene que declarar su propio rotulo.');
+      }
       await dl.saveAs(destino);
       medido.bajados++;
 
@@ -342,6 +387,22 @@ async function main(){
 
   await b.close();
   srv.close();
+
+  /* EL ARNES CONTESTA AL REVES QUE LA PUERTA: con el defecto plantado, 0
+     fallas NO es un pase, es la prueba de que el detector esta ciego. */
+  if (PLANTAR === 'mismo_nombre'){
+    const agarro = fallas.filter(f => f.clase === 'dos_archivos_con_el_mismo_nombre').length;
+    console.log('\nARNES «mismo_nombre» — se sirvio un js/bajar.js con el reconocedor de '
+              + 'rotulos roto, asi las dos grillas de compras bajan con el mismo nombre.');
+    if (agarro){
+      console.log('  OK  la puerta lo agarro: ' + agarro + ' falla(s) '
+                + 'dos_archivos_con_el_mismo_nombre.');
+      process.exit(0);
+    }
+    console.log('  LA PUERTA NO LO AGARRO: dos archivos se pisaron y no canto.');
+    console.log('  Una puerta que no ve el defecto plantado no es una puerta.');
+    process.exit(1);
+  }
 
   if (!medido.bajados){
     console.log('CONTROL DEL ARCHIVO BAJADO: no se pudo bajar ni un archivo.');
