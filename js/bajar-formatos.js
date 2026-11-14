@@ -677,21 +677,45 @@ function bajarPdf(doc){
   var subLineas = doc.subtitulo ? bajarEnvolver(doc.subtitulo, 9, util, 3) : [];
   ARRIBA = 74 + Math.max(0, subLineas.length - 1) * 11;
 
+  /* UN ENCABEZADO NO SE RECORTA: SE PARTE EN DOS RENGLONES.      14/11/2026
+     Encontrado por la puerta 12 el primer dia que llego a mirar los
+     subdiarios: en el PDF de compras, "IVA 27%" salia "IVA 2..." en las
+     SIETE paginas. Al lado de "IVA 21%" eso no es un encabezado cortado: es
+     otro encabezado. Un numero cortado se lee como otro numero, y un rotulo
+     cortado hace lo mismo — es la misma clase que las tarjetas del 14/10.
+     El ancho de la columna lo manda el DATO (a un numero nunca se le corta),
+     asi que robarle ancho al dato para el rotulo seria cambiar un defecto por
+     otro. Se parte el rotulo, que es lo unico que no cuesta nada: "IVA 27%"
+     entra como "IVA" / "27%" y se lee entero. */
+  var encLineas = doc.encabezados.map(function(e, i){
+    return bajarEnvolver(String(e == null ? '' : e), ptEnc, anchos[i] - 6, 2);
+  });
+  var rengEnc = 1;
+  encLineas.forEach(function(ls){ if (ls.length > rengEnc) rengEnc = ls.length; });
+  var altoEnc = altoFila + (rengEnc - 1) * (ptEnc + 1);
+
   var paginas = [], actual = null, y = 0;
   function nuevaPagina(){
     actual = { texto: [], lineas: [], cajas: [] };
     paginas.push(actual);
     y = L - ARRIBA;
     /* encabezado de la tabla, repetido en cada hoja */
-    actual.cajas.push({ x: MX, y: y - altoFila + 2, w: util, h: altoFila,
+    actual.cajas.push({ x: MX, y: y - altoEnc + 2, w: util, h: altoEnc,
                         c: [0.071, 0.196, 0.322] });
     var x = MX;
     doc.encabezados.forEach(function(e, i){
-      actual.texto.push({ x: x + 3, y: y - altoFila + 6, s: bajarRecortar(e, ptEnc, anchos[i] - 6),
-                          pt: ptEnc, c: [0.95, 0.96, 0.95] });
+      var ls = encLineas[i];
+      /* el ULTIMO renglon del rotulo queda donde estaba el rotulo de una sola
+         linea -pegado al piso de la banda-, y los de arriba se apilan sobre
+         el. Asi un rotulo de una linea sale identico a como salia antes. */
+      for (var r = 0; r < ls.length; r++){
+        actual.texto.push({ x: x + 3,
+                            y: y - altoEnc + 6 + (ls.length - 1 - r) * (ptEnc + 1),
+                            s: ls[r], pt: ptEnc, c: [0.95, 0.96, 0.95] });
+      }
       x += anchos[i];
     });
-    y -= altoFila;
+    y -= altoEnc;
   }
   nuevaPagina();
 

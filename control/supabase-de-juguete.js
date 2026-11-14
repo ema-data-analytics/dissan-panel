@@ -147,6 +147,126 @@
     RPC['api_ventas_fact_informe'] = inflado;
   }
 
+  /* LOS DOS SUBDIARIOS — EL JUGUETE NO LOS TENIA.            14/11/2026
+     Y por eso la puerta 12 paso hoy con 0 fallas SIN HABER MIRADO UNA SOLA
+     FILA DE TOTALES: las dos unicas pantallas del panel que tienen <tfoot>
+     son estas, el juguete no contestaba su funcion, la pantalla pintaba su
+     cartel de error, no aparecia ningun boton de Excel, y la puerta las dio
+     por buenas. Es textual el golpe del 10/11 -el Tablero nueve horas caido
+     con doce puertas alrededor- y esta escrito en CLAUDE.md: "Si agregas un
+     campo al resumen, agregalo tambien al juguete, o el control no puede ver
+     que la pantalla lo pinta como undefined".
+
+     DE DONDE SALEN ESTAS FILAS, PARA QUE NADIE LAS CONFUNDA CON DATOS. Los
+     NOMBRES de las columnas son los medidos en el catalogo de la base hoy
+     (pg_get_function_result de api_subdiario_compras_v3 y _ventas_v4): 23 y
+     18 columnas, esos nombres y no otros. Los VALORES los genera este codigo
+     -no son de DISSAN y no se transcribieron a mano, que es la falta del
+     13/11-. Lo que tienen que cumplir es lo unico que el control mira: que la
+     columna sea del tipo que la pantalla espera, que haya plata en todas las
+     numericas para que el total no de cero, y que los controles den distinto
+     de cero en algunos renglones para que las tarjetas no queden todas en
+     verde por falta de datos. La cantidad de renglones es la real de octubre
+     2024 medida contra la base: 289 en compras. */
+  var SD_COLS_COMPRAS = ['exento','neto_21','neto_27','neto_105','iva_21','iva_27',
+    'iva_105','perc_iva_3','perc_ib_mza','perc_ib_sl','imp_debitos','imp_creditos',
+    'sircreb','otros_imp'];
+  var SD_COLS_VENTAS  = ['exento','neto_21','neto_105','iva_21','iva_105',
+    'perc_iibb_sl','perc_iibb_mza'];
+
+  function sdRedondo(n){ return Math.round(n * 100) / 100; }
+
+  RPC['api_subdiario_compras_v3'] = (function(){
+    var a = [], i;
+    for (i = 0; i < 289; i++){
+      var f = { fecha: '2024-10-' + String((i % 28) + 1).padStart(2,'0'),
+                proveedor: 'PROVEEDOR DE PRUEBA ' + (i % 37),
+                cuit: '30-' + String(10000000 + i * 7919).slice(0,8) + '-' + (i % 10),
+                tipo: (i % 23 === 0) ? 'N/C' : 'FAC',
+                numero: 'A' + String(1 + (i % 9)).padStart(4,'0')
+                      + String(100000 + i * 13).slice(0,10) };
+      for (var c = 0; c < SD_COLS_COMPRAS.length; c++) f[SD_COLS_COMPRAS[c]] = 0;
+      var neto = sdRedondo(1000 + (i * 7919) % 2800000 + (i % 100) / 100);
+      if (i % 11 === 0){ f.neto_105 = neto; f.iva_105 = sdRedondo(neto * 0.105); }
+      else if (i % 17 === 0){ f.exento = neto; }
+      else { f.neto_21 = neto; f.iva_21 = sdRedondo(neto * 0.21); }
+      if (i % 29 === 0) f.perc_ib_mza = sdRedondo(neto * 0.015);
+      if (i % 31 === 0) f.perc_iva_3  = sdRedondo(neto * 0.03);
+      if (i % 41 === 0) f.sircreb     = sdRedondo(neto * 0.005);
+      f.imp_total = sdRedondo(f.exento + f.neto_21 + f.neto_27 + f.neto_105
+                            + f.iva_21 + f.iva_27 + f.iva_105
+                            + f.perc_iva_3 + f.perc_ib_mza + f.perc_ib_sl
+                            + f.imp_debitos + f.imp_creditos + f.sircreb + f.otros_imp);
+      if (f.tipo === 'N/C'){
+        for (var d = 0; d < SD_COLS_COMPRAS.length; d++)
+          f[SD_COLS_COMPRAS[d]] = sdRedondo(-f[SD_COLS_COMPRAS[d]]);
+        f.imp_total = sdRedondo(-f.imp_total);
+      }
+      f.control_iva   = 0;
+      f.control_total = (i % 53 === 0) ? 0.01 : 0;      /* alguno que grite */
+      f.control_neto  = (i % 7  === 0) ? -0.02 : 0;     /* la deriva explicada */
+      a.push(f);
+    }
+    return a;
+  })();
+
+  /* el detalle por tipo de gasto, misma regla: nombres medidos del catalogo,
+     valores generados. 171 = los renglones reales de octubre 2024. */
+  RPC['api_subdiario_compras_gastos_v1'] = (function(){
+    var G = ['AGUA','LIMPIEZA','FLETES','PAPELERIA','ENERGIA ELECTRICA','TELEFONIA',
+             'HONORARIOS PROFESIONALES','MANTENIMIENTO DE RODADOS','SEGUROS','ALQUILERES'];
+    var a = [], i;
+    for (i = 0; i < 171; i++){
+      var sin = sdRedondo(2000 + (i * 5209) % 1900000 + (i % 100) / 100);
+      var iva = sdRedondo(sin * 0.21);
+      var otr = (i % 6 === 0) ? sdRedondo(sin * 0.02) : 0;
+      a.push({ imputacion: G[i % G.length],
+               fecha: '2024-10-' + String((i % 28) + 1).padStart(2,'0'),
+               tipo: (i % 21 === 0) ? 'N/C' : 'FAC',
+               numero: 'A' + String(1 + (i % 7)).padStart(4,'0')
+                     + String(300000 + i * 19).slice(0,10),
+               n_interno: String(8000 + i),
+               cod_pro: String(100 + (i % 83)),
+               razon_social: 'PROVEEDOR DE PRUEBA ' + (i % 83),
+               sin_imp: sin, iva: iva, otros_imp: otr,
+               tot_gral: sdRedondo(sin + iva + otr) });
+    }
+    return a;
+  })();
+
+  RPC['api_subdiario_ventas_v4'] = (function(){
+    var a = [], i;
+    var JUR = ['MENDOZA','SAN JUAN','SAN LUIS','BUENOS AIRES'];
+    for (i = 0; i < 250; i++){
+      var f = { fecha: '2024-10-' + String((i % 28) + 1).padStart(2,'0'),
+                jurisdiccion: JUR[i % JUR.length],
+                mayor_menor: (i % 9 === 0) ? 'Menor' : 'Mayor',
+                cliente: 'CLIENTE DE PRUEBA ' + (i % 29),
+                cuit: '30-' + String(20000000 + i * 6007).slice(0,8) + '-' + (i % 10),
+                tipo: (i % 19 === 0) ? 'DVM' : 'FAC',
+                comprobante: String(1 + (i % 5)).padStart(4,'0')
+                           + String(200000 + i * 17).slice(0,8) };
+      for (var c = 0; c < SD_COLS_VENTAS.length; c++) f[SD_COLS_VENTAS[c]] = 0;
+      var neto = sdRedondo(5000 + (i * 6007) % 4200000 + (i % 100) / 100);
+      if (i % 13 === 0){ f.neto_105 = neto; f.iva_105 = sdRedondo(neto * 0.105); }
+      else { f.neto_21 = neto; f.iva_21 = sdRedondo(neto * 0.21); }
+      if (i % 23 === 0) f.perc_iibb_mza = sdRedondo(neto * 0.02);
+      if (i % 37 === 0) f.perc_iibb_sl  = sdRedondo(neto * 0.01);
+      f.importe = sdRedondo(f.exento + f.neto_21 + f.neto_105 + f.iva_21 + f.iva_105
+                          + f.perc_iibb_sl + f.perc_iibb_mza);
+      if (f.tipo === 'DVM'){
+        for (var d = 0; d < SD_COLS_VENTAS.length; d++)
+          f[SD_COLS_VENTAS[d]] = sdRedondo(-f[SD_COLS_VENTAS[d]]);
+        f.importe = sdRedondo(-f.importe);
+      }
+      f.control_iva     = 0;
+      f.control_importe = (i % 5 === 0) ? 0.03 : 0;     /* los B redondos */
+      f.control_neto    = (i % 6 === 0) ? -0.01 : 0;
+      a.push(f);
+    }
+    return a;
+  })();
+
   window.supabase = {
     createClient: function(){
       return {

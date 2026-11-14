@@ -101,7 +101,41 @@ var SD_DEF = {
       { k:'control_neto', r:'CONTROL NETO',      t:'deriva', rojo:false,
         card:'renglones con deriva del neto <b>derivado del IVA</b> contra el neto de Tango · ' +
              'es el redondeo del IVA en los comprobantes en dólares, multiplicado por la cotización' }
-    ]
+    ],
+    /* EL DETALLE POR TIPO DE GASTO — pedido por DISSAN el 14/11/2026.
+       Es la pestania "detalle de comp. por tipo de gastos" del archivo que
+       arma el contador. Lo unico que cambia contra la suya: el tipo de gasto
+       va en una columna llamada IMPUTACION y lleva la DESCRIPCION, no la
+       sigla. Dicho por el usuario, textual: "VA LA DESCRIPCION, NO UNA
+       SIGLA". El codigo (AGU, LIM) no viaja.
+       Medido contra "COMPRAS_ARCHIVO_BASE.xlsx", hoja DETALLE COMP x TIPO,
+       octubre 2024: 171 de 171 renglones identicos, huella md5 de
+       (numero, sin_imp, iva, otros, total) eb7b1f73...c9ee de los dos lados.
+       Y SIN_IMP es neto + EXENTO: con el neto solo daban $82.483.413,64
+       contra sus $96.832.505,12. */
+    extra: {
+      titulo: 'Detalle de comprobantes por tipo de gasto',
+      fn: 'api_subdiario_compras_gastos_v1',
+      nota: 'Son los comprobantes de compra que tienen <b>tipo de gasto</b> cargado en ' +
+            'Tango, con el mismo recorte del subdiario: <b>fecha contable</b>. La columna ' +
+            '<b>IMPUTACION</b> es la descripción del tipo de gasto, no el código. ' +
+            '<b>SIN_IMP</b> es el neto <b>más el exento</b>, y <b>OTROS_IMP</b> es lo que ' +
+            'queda del total una vez sacados el neto, el exento y el IVA: percepciones e ' +
+            'impuestos internos.',
+      cols: [
+        { k:'imputacion',   r:'IMPUTACION', t:'txt'   },
+        { k:'fecha',        r:'FECHA',      t:'fecha' },
+        { k:'tipo',         r:'T_COMP',     t:'cod'   },
+        { k:'numero',       r:'N_COMP',     t:'cod'   },
+        { k:'n_interno',    r:'N_INTERNO',  t:'cod'   },
+        { k:'cod_pro',      r:'COD_PRO',    t:'cod'   },
+        { k:'razon_social', r:'RAZ_SOC',    t:'txt'   },
+        { k:'sin_imp',      r:'SIN_IMP',    t:'num'   },
+        { k:'iva',          r:'IVA',        t:'num'   },
+        { k:'otros_imp',    r:'OTROS_IMP',  t:'num'   },
+        { k:'tot_gral',     r:'TOT_GRAL',   t:'num'   }
+      ]
+    }
   },
   SubdiarioVentas: {
     titulo: 'Subdiario de IVA — Ventas',
@@ -200,7 +234,13 @@ function sdMes(){
                     'septiembre','octubre','noviembre','diciembre'][m-1] + ' ' + a };
 }
 
-function sdPintar(def, filas, ms, mes){
+/* UN BLOQUE = UNA GRILLA CON SUS TARJETAS.                      14/11/2026
+   Esto era el cuerpo de sdPintar. Se saco afuera para que la pantalla de
+   compras pueda dibujar DOS grillas -el subdiario y el detalle por tipo de
+   gasto- con el mismo codigo. Dos funciones casi iguales se desincronizan en
+   cuanto se toca una: es la misma razon por la que hay una sola pantalla para
+   compras y ventas, y la que dejo el arreglo de `listas` del 30/10 afuera. */
+function sdBloque(def, filas, ms, mes){
   var h = [];
   /* UNA TARJETA POR COLUMNA QUE DECLARA `card`, Y NINGUNA MAS. Antes habia dos
      tarjetas fijas: una del CONTROL IVA, que no puede fallar, y otra que leia
@@ -288,10 +328,29 @@ function sdPintar(def, filas, ms, mes){
   }
   h.push('</tr>');
   h.push('</tfoot></table></div>');
+  return h.join('');
+}
+
+function sdPintar(def, filas, ms, mes, extra){
+  var h = sdBloque(def, filas, ms, mes);
+  /* LA SEGUNDA GRILLA NO PUEDE ROMPER LA PRIMERA. Si el detalle por tipo de
+     gasto no vino -la funcion fallo, o el mes no tiene gastos cargados- el
+     subdiario se dibuja igual y se dice por que falta. Una grilla agregada
+     que se lleva puesta la pantalla que ya andaba es peor que no agregarla. */
+  if (def.extra){
+    if (extra && extra.filas && extra.filas.length)
+      h += sdBloque(def.extra, extra.filas, extra.ms, mes);
+    else
+      h += '<div class="sd-aviso"><b>' + esc(def.extra.titulo) + ':</b> '
+         + (extra && extra.error
+             ? esc(extra.error)
+             : 'no hay comprobantes con tipo de gasto cargado en ' + esc(mes.rotulo) + '.')
+         + '</div>';
+  }
 
   /* ULTIMA LINEA: la que ESCRIBE. Una pintar() que corre y no escribe no
      da error y parece que anda (paso el 21/10 con Cartera). */
-  document.getElementById('cuerpo').innerHTML = h.join('');
+  document.getElementById('cuerpo').innerHTML = h;
 }
 
 function sdCargando(si){
@@ -316,7 +375,19 @@ async function calcular(){
         + '.</b> No es un error: ese mes no tiene movimientos cargados.</div>';
       return;
     }
-    sdPintar(def, filas, r.ms, mes);
+    /* el detalle por tipo de gasto, si esta pantalla lo declara. Va DESPUES
+       de tener el subdiario en la mano y con su propio try: si falla, la
+       pantalla principal se dibuja igual y el aviso lo dice. */
+    var extra = null;
+    if (def.extra){
+      try {
+        var re = await rpcTodo(def.extra.fn, { p_desde: mes.desde, p_hasta: mes.hasta });
+        extra = { filas: re.data || [], ms: re.ms };
+      } catch (ee){
+        extra = { filas: [], error: 'no se pudo armar: ' + (ee.message || ee) };
+      }
+    }
+    sdPintar(def, filas, r.ms, mes, extra);
   } catch (e){
     cuerpo.innerHTML = '<div class="sd-aviso"><b>No se pudo armar el subdiario.</b> '
       + esc(e.message || e) + '</div>';

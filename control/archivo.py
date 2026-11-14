@@ -522,6 +522,25 @@ def main():
               medido['fechas'], medido['codigos'], medido['plata'],
               medido['titulos']))
 
+    # LA FILA DE TOTALES SE DECLARA, PASE O NO PASE.              14/11/2026
+    # Hoy esta puerta canto "0 fallas" el mismo dia que se le agrego el
+    # control de la fila de totales, y NO HABIA MIRADO NINGUNA: las dos
+    # pantallas que la tienen no contestaban con el juguete. Un control que
+    # pasa sin decir que midio es media medicion, y en este proyecto ya
+    # costo nueve horas de Tablero caido. Asi que el pie lo dice solo, y si
+    # el numero es cero lo dice con todas las letras.
+    con_tot = medido.get('con_totales', 0)
+    if con_tot:
+        pie += ('\n  la fila de totales: %d pantalla(s) la mostraron · %d archivo(s) '
+                'bajaron tabla de Excel con fila de totales · %d celda(s) de total '
+                'comparadas contra la pantalla.'
+                % (con_tot, medido.get('tablas', 0),
+                   medido.get('totales_comparados', 0)))
+    else:
+        pie += ('\n  la fila de totales: NINGUNA pantalla mostro totales en esta '
+                'corrida, asi que ESE CONTROL NO SE EJERCITO. No es un pase: '
+                'es un control que no llego a mirar.')
+
     if not fallas:
         print('  ADENTRO DE LOS ARCHIVOS: 0 fallas.')
         print(pie)

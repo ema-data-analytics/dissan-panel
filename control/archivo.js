@@ -129,7 +129,48 @@ async function main(){
 
     try {
       await pg.goto('http://127.0.0.1:' + PUERTO + '/' + p + '?f=' + Date.now(), { waitUntil:'load' });
-    } catch (e){ await ctx.close(); continue; }
+    } catch (e){
+      /* NO SE SALTEA UNA PANTALLA EN SILENCIO.                  14/11/2026
+         Esto hacia `continue` sin decir nada: una pantalla que no carga
+         desaparecia del control y la puerta contaba las que si cargaron como
+         si fueran todas. Hoy me tapo media hora de por que los subdiarios
+         no bajaban nada. */
+      falla(p, 'la_pantalla_no_cargo',
+            'no pude abrirla en el servidor local: ' + String(e.message).slice(0,140));
+      await ctx.close(); continue;
+    }
+    /* LAS PANTALLAS QUE HAY QUE ARMAR ANTES DE QUE MUESTREN NADA. 14/11/2026
+       Los dos subdiarios no dibujan la grilla al cargar: piden un mes y un
+       clic. Este control entraba, no veia ningun boton de Excel, y seguia de
+       largo — asi que las UNICAS dos pantallas del panel con fila de totales
+       quedaban afuera del control del archivo bajado, y la puerta pasaba en
+       verde sin haberlas mirado. Un control que solo mide lo que se dibuja
+       solo mide las pantallas faciles.
+
+       VA ANTES DE LA ESPERA, NO DESPUES. Primero lo puse despues y el control
+       seguia viendo 0 botones: esperaba a que apareciera el <tfoot> y agarraba
+       los botones ahi nomas, pero `bajarPonerBotones` corre con un
+       MutationObserver, o sea SIEMPRE un poco despues que la tabla. Armar
+       primero y dejar que la espera de abajo —la que ya sabe esperar a que la
+       cantidad de botones se quede quieta— haga su trabajo es lo correcto, y
+       ademas no agrega ni un numero escrito a mano. */
+    {
+      const mes = await pg.$('#sdMes');
+      if (mes){
+        /* el mes del juguete, no "hoy": el juguete contesta octubre 2024 */
+        await pg.fill('#sdMes', '2024-10');
+        const btn = await pg.$('#sdBtn');
+        if (btn){
+          await btn.click();
+          try { await pg.waitForSelector('table.sd-tb tfoot tr', { timeout: 30000 }); }
+          catch (e){
+            falla(p, 'la_pantalla_no_armo_la_grilla',
+                  'elegi el mes y aprete "Ver el subdiario" y en 30 s no aparecio '
+                + 'la fila de totales: ' + e.message.slice(0,90));
+          }
+        }
+      }
+    }
     /* SE ESPERA A QUE LA PANTALLA SE QUEDE QUIETA, NO 2,2 SEGUNDOS.  10/11/2026
        Habia un waitForTimeout(2200) fijo. Una pantalla que tarda mas sigue
        armando grillas mientras este control ya esta clickeando, y como las
@@ -188,8 +229,24 @@ async function main(){
           const env = b.closest('.bajar-barra') && b.closest('.bajar-barra').nextElementSibling;
           const t = env && env.querySelector('table');
           if (!t) return null;
-          const enc = [...t.querySelectorAll('thead th')]
-                        .map(x => (x.textContent || '').trim());
+          /* LAS COLUMNAS QUE EL PANEL DECLARA QUE NO BAJAN.        14/11/2026
+             En los subdiarios las tres columnas de CONTROL llevan
+             `data-no-baja` en su <th>: se ven en pantalla para discutir con el
+             contador y NO van al archivo, porque el usuario lo pidio textual
+             el 10/11 -el Excel tiene que tener las columnas exactamente como
+             las del contador-. La primera vez que este control llego a mirar
+             estas pantallas canto 98 fallas por eso: comparaba contra columnas
+             que el archivo no tiene por diseno.
+             Se leen del DOM, no de bajar.js: el atributo es la DECLARACION de
+             la pantalla, y este control sigue sin usar una sola funcion del
+             codigo que controla. Si manana alguien le saca el data-no-baja a
+             una columna, el control va a exigirla en el archivo -que es
+             exactamente lo que tiene que pasar-. */
+          const ths  = [...t.querySelectorAll('thead th')];
+          const baja = ths.map(x => !x.hasAttribute('data-no-baja'));
+          const enc  = ths.filter((x, j) => baja[j])
+                          .map(x => (x.textContent || '').trim());
+          const soloLasQueBajan = tds => tds.filter((td, j) => baja[j] !== false);
           const leerCelda = td => ({
             texto: (td.textContent || '').trim(),
             dataV: td.hasAttribute('data-v') ? td.getAttribute('data-v') : null,
@@ -200,7 +257,7 @@ async function main(){
           for (const tr of t.querySelectorAll('tbody tr')){
             const tds = [...tr.children];
             if (tds.length === 1 && enc.length > 1) continue;   /* "no hay datos" */
-            filas.push(tds.map(leerCelda));
+            filas.push(soloLasQueBajan(tds).map(leerCelda));
           }
           /* LA FILA DE TOTALES, QUE HASTA HOY NO MIRABA NADIE.    14/11/2026
              Vive en <tfoot> desde el 05/11, cuando se la saco del <tbody>
@@ -212,7 +269,7 @@ async function main(){
              que fotografiarla: un control no puede comparar contra algo que
              no miro. */
           const totales = [...t.querySelectorAll('tfoot tr')]
-                            .map(tr => [...tr.children].map(leerCelda));
+                            .map(tr => soloLasQueBajan([...tr.children]).map(leerCelda));
           return { encabezados: enc, filas: filas, totales: totales };
         });
       } catch (e){ vista = null; }
@@ -289,6 +346,21 @@ async function main(){
   if (!medido.bajados){
     console.log('CONTROL DEL ARCHIVO BAJADO: no se pudo bajar ni un archivo.');
     console.log('  No medido no es limpio: el push se corta.');
+    console.log('  abri ' + medido.pantallas + ' pantalla(s) y vi ' + medido.grillas
+              + ' grilla(s) con boton de Excel.');
+    /* Y LAS FALLAS QUE YA SE HABIAN JUNTADO, QUE ESTE CAMINO SE TRAGABA.
+       14/11/2026. Hoy esta salida dijo "no se pudo bajar ni un archivo" y
+       NADA MAS, con fallas ya anotadas adentro de `fallas`: el motivo estaba
+       medido y no se imprimia. Es la misma clase que el `tail -60` del 13/11
+       que me tapo por que se habia cortado un push: tirar justo la evidencia
+       que se va a necesitar. */
+    if (fallas.length){
+      console.log('  lo que si se midio antes de quedarse sin archivos:');
+      for (const f of fallas) console.log('    · ' + f.donde + ' — ' + f.clase + ': ' + f.que);
+    } else {
+      console.log('  y no quedo anotada ninguna falla: ninguna pantalla llego a '
+                + 'mostrar un boton de Excel.');
+    }
     process.exit(1);
   }
 
