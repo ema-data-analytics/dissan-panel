@@ -193,10 +193,16 @@ function bajarXlsx(hojas){
   var lista = Array.isArray(hojas) ? hojas.filter(function(h){ return h; }) : [hojas];
   if (!lista.length) lista = [{ nombre:'Detalle', encabezados:[], filas:[], formatos:[] }];
 
-  var xmls = lista.map(function(h, i){
+  /* `idTabla` tiene que ser UNICO en todo el libro, no por hoja: dos tablas
+     con el mismo id hacen que Excel pida reparar el archivo. */
+  var nTablas = 0;
+  var armadas = lista.map(function(h, i){
     h.primera = (i === 0);
+    if (h.totales && h.totales.length) h.idTabla = ++nTablas;
     return bajarUnaHoja(h);
   });
+  var xmls   = armadas.map(function(a){ return a.sheet; });
+  var tablas = armadas.map(function(a){ return a.tabla; });
   var nombres = lista.map(function(h, i){
     return bajarXmlEsc(String(h.nombre || ('Hoja' + (i+1))).slice(0, 31)
              .replace(/[\\\/\?\*\[\]:]/g, ' '));
@@ -214,6 +220,10 @@ function bajarXlsx(hojas){
                'ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>';
       }).join('') +
       '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>' +
+      tablas.map(function(t, i){
+        return t ? '<Override PartName="/xl/tables/table' + (i+1) + '.xml" ' +
+                   'ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.table+xml"/>' : '';
+      }).join('') +
       '</Types>' },
     { nombre: '_rels/.rels', datos:
       '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
@@ -242,6 +252,20 @@ function bajarXlsx(hojas){
   ];
   xmls.forEach(function(x, i){
     piezas.push({ nombre: 'xl/worksheets/sheet' + (i+1) + '.xml', datos: x });
+  });
+  /* La tabla es una pieza aparte, y la hoja la alcanza por su propio
+     archivo de relaciones. Sin el .rels, el <tablePart r:id="rId1"> apunta
+     a la nada y Excel pide reparar el libro. */
+  tablas.forEach(function(t, i){
+    if (!t) return;
+    piezas.push({ nombre: 'xl/tables/table' + (i+1) + '.xml', datos: t });
+    piezas.push({ nombre: 'xl/worksheets/_rels/sheet' + (i+1) + '.xml.rels', datos:
+      '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+      '<Relationship Id="rId1" ' +
+      'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/table" ' +
+      'Target="../tables/table' + (i+1) + '.xml"/>' +
+      '</Relationships>' });
   });
   return bajarZip(piezas);
 }
@@ -322,6 +346,55 @@ function bajarUnaHoja(hoja){
     nf++;
   });
 
+  /* ===================================================================
+     LA FILA DE TOTALES, Y LA TABLA DE EXCEL QUE LA SOSTIENE   14/11/2026
+     ===================================================================
+     Lo pidio el contador, y sus archivos lo muestran: "2026.09 COMPRAS
+     contador asi lo envio.xlsx" no es un rango pelado — es una TABLA de
+     Excel (Tabla1, A1:X405, TableStyleMedium2, rayado de filas), con
+     headerRowCount=1 y **totalsRowCount=1**: 'Total' en la primera columna
+     y `sum` en las 17 numericas.
+
+     ES LA OTRA CARA DEL DEFECTO DEL 05/11. Entonces el TOTAL entraba al
+     Excel como un renglon de datos mas —la palabra TOTAL en la columna
+     FECHA, vacias las de CUIT y NUMERO— y se lo saco del <tbody>. Eso lo
+     dejo FUERA del archivo. Ninguna de las dos era la forma correcta: la
+     correcta es la fila de totales DE LA TABLA, que Excel entiende como
+     tal, vuelve a sumar al filtrar y no se ordena junto con los datos.
+
+     SE ESCRIBE LA FORMULA **Y** EL VALOR CALCULADO. Solo la formula haria
+     que quien lea el archivo sin abrirlo en Excel —la puerta 12, que usa
+     openpyxl con data_only— vea una celda vacia, y un total que el control
+     no puede leer no es un total. Solo el valor perderia el recalculo al
+     filtrar. Van los dos: <f> para Excel, <v> para todo lo demas.      */
+  var hayTot = !!(hoja.totales && hoja.totales.length);
+  var filaTot = 0;
+  if (hayTot){
+    filaTot = nf;
+    var cst = '';
+    for (var it = 0; it < hoja.encabezados.length; it++){
+      var ct = hoja.totales[it];
+      if (!ct || ct.v === null || ct.v === undefined || ct.v === '') continue;
+      var reft = bajarCol(it) + nf;
+      if (ct.t === 'num'){
+        var fmtt = hoja.formatos[it] === 'pct'  ? IDX.pct
+                 : hoja.formatos[it] === 'ent'  ? IDX.ent
+                 : hoja.formatos[it] === 'num4' ? IDX.num4
+                 : hoja.formatos[it] === 'num'  ? IDX.num
+                 : IDX.texto;
+        cst += '<c r="' + reft + '" s="' + fmtt + '">' +
+               '<f>SUBTOTAL(109,' + bajarNombreTabla(hoja) + '[' +
+                 bajarRefEstruct(hoja.encabezados[it]) + '])</f>' +
+               '<v>' + ct.v + '</v></c>';
+      } else {
+        cst += '<c r="' + reft + '" s="' + IDX.enc + '" t="inlineStr">' +
+               '<is><t xml:space="preserve">' + bajarXmlEsc(ct.v) + '</t></is></c>';
+      }
+    }
+    filas.push('<row r="' + nf + '">' + cst + '</row>');
+    nf++;
+  }
+
   var ultima = bajarCol(hoja.encabezados.length - 1);
   var cols = '<cols>' + (hoja.anchos || []).map(function(a, i){
     return '<col min="' + (i+1) + '" max="' + (i+1) + '" width="' + a + '" customWidth="1"/>';
@@ -329,7 +402,8 @@ function bajarUnaHoja(hoja){
 
   var sheet =
     '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
-    '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
+    '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" ' +
+    'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">' +
     /* `tabSelected` SOLO EN LA PRIMERA. Si dos hojas dicen que estan
        seleccionadas, Excel abre el libro con las dos marcadas y cualquier cosa
        que se escriba cae en las dos a la vez. */
@@ -340,10 +414,50 @@ function bajarUnaHoja(hoja){
     '<sheetFormatPr defaultRowHeight="15"/>' +
     ((hoja.anchos || []).length ? cols : '') +
     '<sheetData>' + filas.join('') + '</sheetData>' +
-    '<autoFilter ref="A' + filaEnc + ':' + ultima + (nf - 1) + '"/>' +
+    /* UNA TABLA Y UN AUTOFILTRO A LA VEZ ROMPEN EL ARCHIVO: Excel pide
+       reparar el libro. La tabla ya trae su propio filtro adentro. */
+    (hayTot ? '' : '<autoFilter ref="A' + filaEnc + ':' + ultima + (nf - 1) + '"/>') +
+    (hayTot ? '<tableParts count="1"><tablePart r:id="rId1"/></tableParts>' : '') +
     '</worksheet>';
 
-  return sheet;
+  var tabla = null;
+  if (hayTot){
+    var ref = 'A' + filaEnc + ':' + ultima + filaTot;
+    tabla =
+      '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<table xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" ' +
+      'id="' + (hoja.idTabla || 1) + '" name="' + bajarNombreTabla(hoja) + '" ' +
+      'displayName="' + bajarNombreTabla(hoja) + '" ref="' + ref + '" ' +
+      'headerRowCount="1" totalsRowCount="1">' +
+      '<autoFilter ref="A' + filaEnc + ':' + ultima + (filaTot - 1) + '"/>' +
+      '<tableColumns count="' + hoja.encabezados.length + '">' +
+      hoja.encabezados.map(function(e, i){
+        var ct = (hoja.totales || [])[i];
+        var extra = '';
+        if (ct && ct.t === 'num')      extra = ' totalsRowFunction="sum"';
+        else if (ct && ct.v)           extra = ' totalsRowLabel="' + bajarXmlEsc(ct.v) + '"';
+        return '<tableColumn id="' + (i+1) + '" name="' + bajarXmlEsc(e) + '"' + extra + '/>';
+      }).join('') +
+      '</tableColumns>' +
+      '<tableStyleInfo name="TableStyleMedium2" showFirstColumn="0" ' +
+      'showLastColumn="0" showRowStripes="1" showColumnStripes="0"/>' +
+      '</table>';
+  }
+
+  return { sheet: sheet, tabla: tabla };
+}
+
+/* El nombre de la tabla NO puede tener espacios ni empezar con un numero:
+   Excel rechaza el libro. Una por hoja, numeradas. */
+function bajarNombreTabla(hoja){
+  return 'Tabla' + (hoja.idTabla || 1);
+}
+/* Dentro de una referencia estructurada —Tabla1[NETO 21%]— los caracteres
+   [ ] # ' se escapan con una comilla simple delante. Sin esto, un titulo
+   con corchetes rompe la formula y Excel pide reparar el archivo. */
+function bajarRefEstruct(nombre){
+  return bajarXmlEsc(String(nombre === null || nombre === undefined ? '' : nombre)
+    .replace(/(['\[\]#])/g, "'$1"));
 }
 
 /* ===================================================================

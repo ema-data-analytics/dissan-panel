@@ -230,13 +230,19 @@ def revisar(ruta):
 
     # cuantas filas de datos tiene el archivo
     filas_arch = 0
+    ultima_con_datos = fila_enc
     r = fila_enc + 1
     while r <= ws.max_row:
         if any(ws.cell(row=r, column=c).value not in (None, '')
                for c in range(1, len(encs) + 1)):
             filas_arch += 1
+            ultima_con_datos = r
         r += 1
     medido['filas'] += filas_arch
+
+    # la fila de totales, antes de comparar celda por celda: si falta, el
+    # resto de la comparacion igual corre y se ve todo junto.
+    revisar_fila_de_totales(nombre, ws, vista, fila_enc, encs, ultima_con_datos)
 
     # EL ARCHIVO NO PUEDE TRAER MENOS DE LO QUE SE VE. Puede traer MAS:
     # bajar.js recorre todas las paginas, y eso ya lo mide el control de
@@ -399,6 +405,101 @@ def revisar(ruta):
                 falla(nombre, 'el_texto_del_archivo_no_es_el_de_la_pantalla',
                       '%s: pantalla "%s", archivo "%s".'
                       % (donde, texto[:60], v.strip()[:60]))
+
+
+def revisar_fila_de_totales(nombre, ws, vista, fila_enc, encs, ultima_con_datos):
+    """LA FILA DE TOTALES TIENE QUE SER LA DE UNA TABLA DE EXCEL.   14/11/2026
+
+    Lo pidio el contador: sus archivos ("2026.09 COMPRAS contador asi lo
+    envio.xlsx") no son un rango pelado — son TABLAS de Excel, estilo
+    TableStyleMedium2, headerRowCount=1 y **totalsRowCount=1**, con la etiqueta
+    'Total' en la primera columna y `sum` en las numericas.
+
+    Y es la otra cara del defecto del 05/11: entonces el TOTAL entraba al
+    archivo como un renglon de datos mas —con la palabra TOTAL en la columna
+    FECHA y vacias las de CUIT y NUMERO— y se lo saco del <tbody>. Sacarlo lo
+    dejo fuera del archivo. La forma correcta no es ninguna de las dos: es la
+    fila de totales DE LA TABLA, que Excel entiende como tal, suma sola al
+    filtrar y no se ordena con los datos.
+
+    Si la pantalla no tiene <tfoot>, aca no hay nada que exigir.
+    """
+    totales_pant = (vista or {}).get('totales') or []
+    if not totales_pant:
+        return
+    medido['con_totales'] = medido.get('con_totales', 0) + 1
+
+    tablas = list(ws.tables.values()) if getattr(ws, 'tables', None) else []
+    if not tablas:
+        falla(nombre, 'el_excel_no_trae_tabla',
+              'la pantalla muestra una fila de TOTALES y el archivo no tiene una '
+              'sola tabla de Excel: salio como rango pelado. El contador las manda '
+              'como tabla (TableStyleMedium2, totalsRowCount=1) y asi las espera.')
+        return
+
+    t = tablas[0]
+    medido['tablas'] = medido.get('tablas', 0) + 1
+    if (t.totalsRowCount or 0) != 1:
+        falla(nombre, 'la_tabla_no_declara_fila_de_totales',
+              'la tabla "%s" (%s) tiene totalsRowCount=%s. Sin eso Excel no la '
+              'reconoce como fila de totales: no suma al filtrar y se ordena '
+              'junto con los datos.' % (t.name, t.ref, t.totalsRowCount))
+        return
+
+    # la tabla tiene que ARRANCAR en los encabezados y TERMINAR en los totales
+    m = re.match(r'^[A-Z]+(\d+):[A-Z]+(\d+)$', str(t.ref or ''))
+    if not m:
+        falla(nombre, 'la_tabla_tiene_un_rango_raro',
+              'no pude leer el rango de la tabla: "%s".' % t.ref)
+        return
+    desde, hasta = int(m.group(1)), int(m.group(2))
+    if desde != fila_enc:
+        falla(nombre, 'la_tabla_no_arranca_en_los_encabezados',
+              'la tabla va de la fila %d y los encabezados estan en la %d.'
+              % (desde, fila_enc))
+    if hasta != ultima_con_datos:
+        falla(nombre, 'la_tabla_no_termina_en_los_totales',
+              'la tabla termina en la fila %d y la ultima fila con datos del '
+              'archivo es la %d. Si la tabla no la abarca, el total queda afuera '
+              'y es un renglon suelto: Excel no lo suma ni lo respeta al ordenar.'
+              % (hasta, ultima_con_datos))
+        return
+    fila_tot = hasta
+
+    # ---- y los NUMEROS: los de la pantalla, uno por uno ---------------
+    pant = totales_pant[0]
+    for i in range(min(len(pant), len(encs))):
+        texto = (pant[i].get('texto') or '').strip()
+        # SE USA EL MISMO LECTOR QUE EL RESTO DEL CONTROL, no uno nuevo.
+        # El primer intento escribio un parser propio que leia el `data-v`
+        # —que es el numero de MAQUINA, con punto decimal— con la regla
+        # castellana: 253698299.3 le salia 2.536.982.993. Es textual el
+        # defecto del 05/11 con los precios en ingles. `exacto_de_la_pantalla`
+        # ya resuelve el orden data-v -> title -> texto, y es el que usan las
+        # otras comparaciones: una sola copia.
+        esperado, _ = exacto_de_la_pantalla(pant[i])
+        v = ws.cell(row=fila_tot, column=i + 1).value
+        donde = '%s, fila de totales, columna %s' % (nombre, encs[i] or chr(65 + i))
+
+        if esperado is None:
+            # celda de texto: la etiqueta TOTAL tiene que estar
+            if texto and str(v or '').strip().upper() not in (texto.upper(), 'TOTAL'):
+                falla(nombre, 'la_etiqueta_del_total_no_coincide',
+                      '%s: la pantalla dice "%s" y el archivo "%s".'
+                      % (donde, texto[:40], str(v or '')[:40]))
+            continue
+
+        medido['totales_comparados'] = medido.get('totales_comparados', 0) + 1
+        if v is None or isinstance(v, str):
+            falla(nombre, 'el_total_del_archivo_no_es_un_numero',
+                  '%s: la pantalla suma %s y el archivo guardo %r. Un total que '
+                  'es texto no se suma ni se filtra.'
+                  % (donde, texto, v))
+            continue
+        if abs(float(v) - esperado) > 0.01:
+            falla(nombre, 'el_total_del_archivo_no_es_el_de_la_pantalla',
+                  '%s: pantalla %s (%.2f) y archivo %.2f. Diferencia %.2f.'
+                  % (donde, texto, esperado, float(v), float(v) - esperado))
 
 
 def main():

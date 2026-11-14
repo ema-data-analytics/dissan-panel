@@ -190,18 +190,30 @@ async function main(){
           if (!t) return null;
           const enc = [...t.querySelectorAll('thead th')]
                         .map(x => (x.textContent || '').trim());
+          const leerCelda = td => ({
+            texto: (td.textContent || '').trim(),
+            dataV: td.hasAttribute('data-v') ? td.getAttribute('data-v') : null,
+            title: td.getAttribute('title') || null,
+            clase: td.className || ''
+          });
           const filas = [];
           for (const tr of t.querySelectorAll('tbody tr')){
             const tds = [...tr.children];
             if (tds.length === 1 && enc.length > 1) continue;   /* "no hay datos" */
-            filas.push(tds.map(td => ({
-              texto: (td.textContent || '').trim(),
-              dataV: td.hasAttribute('data-v') ? td.getAttribute('data-v') : null,
-              title: td.getAttribute('title') || null,
-              clase: td.className || ''
-            })));
+            filas.push(tds.map(leerCelda));
           }
-          return { encabezados: enc, filas: filas };
+          /* LA FILA DE TOTALES, QUE HASTA HOY NO MIRABA NADIE.    14/11/2026
+             Vive en <tfoot> desde el 05/11, cuando se la saco del <tbody>
+             porque el Excel y el PDF se la llevaban como si fuera un
+             comprobante mas. Sacarla de ahi la dejo FUERA del archivo, y el
+             contador la quiere adentro — como fila de totales de una tabla
+             de Excel, no como un renglon de datos. Para poder exigir que el
+             archivo la traiga, y que traiga los MISMOS numeros, primero hay
+             que fotografiarla: un control no puede comparar contra algo que
+             no miro. */
+          const totales = [...t.querySelectorAll('tfoot tr')]
+                            .map(tr => [...tr.children].map(leerCelda));
+          return { encabezados: enc, filas: filas, totales: totales };
         });
       } catch (e){ vista = null; }
 

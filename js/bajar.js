@@ -138,6 +138,23 @@ function bajarLeerTabla(tabla){
     for (var n2 = 0; n2 < iClave.length; n2++) fk.push(bajarCelda(tds[iClave[n2]]));
     filas.push(fila); ctrl.push(fc); claves.push(fk);
   }
+  /* LA FILA DE TOTALES DEL <tfoot>.                            14/11/2026
+     Hasta hoy esto leía sólo `tbody tr`, así que el TOTAL no entraba al
+     archivo. Es la otra cara del 05/11: entonces el total estaba DENTRO del
+     tbody y se bajaba como si fuera un comprobante más —la palabra TOTAL en
+     la columna FECHA—, se lo mudó a tfoot y con eso desapareció del Excel.
+     El contador lo quiere adentro, pero como fila de totales DE LA TABLA,
+     que es lo que hacen sus archivos. Se saltean las MISMAS columnas que en
+     los datos: si se saltearan distinto, el total caería bajo otro título.  */
+  var totales = null;
+  var tft = tabla.querySelector('tfoot tr');
+  if (tft){
+    totales = [];
+    for (var y = 0; y < tft.children.length; y++){
+      if (saltar[y]) continue;
+      totales.push(bajarCelda(tft.children[y]));
+    }
+  }
   /* el tipo de cada columna: el que más se repite entre sus celdas con valor */
   var tipos = [];
   for (var k = 0; k < enc.length; k++){
@@ -159,7 +176,7 @@ function bajarLeerTabla(tabla){
     tipos.push({ tipo: t, pct: con > 0 && pct >= con * 0.8,
                  cod: con > 0 && cods >= con * 0.8 });
   }
-  return { encabezados: enc, filas: filas, tipos: tipos,
+  return { encabezados: enc, filas: filas, tipos: tipos, totales: totales,
            encCtrl: encCtrl, ctrl: ctrl, encClave: encClave, claves: claves };
 }
 
@@ -363,7 +380,11 @@ function bajarAExcel(tabla, boton){
                filtros.length ? 'Filtros: ' + filtros.join('  \u00b7  ') : 'Sin filtros',
                d.filas.length + (d.filas.length === 1 ? ' rengl\u00f3n' : ' renglones') +
                ' \u00b7 bajado el ' + bajarHoy()],
-      encabezados: d.encabezados, filas: filas, formatos: formatos, anchos: anchos
+      encabezados: d.encabezados, filas: filas, formatos: formatos, anchos: anchos,
+      /* si la pantalla muestra totales, el archivo los trae como fila de
+         totales de una tabla de Excel. Si no los muestra, no se inventa una:
+         `totales` queda en null y la hoja sale como siempre. */
+      totales: d.totales
     }];
 
     /* ---------- LA HOJA DE CONTROLES ----------                 10/11/2026
