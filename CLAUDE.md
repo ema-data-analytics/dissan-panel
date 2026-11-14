@@ -1075,3 +1075,102 @@ corto en `lo publicado`, y el detalle de por que se habia perdido: el `tail` se
 quedo con el final. Corrida sola un minuto despues, esa puerta dio **0 fallas,
 53 de 53 archivos identicos**. Era un tropiezo de red. **La salida de un push se
 guarda entera en un archivo; recortarla es tirar justo lo que se va a necesitar.**
+
+## 14/11/2026 — TRES LISTAS ESCRITAS A MANO EN UN DIA, Y UNA PUERTA QUE NO MIRO
+
+**UN CONTROL NUEVO QUE CANTA "0 FALLAS" EL MISMO DIA QUE SE ESCRIBIO TIENE QUE
+DECLARAR SOBRE QUE LO HIZO.** El 13/11 le agregue a la puerta 12 el control de
+la **fila de totales** y dio 0 fallas. **No habia mirado ninguna**: medido
+despues, de los 13 Excel bajados, **tabla de Excel: ninguno**. Las unicas dos
+pantallas del panel con `<tfoot>` son los subdiarios, el juguete no contestaba
+su funcion, no aparecia ningun boton de Excel y la puerta las daba por buenas —
+textual el golpe del 10/11, que ya estaba escrito en este archivo. Ahora el pie
+lo dice solo: *"la fila de totales: NINGUNA pantalla mostro totales en esta
+corrida, asi que ESE CONTROL NO SE EJERCITO. No es un pase: es un control que
+no llego a mirar."* **Un control que pasa sin declarar que midio es media
+medicion.**
+
+**Y EL JUGUETE SE AMPLIA CON LOS NOMBRES MEDIDOS DEL CATALOGO, NO TRANSCRITOS.**
+`pg_get_function_result` da las columnas exactas; los valores los genera el
+codigo y se declara en el comentario. Escribir las filas a mano seria la falta
+del 13/11: *transcribir no es copiar*.
+
+**ARMAR LA PANTALLA VA ANTES DE LA ESPERA, NO DESPUES.** Primero puse el
+"elegi el mes y apreta" despues de la espera y la puerta seguia viendo 0
+botones: esperaba al `<tfoot>` y agarraba los botones ahi nomas, pero
+`bajarPonerBotones` corre con un **MutationObserver**, o sea siempre un poco
+despues que la tabla. Armar primero y dejar que la espera que ya sabia esperar
+haga su trabajo no agrega ni un numero escrito a mano.
+
+**TRES LISTAS DE NOMBRES ESCRITAS A MANO MORDIERON EL MISMO DIA. Cuando una
+muerde, no se le agrega un nombre mas: se reemplaza por la convencion.**
+1. `control/pantallas.js` buscaba el paginado con
+   `.vi-tb-caja,.db-tb-caja,.rt-tb,.marco` y `.sd-caja` no estaba: **corto un
+   push con 12 fallas FALSAS** sobre dos pantallas que si tienen paginado
+   (medido en el panel publicado: 30 visibles, 259 con `hidden`, la `fl-barra`
+   puesta). Ahora sube desde la tabla y mira el hermano siguiente de cada
+   nivel, sin nombrar ninguna clase.
+2. `js/bajar.js → bajarTitulo` buscaba el rotulo con
+   `.mv-sec,.db-sec,.rt-sec,.seg-titulo-h,.mv-titulo` y `.sd-sec` no estaba.
+   Con una grilla no se notaba; con **dos grillas en la misma pantalla** las
+   dos bajaban **con el mismo nombre** y el PDF de la segunda salia titulado
+   con el nombre de la primera. Ahora la regla es la convencion de la casa:
+   una clase que **TERMINA** en `-sec` o en `-titulo`. `sd-sec-pie` queda
+   afuera a proposito —esta mas cerca de la tabla que el rotulo, y una regla
+   floja haria que el archivo se llamara "289 renglones leidos en 1589 ms"—.
+3. Y la de siempre, la de calidades del 14/10, que es de donde sale la regla.
+
+**DOS GRILLAS QUE BAJAN CON EL MISMO NOMBRE SE PISAN, Y EL CONTROL CUENTA UNA
+SOLA.** El segundo archivo sobreescribia al primero en la carpeta y la puerta
+lo comparaba contra SU propia pantalla: **0 fallas, un archivo menos, la grilla
+nueva sin controlar.** Ahora corta.
+
+**UNA PUERTA QUE DEJA DE GRITAR PUEDE ESTAR ARREGLADA O CIEGA, Y LAS DOS SE VEN
+IGUAL DESDE AFUERA.** Las dos puertas tocadas hoy llevan arnes adentro, que
+sirve el archivo roto por `pg.route` **sin tocar el repositorio**:
+`CONTROL_PLANTAR=sin_barra` (un `filas.js` sin la barra) y
+`CONTROL_PLANTAR=mismo_nombre` (un `bajar.js` con el reconocedor de rotulos
+roto). **Y si el arnes no encuentra donde plantar el defecto, revienta**: un
+arnes que no planta nada da verde sin haber probado.
+
+**DOS CAMINOS DE LA PUERTA 12 SE TRAGABAN LA CAUSA EN SILENCIO** y me taparon
+media hora: el `goto` que fallaba hacia `continue` sin anotar nada, y
+*"no se pudo bajar ni un archivo"* se imprimia **sin las fallas ya juntadas**.
+Es el `tail -60` del 13/11 otra vez: **tirar justo la evidencia que se va a
+necesitar.**
+
+**UN ENCABEZADO DE PDF NO SE RECORTA: SE PARTE EN DOS RENGLONES.** `IVA 27%`
+salia **`IVA 2...`** en las siete paginas del PDF de compras. Al lado de
+`IVA 21%` eso no es un rotulo cortado: **es otro rotulo**. El ancho de la
+columna lo manda el DATO —a un numero nunca se le corta—, asi que se parte el
+rotulo, que es lo unico que no cuesta nada.
+
+**UN TIPO MAL DECLARADO EN `RETURNS TABLE` NO FALLA AL CREAR: FALLA AL LLAMAR.**
+`cpa04.fecha_cont` es **timestamp**, no date. Declararla `date` y leer el campo
+pelado crea la funcion sin una queja y revienta en la primera llamada con
+`structure of query does not match function result type`. **El juguete no lo
+puede ver nunca** —contesta por nombre de funcion y no mira tipos ni
+argumentos, lo mismo del 11/11—. Lo agarro la prueba contra la base con la
+sesion del usuario.
+
+**EL `EXECUTE` DE `anon` PUEDE VENIR DIRECTO, NO SOLO DE PUBLIC. LA REGLA DEL
+12/11 ESTABA INCOMPLETA.** En `api_subdiario_compras_gastos_v1`, despues de
+`revoke ... from public`, `has_function_privilege('anon', ...)` **seguia dando
+true**: el default ACL de Supabase se lo da a `anon` directo. **Van los dos
+revoke**, y despues se mide con curl: HTTP 401 con la clave publishable.
+
+**EL DETALLE POR TIPO DE GASTO: `api_subdiario_compras_gastos_v1`.** La columna
+**IMPUTACION lleva la DESCRIPCION, no la sigla** (dicho por el usuario,
+textual). Medido contra la planilla del contador, octubre 2024: **171 = 171**
+renglones y **$126.668.551,39 = $126.668.551,39**, y **renglon por renglon**
+con huella md5 de los dos lados (`eb7b1f73...c9ee`), 171 de 171. Tres trampas:
+va por **fecha contable** (por emision da 162 y $124.554.650,95);
+**`SIN_IMP` es neto + EXENTO** (con el neto solo daba $82.483.413,64 contra
+$96.832.505,12); y `OTROS_IMP` se despeja del total —lo que no es neto, ni
+exento, ni IVA—.
+
+**Y LAS DOS COPIAS DE ESTE ARCHIVO ERAN DOS ARCHIVOS DE VERDAD.**
+`/home/claude/CLAUDE.md` y `dissan-panel/CLAUDE.md`, con el mismo md5 y sin
+nada que las mantuviera iguales: es el defecto del 30/10 con `listas` adentro
+del archivo que lo prohibe. Quedo **una sola**, la del repositorio, y la otra
+apuntando a ella.
