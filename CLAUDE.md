@@ -1174,3 +1174,81 @@ exento, ni IVA—.
 nada que las mantuviera iguales: es el defecto del 30/10 con `listas` adentro
 del archivo que lo prohibe. Quedo **una sola**, la del repositorio, y la otra
 apuntando a ella.
+
+## 15/11/2026 — EL REFRESCO QUE FALLABA TRES DIAS, Y EL RELOJ QUE NO SE REARMA
+
+**`alter function ... set statement_timeout` NO SALVA A LA FUNCION DEL RELOJ DEL
+QUE LA LLAMA.** Postgres arma el temporizador cuando ARRANCA la sentencia del
+cliente; cambiar el GUC adentro de la funcion **no lo rearma**. Medido: con el
+reloj del que llama en 8 s, la funcion con su propio `900s` murio a los 8 s
+igual. Fue lo primero que probe y no sirve — y es justo la clase de cosa que
+habria dado por buena sin medirla.
+
+**TODO EL CUERPO DE UNA FUNCION plpgsql ES UNA SOLA TRANSACCION, ASI QUE UN
+TIMEOUT EN EL ULTIMO RENGLON ROLLBACKEA TODO LO ANTERIOR.**
+`api_refrescar_margen_real` actualizaba el log con `ok = true` y DESPUES corria
+las identidades y `ayuda.entrenar()`, las dos envueltas en
+`exception when others then null`. Eso **no alcanza**: un `statement_timeout`
+cancela la sentencia entera, asi que se perdian las materializadas y el
+renglon del log tambien. El primer intento murio asi el 13, el 14 y el 15, y
+las tres veces se salvo **solo porque hubo un reintento a mano**. Lo escribi
+tres dias seguidos en los documentos sin arreglarlo: eso es exactamente lo que
+el usuario no quiere. **Si algo tarde y opcional vive adentro de una funcion
+que tiene que terminar, no esta protegido por un `exception`: hay que sacarlo
+afuera, a su propia llamada.**
+
+**UNA IDENTIDAD QUE LLAMA A UNA FUNCION LA LLAMA DOS VECES: EN `sql_a` Y EN
+`sql_b`.** Las 13 identidades del subdiario de IVA llamaban a
+`api_subdiario_ventas_v3` en las dos puntas: **26 calculos por corrida, 3.410
+ms cada uno medidos**. Ahora se calcula UNA vez en `ema.mv_subdiario_ventas`,
+refrescada **adentro del mismo refresco y ANTES de `identidad_correr`** —si no
+se refrescara, las identidades compararian el subdiario de ayer y podrian dar
+un **verde falso**, que es peor que un rojo—.
+
+**Y EL REEMPLAZO SE HACE CAMBIANDO SOLO EL NOMBRE.** La envoltura
+`ema.subdiario_ventas(date, date)` tiene la **misma firma** que la funcion, asi
+que el update fue un `replace` del nombre sin tocar un solo argumento. Trece
+consultas reescritas a mano serian trece oportunidades de equivocarse.
+
+**"MAS RAPIDO" NO SIRVE SI DA OTRO NUMERO.** Antes de tocar las identidades se
+guardaron sus valores en `ema.identidad_antes_del_15_11`. Despues del cambio:
+**las 13 con el MISMO `valor_a` y el MISMO `valor_b`, y las 13 en verde.
+13 de 13.** Sin esa tabla el cambio no se podria controlar contra nada.
+
+**Medido con el reloj POR DEFECTO —la condicion del primer intento—:**
+`api_refrescar_margen_real()` → **ok true, 112,4 s**, 32.304 renglones,
+cobertura 83,9 %, datos hasta 13/11. `api_entrenar_ayuda()` → ok true,
+**33.839 ms**, NOTA 100. 86 identidades, 85 en verde (la unica en rojo,
+`stock_entradas_menos_salidas`, viene asi desde el 10/11 por una diferencia
+propia de Tango y este cambio no la toca).
+
+**LAS CIFRAS DE REFERENCIA DE UNA TAREA PROGRAMADA ENVEJECEN Y HACEN SONAR UNA
+ALARMA FALSA TODAS LAS NOCHES.** La tarea comparaba contra 93,4 % de cobertura
+y 31.434 renglones, viejos desde el 06/11. Estaba anotado el 13 y el 14 sin
+corregirse — **una tarea nocturna no se edita a si misma**. Ahora dice 83,9 % y
+32.304, y la tarea tiene **tres pasos**: refresco, respaldo y entrenamiento.
+
+**PUERTA 17 — `la lectura de listas` (`control/listas.js`).** La lectura de los
+PDF de los proveedores no tenia **ningun** control, y por eso el codigo de ICU
+salia `14001-31Set` sin que nada lo viera. Arma un PDF con la geometria MEDIDA
+de la lista —el archivo del proveedor **no va al repositorio**— y le pasa el
+`lpLeerPdf` de verdad.
+
+**EL BORDE DE UNA COLUMNA SE MIDE DE LA PAGINA, NO SE CONFIGURA.** En ICU el
+codigo mas ancho termina en **x 86,4** y la descripcion arranca **siempre en
+89,9** (los 42 renglones): la franja configurada `[0, 90]` dejaba entrar la
+descripcion **por un decimo de punto**, y el umbral de 6 pt del "salto de
+columna" no corta un hueco de **3,5**. Mover el 90 a 88 habria tapado ese
+archivo y nada mas. Ahora los renglones **votan** donde arranca la descripcion
+y gana el mas votado; el borde medido solo puede **angostar** la franja, nunca
+ensancharla, y si la pagina no tiene un borde claro rige lo configurado.
+Medido: **42 de 42 codigos identicos** a los que extrae pdfplumber, y COLOPLAST
+con y sin el arreglo **igual: 249 renglones, 0 descartes**.
+
+**Y UN FIXTURE HECHO CON CHROMIUM DESDE HTML NO REPRODUCE UN PDF DE OFICINA.**
+Chromium **fusiona** las celdas de una misma linea en un solo item de texto, asi
+que `lpPalabrasDeItems` les aproxima la x y el borde sale distinto en cada
+renglon. La puerta gritaba contra un codigo que estaba bien. El PDF del fixture
+se escribe a mano, con un `BT/Td/Tj` por celda —que es lo que hace el generador
+del proveedor— y **la puerta exige que el fixture tenga el borde constante y el
+hueco chico, o declara que no probo nada.**
