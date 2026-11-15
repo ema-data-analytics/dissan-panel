@@ -239,6 +239,86 @@ function lpTextoFranja(ln, r) {
            .map(function (w) { return w.text; }).join(' ').trim();
 }
 
+/* EL SALTO DE COLUMNA, EN PUNTOS. Una sola vez, porque ya estaba escrito
+   adentro de lpPrecioDeLinea y un numero en dos lugares se separa. */
+var LP_SALTO = 6;
+
+/** EL CODIGO: LOS FRAGMENTOS PEGADOS, Y SE CORTA EN EL SALTO DE COLUMNA.
+    14/11/2026 — la cagada que se veia en pantalla: el codigo de ICU salia
+    "14001-31Set", con la primera palabra de la descripcion pegada.
+
+    Medido sobre "Lista III NOVIEMBRE 2026 dissan icu medical.pdf":
+      Codigo       x 57,2 -> 83,1
+      Descripcion  x 89,9 -> ...
+    y la franja del codigo estaba configurada [0, 90]. La descripcion entraba
+    por UN DECIMO DE PUNTO. Mover el 90 a 86 tapa este archivo y nada mas: la
+    proxima lista que mida 89,99 vuelve a romper, y es la lista fija de
+    calidades del 14/10 en version numerica.
+
+    La regla de verdad ya estaba escrita en este archivo, en el lector del
+    PRECIO: cortar cuando el hueco con el fragmento anterior pasa de 6 puntos,
+    que ahi esta comentado como "salto de columna".
+    Un codigo es UNA cosa; sus fragmentos vienen pegados -pdf.js
+    parte una cadena en varios items, pero sin hueco-. Entre el codigo y la
+    descripcion hay un hueco de verdad: 89,9 - 83,1 = 6,8 puntos. Asi que se
+    corta en el primer hueco mayor que LP_SALTO, con el mismo numero que el
+    precio, y el ancho de la franja deja de ser critico al decimo.
+
+    Y NO alcanza con juntar con espacio en vez de pegar: lpLeerPdf hace
+    `.replace(/\s+/g,'')` dos renglones mas abajo y lo volveria a pegar. */
+function lpCodigoDeLinea(ln, r) {
+  if (!r) return '';
+  var dentro = ln.filter(function (w) { return w.x0 >= r[0] && w.x0 < r[1]; });
+  var piezas = [], prev = null, i;
+  for (i = 0; i < dentro.length; i++) {
+    if (prev !== null && (dentro[i].x0 - prev) > LP_SALTO) break;
+    piezas.push(dentro[i].text);
+    prev = dentro[i].x1;
+  }
+  return piezas.join('');
+}
+
+/** EL BORDE DE LA DESCRIPCION SE MIDE DE LA PAGINA, NO SE CONFIGURA.
+    14/11/2026 — y esto es lo unico que cierra el caso de ICU.
+
+    Medido sobre los 42 renglones de la lista de ICU:
+      el codigo MAS ANCHO termina en x 86,4  (LAT-MC33054)
+      la descripcion arranca SIEMPRE en x 89,9  (los 42, sin una excepcion)
+      el hueco mas chico entre los dos: 3,5 puntos
+    O sea: ni la franja [0,90] alcanza -la descripcion entra por un decimo-,
+    ni el umbral de 6 puntos del salto de columna -hay huecos de 3,5-, ni
+    mover el 90 a 88 seria mas que un parche medido para ESTE archivo.
+
+    Lo que SI es estructura, y se ve en los 42 renglones: la columna de la
+    descripcion tiene UN borde izquierdo y es siempre el mismo. Eso se mide:
+    por renglon se vota el x0 del segundo fragmento -cuando hay un hueco de
+    verdad con el primero- y gana el mas votado. En ICU gana 89,9 por
+    paliza; los pocos renglones raros (el que no tiene descripcion vota por
+    la columna del precio) quedan en minoria.
+
+    CONSERVADOR A PROPOSITO: el borde medido sólo puede ANGOSTAR la franja
+    del codigo, nunca ensancharla, y hace falta que lo voten al menos 5
+    renglones y un cuarto de los que votaron. Si la pagina no tiene un borde
+    claro, no se toca nada y rige lo configurado — las 10 listas que hoy se
+    leen bien no cambian de comportamiento por esto. */
+function lpBordeDescripcion(lns, r) {
+  if (!r) return null;
+  var votos = {}, votantes = 0, i, ln, b;
+  for (i = 0; i < lns.length; i++) {
+    ln = lns[i];
+    if (ln.length < 2) continue;
+    if (ln[0].x0 < r[0] || ln[0].x0 >= r[1]) continue;   /* no arranca con codigo */
+    if ((ln[1].x0 - ln[0].x1) <= 1) continue;            /* es el codigo partido, no otra columna */
+    b = Math.floor(ln[1].x0 * 2) / 2;                    /* al medio punto, PARA ABAJO */
+    votos[b] = (votos[b] || 0) + 1;
+    votantes++;
+  }
+  var mejor = null, mejorN = 0, k;
+  for (k in votos) if (votos[k] > mejorN) { mejorN = votos[k]; mejor = Number(k); }
+  if (mejor === null || mejorN < 5 || mejorN < votantes * 0.25) return null;
+  return mejor;
+}
+
 /** el precio: anclado al signo de moneda, o por franja de x */
 function lpPrecioDeLinea(ln, pcfg) {
   var modo = (pcfg && pcfg.modo) ? pcfg.modo : 'moneda';
@@ -259,7 +339,7 @@ function lpPrecioDeLinea(ln, pcfg) {
       for (k = i + 1; k < ln.length; k++) {
         t2 = ln[k].text;
         if (!LP_FRAG.test(t2)) break;
-        if (piezas.length && (ln[k].x0 - prev) > 6) break;   /* salto de columna */
+        if (piezas.length && (ln[k].x0 - prev) > LP_SALTO) break;  /* salto de columna */
         if (!piezas.length && !/[0-9]/.test(t2[0])) break;
         piezas.push(t2); prev = ln[k].x1;
       }
@@ -301,6 +381,24 @@ function lpLeerPdf(buf, cfg, diag) {
         }).then(function (tc) {
           var lns = lpRenglones(lpPalabrasDeItems((tc && tc.items) || []), tol);
           var i, ln, cod, pretxt, precio, caja, ct, c;
+
+          /* el borde medido de la descripcion, por pagina: una lista puede
+             cambiar de maqueta de una hoja a otra. Sólo angosta la franja
+             del codigo, nunca la ensancha. */
+          var borde = lpBordeDescripcion(lns, cfg.cod);
+          var fCod  = cfg.cod;
+          var fDesc = cfg.desc;
+          if (borde !== null && cfg.cod) {
+            fCod = [cfg.cod[0], Math.min(cfg.cod[1], borde - 0.5)];
+            if (!fDesc) fDesc = [Math.min(cfg.cod[1], borde), 320];
+          }
+          if (!fDesc && cfg.cod) fDesc = [cfg.cod[1], 320];
+          if (diag && p <= 4) {
+            muestra.push({ pag: p, linea: 'BORDE MEDIDO de la descripcion: '
+              + (borde === null ? 'no se pudo medir, rige lo configurado' : borde)
+              + ' · franja del codigo usada: [' + fCod[0] + ', ' + fCod[1] + ']'
+              + ' · franja de la descripcion: [' + fDesc[0] + ', ' + fDesc[1] + ']' });
+          }
           if (diag && p <= 4) {
             lns.slice(0, 14).forEach(function (ln2) {
               muestra.push({ pag: p, linea: ln2.map(function (w) {
@@ -310,7 +408,7 @@ function lpLeerPdf(buf, cfg, diag) {
           }
           for (i = 0; i < lns.length; i++) {
             ln = lns[i];
-            cod = lpEnFranja(ln, cfg.cod).trim().replace(/\s+/g, '').replace(/\*+$/, '');
+            cod = lpCodigoDeLinea(ln, fCod).trim().replace(/\s+/g, '').replace(/\*+$/, '');
             if (!cod) continue;
             if (LP_HDR[lpSinTildes(cod).toUpperCase().replace(/^[.:]+|[.:]+$/g, '')]) continue;
             if (cod.length > maxcod) continue;
@@ -335,7 +433,7 @@ function lpLeerPdf(buf, cfg, diag) {
               }
             }
             filas.push({ cod: cod,
-                         descripcion: lpTextoFranja(ln, cfg.desc || [cfg.cod[1], 320]) || null,
+                         descripcion: lpTextoFranja(ln, fDesc) || null,
                          precio: precio, caja: caja, pag: p });
           }
           return unaPagina();

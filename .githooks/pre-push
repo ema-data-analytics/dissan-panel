@@ -131,6 +131,14 @@ correr "los pasos en vivo"  control/vivo.js       node control/vivo.js
 # reconocedor, que lo dictado no pise lo que la persona ya escribio, y que si
 # Chrome niega el microfono lo diga y suelte el boton.
 correr "el dictado"         control/voz.js        node control/voz.js
+# PUERTA 17, 14/11/2026. LA LECTURA DE LOS PDF DE LOS PROVEEDORES NO TENIA
+# NINGUN CONTROL, y por eso el codigo de ICU salia "14001-31Set" -con la
+# primera palabra de la descripcion pegada- sin que nada lo viera. Un codigo
+# asi no liga con el articulo de Tango y el renglon se pierde: un precio que
+# no entra es una cotizacion mal hecha o una venta bajo el costo. Arma un PDF
+# con la geometria MEDIDA de la lista de ICU -el archivo del proveedor NO va
+# al repositorio- y le pasa el lpLeerPdf de verdad.
+correr "la lectura de listas" control/listas.js   node control/listas.js
 
 echo ""
 if [ -z "$FALLARON" ]; then
