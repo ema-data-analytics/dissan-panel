@@ -197,15 +197,34 @@ function servidor() {
   });
   if (fs.existsSync(JUGUETE)) await pg.addInitScript({ path: JUGUETE });
 
-  if (PLANTAR === 'sin_borde') {
+  /* EL ARNES. Sirve un js/listas.js roto por pg.route, SIN TOCAR EL
+     REPOSITORIO, y si no encuentra donde plantar el defecto REVIENTA: un arnes
+     que no planta nada da verde sin haber probado.
+       sin_borde  — el medidor del borde de la descripcion apagado (el defecto
+                    del 14/11: el codigo de ICU sale con la primera palabra de
+                    la descripcion pegada).
+       sin_bulto  — el bloque «vienen por bulto» que no se pinta (el defecto
+                    del 15/11: el precio del archivo 10 a 54 veces mas chico, y
+                    nadie mirandolo).                            15/11/2026 */
+  const ARNESES = {
+    sin_borde: ['function lpBordeDescripcion(lns, r) {',
+                'function lpBordeDescripcion(lns, r) { return null; /* ARNES */',
+                'el medidor del borde de la descripcion desactivado, que es el codigo '
+                  + 'que tenia el defecto del 14/11'],
+    sin_bulto: ['if (a.por_caja && a.por_caja.length) {',
+                'if (false && a.por_caja && a.por_caja.length) { /* ARNES */',
+                'el bloque «vienen por bulto» apagado, o sea el precio del archivo sin '
+                  + 'que nadie lo muestre, que es el defecto del 15/11']
+  };
+  if (ARNESES[PLANTAR]) {
+    const arn = ARNESES[PLANTAR];
     await pg.route('**/js/listas.js*', function (r) {
       let cuerpo = fs.readFileSync(path.join(RAIZ, 'js', 'listas.js'), 'utf8');
       const antes = cuerpo;
-      cuerpo = cuerpo.replace('function lpBordeDescripcion(lns, r) {',
-                              'function lpBordeDescripcion(lns, r) { return null; /* ARNES */');
+      cuerpo = cuerpo.replace(arn[0], arn[1]);
       if (cuerpo === antes) {
-        throw new Error('EL ARNES NO PUDO PLANTAR EL DEFECTO: no encontro '
-          + 'lpBordeDescripcion en js/listas.js. Un arnes que no planta nada da '
+        throw new Error('EL ARNES NO PUDO PLANTAR EL DEFECTO (' + PLANTAR + '): no '
+          + 'encontro «' + arn[0] + '» en js/listas.js. Un arnes que no planta nada da '
           + 'verde sin haber probado.');
       }
       r.fulfill({ status: 200, contentType: 'application/javascript', body: cuerpo });
@@ -246,7 +265,45 @@ function servidor() {
                                        sigue: Math.round(ln[j].x0 * 10) / 10,
                                        hueco: Math.round((ln[j].x0 - fin) * 10) / 10 });
     });
-    return { leido: leido, huecos: huecos };
+    /* Y AHORA SE PINTA LA PANTALLA CON EL ARMADO.          15/11/2026
+       Leer el PDF bien no alcanza: el 15/11 el archivo para Tango mandaba el
+       precio de UNA unidad en 15 articulos que Tango tiene POR BULTO, 10 a 54
+       veces mas chico. El bloque que lo muestra no lo pintaba ninguna puerta
+       —el golpe del 10/11—, asi que aca se llama a la funcion de verdad (la
+       contesta el juguete) y se pinta con lpPintar, que es el codigo que ve el
+       usuario. No se puede soltar el archivo del proveedor desde un control,
+       pero SI se puede pintar lo que sale de el. */
+    let pintado = null;
+    try {
+      const ar = await rpc('api_listas_armar_v2', { p_lista_id: 6, p_filas: [] });
+      LP_LEIDO = { ok: true, filas: [],
+                   lectura: { filas_leidas: ar.data.resumen.leidas,
+                              con_precio: ar.data.resumen.leidas,
+                              con_unidades_caja: ar.data.resumen.por_caja_que_entran,
+                              paginas: 1, ms: 1 },
+                   avisos: [] };
+      LP_ARMADO = ar.data; LP_ARMADO._ms = ar.ms || 1;
+      lpPintar();
+      const sec = Array.prototype.slice.call(document.querySelectorAll('.lp-sec'))
+        .filter(function (s) { return /vienen por bulto/i.test(s.textContent || ''); })[0];
+      const tb = sec ? sec.parentElement.querySelector('.lp-wrap table.lp-tb') : null;
+      pintado = {
+        hay_bloque: !!sec,
+        pie: sec ? (sec.nextElementSibling ? sec.nextElementSibling.textContent : '') : '',
+        encabezados: tb ? Array.prototype.map.call(tb.querySelectorAll('thead th'),
+                        function (t) { return (t.textContent || '').trim(); }) : [],
+        celdas: tb ? Array.prototype.map.call(tb.querySelectorAll('tbody td'),
+                        function (t) { return (t.textContent || '').trim(); }) : [],
+        renglones: tb ? tb.querySelectorAll('tbody tr').length : 0,
+        filas_del_archivo: document.querySelectorAll('table.lp-tb[data-bajar="1"] tbody tr').length,
+        esperado: { renglones: (LP_ARMADO.por_caja || []).length,
+                    filas: (LP_ARMADO.filas || []).length,
+                    corregidos: LP_ARMADO.resumen.corregidos_por_bulto,
+                    sin_control: LP_ARMADO.resumen.por_bulto_sin_control }
+      };
+    } catch (e) { pintado = { error: String(e && e.message || e).slice(0, 200) }; }
+
+    return { leido: leido, huecos: huecos, pintado: pintado };
   }, [b64, cfg]);
 
   await b.close();
@@ -342,22 +399,80 @@ function servidor() {
     }
   });
 
+  /* ---- 6. el bloque "vienen por bulto", PINTADO ---- 15/11/2026 ----
+     El defecto del 15/11 vivia en el precio que va al archivo, no en la
+     lectura. Este tramo exige que la pantalla lo pinte de verdad, con numeros
+     y no con `undefined`: si alguien le cambia el nombre a una clave del
+     resumen o del detalle, la pantalla escribe "undefined" y hoy nadie lo ve. */
+  const P = r.pintado || {};
+  if (P.error) {
+    falla('el bloque por bulto', 'no_se_pudo_pintar', P.error);
+  } else if (!P.hay_bloque) {
+    falla('el bloque por bulto', 'la_pantalla_no_pinto_el_bloque',
+          'el armado trae ' + (P.esperado && P.esperado.renglones) + ' articulos por bulto y la '
+        + 'pantalla no mostro la seccion: el control del 15/11 NO SE EJERCITO');
+  } else {
+    if (P.renglones !== P.esperado.renglones) {
+      falla('el bloque por bulto', 'faltan_renglones',
+            'el armado trae ' + P.esperado.renglones + ' y la pantalla pinto ' + P.renglones);
+    }
+    if (P.filas_del_archivo !== P.esperado.filas) {
+      falla('el archivo para Tango', 'faltan_renglones',
+            'el armado trae ' + P.esperado.filas + ' renglones y la grilla del archivo pinto '
+          + P.filas_del_archivo);
+    }
+    const sucias = (P.celdas || []).filter(function (c) {
+      return /undefined|NaN|\[object/.test(c);
+    });
+    if (sucias.length) {
+      falla('el bloque por bulto', 'la_pantalla_pinto_undefined',
+            sucias.length + ' celda(s) con undefined/NaN: ' + sucias.slice(0, 4).join(' · '));
+    }
+    ['Precio que viaja', 'Ya en Tango', 'razón'].forEach(function (t) {
+      if ((P.encabezados || []).indexOf(t) < 0) {
+        falla('el bloque por bulto', 'falta_una_columna',
+              'falta la columna "' + t + '", que es CONTRA QUE se decidio el precio');
+      }
+    });
+    if (!/no hay con qué decidir|SIN CONTROLAR|no tiene.*cargado/i.test(P.pie || '')
+        && P.esperado.sin_control > 0) {
+      falla('el bloque por bulto', 'no_declara_lo_que_no_controla',
+            'hay ' + P.esperado.sin_control + ' articulo(s) sin precio previo en Tango y el pie '
+          + 'de la seccion no lo declara: "' + String(P.pie || '').slice(0, 120) + '"');
+    }
+  }
+  const quePintoElBulto = P.hay_bloque
+    ? 'el bloque «vienen por bulto» PINTADO de verdad con lpPintar: ' + P.renglones
+      + ' de ' + P.esperado.renglones + ' renglones, ' + P.esperado.corregidos
+      + ' con el precio corregido al del bulto y ' + P.esperado.sin_control
+      + ' declarado(s) sin control, las tres columnas del control presentes, '
+      + P.filas_del_archivo + ' de ' + P.esperado.filas + ' renglones en la grilla del '
+      + 'archivo y 0 celdas con undefined'
+    : 'el bloque «vienen por bulto» NO SE PINTO, asi que ESE CONTROL NO SE EJERCITO';
+
   try { fs.rmSync(TMP, { recursive: true, force: true }); } catch (e) {}
 
   /* ---- el informe ---- */
-  if (PLANTAR === 'sin_borde') {
-    const agarro = fallas.filter(function (f) {
-      return f.clase === 'el_codigo_salio_mal'
-          || f.clase === 'la_descripcion_perdio_su_primera_palabra';
-    }).length;
-    console.log('\nARNES «sin_borde» — se sirvio un js/listas.js con el medidor del borde de la '
-              + 'descripcion desactivado, que es el codigo que tenia el defecto.');
-    if (agarro) {
-      console.log('  OK  la puerta lo agarro: ' + agarro + ' falla(s).');
-      fallas.slice(0, 4).forEach(function (f) { console.log('      · ' + f.clase + ': ' + f.que); });
+  if (ARNESES[PLANTAR]) {
+    /* cada arnes exige SU clase de falla, no una cualquiera: si el de sin_bulto
+       pasara porque se rompio la lectura, estaria dando verde por el motivo
+       equivocado. */
+    const ESPERA = {
+      sin_borde: ['el_codigo_salio_mal', 'la_descripcion_perdio_su_primera_palabra'],
+      sin_bulto: ['la_pantalla_no_pinto_el_bloque']
+    }[PLANTAR];
+    const agarro = fallas.filter(function (f) { return ESPERA.indexOf(f.clase) >= 0; });
+    console.log('\nARNES «' + PLANTAR + '» — se sirvio un js/listas.js con '
+              + ARNESES[PLANTAR][2] + '.');
+    if (agarro.length) {
+      console.log('  OK  la puerta lo agarro: ' + agarro.length + ' falla(s) de la clase que '
+                + 'corresponde (' + ESPERA.join(' o ') + ').');
+      agarro.slice(0, 4).forEach(function (f) { console.log('      · ' + f.clase + ': ' + f.que); });
       process.exit(0);
     }
-    console.log('  LA PUERTA NO LO AGARRO: con el borde desactivado leyo todo bien.');
+    console.log('  LA PUERTA NO LO AGARRO: con el defecto plantado no sono ' + ESPERA.join(' ni ')
+              + '. Las fallas que si hubo: '
+              + (fallas.length ? fallas.map(function (f) { return f.clase; }).join(' · ') : 'ninguna'));
     console.log('  Una puerta que no ve el defecto plantado no es una puerta.');
     process.exit(1);
   }
@@ -371,9 +486,11 @@ function servidor() {
               + 'es ' + minHueco + ' pt — el de ICU es 3,5), '
               + 'leidos con el lpLeerPdf DE VERDAD de js/listas.js en un navegador: los '
               + esperados.length + ' codigos identicos a los que escribio el generador, y las '
-              + esperados.length + ' descripciones con su primera palabra.');
+              + esperados.length + ' descripciones con su primera palabra. Y '
+              + quePintoElBulto + '.');
     console.log('  NO midio: los PDF de verdad de los 8 proveedores. No estan en el '
-              + 'repositorio y no van a estar.');
+              + 'repositorio y no van a estar. Tampoco el clic de soltar el archivo: eso '
+              + 'necesita la pantalla del usuario.');
     process.exit(0);
   }
 

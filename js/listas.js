@@ -687,7 +687,12 @@ function lpProcesar() {
     LP_LEIDO = leido;
     if (!leido.ok) { lpCargando(false); return lpError(null, leido); }
     lpCargando(true, 'Ligando ' + leido.lectura.filas_leidas + ' renglones con los artículos de Tango…');
-    return rpc('api_listas_armar', { p_lista_id: provId, p_filas: leido.filas })
+    /* api_listas_armar_v2, NO la v1.                             15/11/2026
+       La v1 mandaba SIEMPRE el precio por unidad. Medido contra cpa44 —el
+       precio que Tango ya tiene cargado para esa lista— 15 de los 241
+       renglones de COLOPLAST viajaban 10, 20, 30, 45 o 54 veces mas chicos.
+       La v1 queda viva y sin tocar; todo arreglo va a la v2. */
+    return rpc('api_listas_armar_v2', { p_lista_id: provId, p_filas: leido.filas })
       .then(function (r) {
         LP_ARMADO = r.data;
         LP_ARMADO._ms = r.ms;
@@ -748,6 +753,11 @@ function lpPintar() {
       + '(máxima diferencia ' + exacto(res.dif_costo_contra_la_lectura) + '). '
       + 'Vale el de la base. Hay que revisar el factor antes de importar.');
   }
+  if (Number(res.por_bulto_sin_control) > 0) {
+    avisos.push(num(res.por_bulto_sin_control) + ' artículo(s) vienen por bulto y Tango todavía '
+      + 'no tiene precio cargado para ellos en esta lista, así que no hay con qué decidir si el '
+      + 'precio va por unidad o por bulto: viajan por unidad. Están abajo, uno por uno.');
+  }
   var porque = a.por_que_queda_afuera || {};
   var claves = Object.keys(porque);
   if (claves.length) {
@@ -762,22 +772,47 @@ function lpPintar() {
       + '</ul></div>');
   }
 
-  /* los que Tango compra por caja y SI entran: el dato con el que se controla */
+  /* LOS QUE VIENEN POR BULTO.                                   15/11/2026
+     Este bloque decia: "El Precio va por unidad y la Unidad es la que tiene el
+     articulo en Tango, IGUAL QUE EN EL ARCHIVO QUE ARMO DISSAN". Era mentira en
+     15 de los 241 renglones de COLOPLAST: medido contra cpa44 —el precio que
+     Tango ya tiene cargado para esa lista— esos 15 los tiene POR BULTO, y el
+     archivo mandaba el precio de UNA unidad, 10 a 54 veces mas chico, en
+     silencio. Ahora cada renglon trae su veredicto y CONTRA QUE se decidio. */
   if (a.por_caja && a.por_caja.length) {
-    h.push('<div class="lp-sec">Artículos que Tango compra por caja</div>');
-    h.push('<div class="lp-sec-pie">Entran porque la lista dice cuántas unidades trae la caja. '
-      + 'El Precio va por unidad y la Unidad es la que tiene el artículo en Tango, igual que en el '
-      + 'archivo que armó DISSAN. El precio de la caja se muestra al lado para poder controlarlo.</div>');
+    var nBulto = Number(res.corregidos_por_bulto || 0);
+    var nSinC  = Number(res.por_bulto_sin_control || 0);
+    h.push('<div class="lp-sec">Los artículos que vienen por bulto</div>');
+    h.push('<div class="lp-sec-pie">'
+      + (nBulto ? '<b>' + num(nBulto) + '</b> con el precio pasado al del bulto, '
+                + 'porque el precio que Tango ya tiene cargado para esta lista está por bulto. '
+          : '')
+      + (nSinC ? '<b>' + num(nSinC) + '</b> que Tango no tiene cargados todavía: viajan con el '
+               + 'precio por unidad y <b>nadie los puede controlar</b>, hay que mirarlos a mano. '
+          : '')
+      + 'La columna «Ya en Tango» es la fuente contra la que se decidió, y «razón» es cuántas '
+      + 'veces entra el precio que viaja en el que Tango tiene: cerca de 1 está bien.</div>');
     h.push('<div class="lp-wrap"><table class="lp-tb"><thead><tr>'
       + '<th>Cód. Artículo</th><th>Sinónimo</th><th>Unidad</th>'
-      + '<th>Unidades por caja</th><th>Precio por unidad</th><th>Precio de la caja</th>'
+      + '<th>Unidades por bulto</th><th>Precio por unidad</th><th>Precio del bulto</th>'
+      + '<th>Precio que viaja</th><th>Ya en Tango</th><th>razón</th><th>Qué se hizo</th>'
       + '</tr></thead><tbody>');
     a.por_caja.forEach(function (c) {
+      var prev  = (c.precio_prev === null || c.precio_prev === undefined) ? null : Number(c.precio_prev);
+      var viaja = Number(c.precio_que_viaja);
+      var raz   = (prev && viaja) ? (prev / viaja) : null;
       h.push('<tr><td>' + esc(c.cod_articulo) + '</td><td>' + esc(c.sinonimo) + '</td>'
         + '<td><span class="lp-chip lp-chip-caja">' + esc(c.unidad) + '</span></td>'
         + '<td class="num" data-v="' + esc(c.unidades_caja) + '">' + num(c.unidades_caja) + '</td>'
         + '<td class="num" data-v="' + esc(c.precio_unidad) + '">' + exacto(c.precio_unidad) + '</td>'
-        + '<td class="num" data-v="' + esc(c.precio_caja) + '">' + exacto(c.precio_caja) + '</td></tr>');
+        + '<td class="num" data-v="' + esc(c.precio_caja) + '">' + exacto(c.precio_caja) + '</td>'
+        + '<td class="num" data-v="' + esc(c.precio_que_viaja) + '"><b>'
+        + exacto(c.precio_que_viaja) + '</b></td>'
+        + '<td class="num" data-v="' + esc(prev === null ? '' : prev) + '">'
+        + (prev === null ? '—' : exacto(prev)) + '</td>'
+        + '<td class="num" data-v="' + esc(raz === null ? '' : raz) + '">'
+        + (raz === null ? '—' : raz.toFixed(3).replace('.', ',')) + '</td>'
+        + '<td>' + esc(c.veredicto) + '</td></tr>');
     });
     h.push('</tbody></table></div>');
   }

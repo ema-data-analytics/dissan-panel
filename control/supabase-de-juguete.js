@@ -267,6 +267,70 @@
     return a;
   })();
 
+  /* api_listas_armar_v2 — el armado del archivo para Tango.      15/11/2026
+     POR QUE EXISTE. Hasta hoy el juguete NO contestaba ninguna funcion de
+     listas.html, asi que el bloque "Los articulos que vienen por bulto" no lo
+     pintaba ninguna puerta: es textual el golpe del 10/11 —una pantalla que
+     ninguna puerta abre CON DATOS no esta controlada— y el del 14/11 con la
+     fila de totales. Si maniana alguien le cambia el nombre a una clave del
+     resumen, la pantalla pinta `undefined` y nadie se entera.
+     Las CLAVES salen medidas de la funcion viva (su salida leida el 15/11 con
+     la sesion del usuario); los VALORES los genera este codigo, y queda
+     declarado aca: transcribir no es copiar (13/11).
+     Las tres ramas del bloque, a proposito, una por renglon: uno que Tango
+     tiene POR BULTO (el precio se corrige), uno SIN precio previo (viaja por
+     unidad y se declara sin control) y uno normal por unidad. */
+  RPC['api_listas_armar_v2'] = (function(){
+    var enc = ['Cód. Artículo','Descripción artículo','Descripción adicional artículo',
+               'Sinónimo','Cód. Lista','Desc. Lista','Moneda','Unidad','Precio','Bonif.',
+               'Fecha vigencia desde','Fecha vigencia hasta'];
+    var FACTOR = 0.72, VIG = '01/07/2026', HASTA = '31/07/2026';
+    var filas = [], pc = [], i, precioUnidad, uBulto, art, sin;
+    for (i = 0; i < 40; i++){
+      art = 'JUG' + String(1000 + i);
+      sin = String(10000 + i * 7);
+      precioUnidad = sdRedondo((1500 + (i * 6007) % 90000) * FACTOR);
+      uBulto = (i % 7 === 0) ? 30 : ((i % 5 === 0) ? 10 : 1);
+      var porBulto = (i === 0), sinControl = (i === 5);
+      var viaja = porBulto ? sdRedondo(precioUnidad * uBulto) : precioUnidad;
+      filas.push([art, 'Articulo de juguete ' + i, null, sin, '4', 'COLOPLAST', 'PESOS',
+                  (uBulto > 1 ? 'CAJ' : 'UNI'), viaja, 0, VIG, HASTA]);
+      if (porBulto || sinControl || (uBulto > 1 && i === 10)){
+        pc.push({ cod_articulo: art, sinonimo: sin, unidad: (uBulto > 1 ? 'CAJ' : 'UNI'),
+                  unidades_caja: uBulto, precio_unidad: precioUnidad,
+                  precio_caja: sdRedondo(precioUnidad * uBulto),
+                  precio_que_viaja: viaja,
+                  precio_prev: sinControl ? null : sdRedondo(viaja * 1.078),
+                  va_por_bulto: porBulto,
+                  veredicto: porBulto
+                    ? 'Tango lo tiene POR BULTO: viaja el precio del bulto'
+                    : (sinControl
+                        ? 'sin precio previo en Tango: viaja por unidad, SIN CONTROLAR'
+                        : 'Tango lo tiene por unidad: viaja el precio por unidad') });
+      }
+    }
+    return {
+      ok: true,
+      lista: { id: 6, proveedor: 'COLOPLAST', cuit: '30-69161838-9', codigo_lista: '4',
+               desc_lista: 'COLOPLAST', moneda: 'PESOS', moneda_tango: 'PESOS',
+               vigencia: VIG, vigencia_hasta: HASTA,
+               regla: 'precio minorista unitario sin IVA menos 28%',
+               tipo_regla: 'descuento', factor: FACTOR },
+      encabezado: enc,
+      filas: filas,
+      avisos: [{ cod_proveedor: '99999', descripcion: 'Uno que no esta en Tango',
+                 precio_lista: 1234.5, cod_articulo: null, porque: 'sin alta en Tango' }],
+      por_caja: pc,
+      resumen: { leidas: filas.length + 1, entran: filas.length, afuera: 1,
+                 por_caja_que_entran: pc.length,
+                 corregidos_por_bulto: pc.filter(function(x){ return x.va_por_bulto; }).length,
+                 por_bulto_sin_control: pc.filter(function(x){ return x.precio_prev === null; }).length,
+                 dif_costo_contra_la_lectura: 0, sin_codigo_de_lista: false,
+                 regla_pendiente: false },
+      por_que_queda_afuera: { 'sin alta en Tango': 1 }
+    };
+  })();
+
   window.supabase = {
     createClient: function(){
       return {

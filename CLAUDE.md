@@ -1252,3 +1252,77 @@ renglon. La puerta gritaba contra un codigo que estaba bien. El PDF del fixture
 se escribe a mano, con un `BT/Td/Tj` por celda —que es lo que hace el generador
 del proveedor— y **la puerta exige que el fixture tenga el borde constante y el
 hueco chico, o declara que no probo nada.**
+
+## 15/11/2026 (noche) — EL ARCHIVO PARA TANGO MANDABA EL PRECIO DE UNA UNIDAD
+
+**UN PRECIO 54 VECES MAS CHICO NO SE VE: SE VE UN PRECIO.** El archivo para
+Tango llevaba SIEMPRE el precio por unidad (precio de lista x factor). Para los
+articulos cuyo precio Tango espera POR BULTO, eso entra dividido por 10, 20, 30,
+45 o 54. Medido sobre los 241 renglones que entran de COLOPLAST: **15 estaban
+mal**. Y la pantalla lo afirmaba por escrito —*"El Precio va por unidad y la
+Unidad es la que tiene el articulo en Tango, **igual que en el archivo que armo
+DISSAN**"*—, o sea que yo habia publicado como control una afirmacion que nunca
+medi.
+
+**LA FUENTE QUE LO DICE ES `cpa44`, EL PRECIO QUE TANGO YA TIENE CARGADO** para
+esa misma lista de proveedor. Es la unica. Las tres que parecian servir no
+sirven, y eso se midio antes de elegir:
+- **`cpa46.unidad_medida_seleccionada = 'C'`** (lo que se eligio en las facturas
+  de compra) marca 11 articulos y **seis estan al reves**: 4720 figura por caja
+  y Tango lo tiene por unidad; 12080 y 12035 NO figuran y Tango los tiene por
+  bulto. Era el discriminador de la v1.
+- **`sta_articulo_unidad_compra.equivalencia`** vale **1 en los once**.
+- **La unidad de la celda** tampoco: 12035 dice `UNI` y va por bulto, 3M00020
+  dice `CAJ` y va por unidad.
+
+La razon `cpa44.precio_uni / precio_que_viaja` cayo **exactamente en
+1,078 x unidades_por_bulto** en los 15 (10,780 · 21,560 · 32,340 · 48,510 ·
+58,212) y en **1,000 a 1,078** en los otros 224. **No hay un solo caso en el
+medio**, y entre 1,078 y 10,780 hay un factor de diez.
+
+**LA REGLA NO LLEVA NINGUNA LISTA ESCRITA A MANO** (14/10, 14/11): se compara la
+razon contra 1 y contra las unidades por bulto **en escala logaritmica** y gana
+la mas cercana. Es libre de escala, asi que el precio puede haberse movido hasta
+raiz(unidades) veces sin equivocar la decision. **No hay umbral tipeado por mi.**
+
+**LO QUE NO SE PUEDE CONTROLAR SE DECLARA, NO SE ADIVINA NI SE BORRA.** Si el
+articulo viene por bulto y Tango no tiene precio previo, entra **por unidad**
+—igual que antes, asi que no se rompe nada— y sale nombrado con su veredicto en
+la pantalla. Medido: COLOPLAST 2, J&J 1. Hacerlos desaparecer del archivo seria
+perder precios para tapar una duda.
+
+**MAS RAPIDO NO SIRVE SI DA OTRO NUMERO, Y ARREGLADO TAMPOCO.** v2 contra v1 con
+la misma entrada: COLOPLAST 241 = 241 renglones, **0 filas desalineadas,
+exactamente 15 precios cambiados**; JOHNSON & JOHNSON 691 = 691 y **0 precios
+cambiados**; POTENZA 248 = 248 y **0**. El arreglo toca los 15 que estaban mal y
+**ni un precio mas**.
+
+**Y LA MEDICION DE VERDAD FUE CON SU JWT, NO CON MI CONEXION DE DUEÑO.** Como
+dueño el portero de `api_listas_armar` me rechazaba (`P0001`), y lo abri con
+`set local request.jwt.claims` para poder medir. Eso **no prueba el panel**: la
+prueba es la llamada por el `rpc()` de la pantalla publicada con la sesion del
+usuario — 249 leidos, 241 entran, 15 corregidos, 2 sin control, 872 ms.
+
+**LA IDENTIDAD `listas_precio_contra_cpa44`, Y SU PRIMER INTENTO QUE GRITO EN
+FALSO.** Marcaba toda diferencia de 4 veces o mas y dio **5**: cinco renglones
+de J&J donde el precio nuevo es 4,16 a 7,65 veces el viejo. **No era el
+defecto.** `JJEN0083` se compro el 31/12/2022 a $31.349,32 (`cpa46`) y la
+inflacion del INDEC de dic-2022 a ago-2026 es **10,82 veces** → $339.214 a pesos
+de hoy contra los $381.114 de la lista de julio 2026. `cpa44` tiene el precio de
+2022. Publicar eso como alarma habria sido **acusar de agujero a algo que no lo
+es por cuarta vez en tres dias, y encima todas las noches**. Ahora se mide **la
+firma** del defecto —la razon igual a las unidades por bulto— y en **una sola
+direccion**, la del archivo mas barato que Tango, que es la que carga un costo
+falso. Las dos caras: **v1 → 15, v2 → 0**. Sola: 5.751 ms.
+
+**`replace()` CAMBIA TODAS LAS APARICIONES, Y UN PARCHE CON UN ANCLA CORTA SE
+LLEVA LA QUE NO QUERIA.** El ancla `from clas s\n  )` existia dos veces despues
+del paso anterior: el CTE `decide` quedo leyendo de `sal`, que todavia no
+existia. **La funcion se creo sin una sola queja** y revento en la primera
+llamada con *"relation sal does not exist"* — el mismo golpe del 14/11 con el
+tipo mal declarado en `RETURNS TABLE`. **El ancla de un parche tiene que incluir
+el renglon de abajo.**
+
+**LAS MONEDAS, MEDIDAS: 10 coinciden, 0 chocan, 4 no tienen lista en Tango.**
+Las tres en dolares son MEDIX y LECTUS (sin lista en Tango, no se pueden
+controlar) y BECTON DICKINSON (`DOLAR` = `DOLAR`). COLOPLAST `PESOS` = `PESOS`.
