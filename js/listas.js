@@ -821,19 +821,35 @@ function lpPintar() {
      Tango ya tiene cargado para esa lista— esos 15 los tiene POR BULTO, y el
      archivo mandaba el precio de UNA unidad, 10 a 54 veces mas chico, en
      silencio. Ahora cada renglon trae su veredicto y CONTRA QUE se decidio. */
-  if (a.por_caja && a.por_caja.length) {
+  /* UNA SECCION QUE DESAPARECE SE LEE COMO «FALTA ALGO».        16/11/2026
+     Con ICU esta seccion y la de «lo que queda afuera» no se pintaban —0 por
+     bulto y 0 afuera— y el usuario pregunto, con razon, que las habia sacado.
+     Medido en los 9 commits desde el 27/10: nunca se saco nada, estaban
+     vacias. Pero una pantalla que calla no se distingue de una rota: ahora la
+     seccion aparece SIEMPRE y dice «ninguno» cuando no hay. Es la misma regla
+     que el pie de la puerta 12 del 14/11 —un control que pasa sin declarar que
+     midio es media medicion— aplicada a lo que ve la persona. */
+  {
     var nBulto = Number(res.corregidos_por_bulto || 0);
     var nSinC  = Number(res.por_bulto_sin_control || 0);
+    var hayBulto = !!(a.por_caja && a.por_caja.length);
     h.push('<div class="lp-sec">Los artículos que vienen por bulto</div>');
     h.push('<div class="lp-sec-pie">'
-      + (nBulto ? '<b>' + num(nBulto) + '</b> con el precio pasado al del bulto, '
-                + 'porque el precio que Tango ya tiene cargado para esta lista está por bulto. '
-          : '')
-      + (nSinC ? '<b>' + num(nSinC) + '</b> que Tango no tiene cargados todavía: viajan con el '
-               + 'precio por unidad y <b>nadie los puede controlar</b>, hay que mirarlos a mano. '
-          : '')
-      + 'La columna «Ya en Tango» es la fuente contra la que se decidió, y «razón» es cuántas '
-      + 'veces entra el precio que viaja en el que Tango tiene: cerca de 1 está bien.</div>');
+      + (!hayBulto
+          ? '<b>Ninguno.</b> Tango no compra por bulto ningún artículo de esta lista, así que '
+          + 'no hay precio que corregir: los ' + num(res.entran) + ' renglones viajan con el '
+          + 'precio por unidad.'
+          : ((nBulto ? '<b>' + num(nBulto) + '</b> con el precio pasado al del bulto, '
+                     + 'porque el precio que Tango ya tiene cargado para esta lista está por bulto. '
+               : '')
+           + (nSinC ? '<b>' + num(nSinC) + '</b> que Tango no tiene cargados todavía: viajan con el '
+                    + 'precio por unidad y <b>nadie los puede controlar</b>, hay que mirarlos a mano. '
+               : '')
+           + 'La columna «Ya en Tango» es la fuente contra la que se decidió, y «razón» es cuántas '
+           + 'veces entra el precio que viaja en el que Tango tiene: cerca de 1 está bien.'))
+      + '</div>');
+  }
+  if (a.por_caja && a.por_caja.length) {
     h.push('<div class="lp-wrap"><table class="lp-tb"><thead><tr>'
       + '<th>Cód. Artículo</th><th>Sinónimo</th><th>Unidad</th>'
       + '<th>Unidades por bulto</th><th>Precio por unidad</th><th>Precio del bulto</th>'
@@ -888,12 +904,21 @@ function lpPintar() {
   });
   h.push('</tbody></table></div>');
 
-  /* lo que queda afuera, con el motivo renglon por renglon */
-  if (a.avisos && a.avisos.length) {
+  /* lo que queda afuera, con el motivo renglon por renglon. Tambien aparece
+     SIEMPRE, por lo mismo: con ICU entran los 42 de 42 y la seccion se
+     esfumaba.                                                  16/11/2026 */
+  {
     h.push('<div class="lp-sec">Lo que queda afuera, y por qué</div>');
-    h.push('<div class="lp-sec-pie">Estos renglones NO van al archivo. Los que dicen '
-      + '«sin alta en Tango» hay que darlos de alta primero; los que se compran por caja '
-      + 'necesitan que la lista diga cuántas unidades trae.</div>');
+    h.push('<div class="lp-sec-pie">'
+      + (!(a.avisos && a.avisos.length)
+          ? '<b>Ninguno.</b> Entran los ' + num(res.entran) + ' de ' + num(res.leidas)
+          + ' renglones que se leyeron del archivo: ni uno queda afuera.'
+          : 'Estos renglones NO van al archivo. Los que dicen «sin alta en Tango» hay que '
+          + 'darlos de alta primero; los que se compran por caja necesitan que la lista diga '
+          + 'cuántas unidades trae.')
+      + '</div>');
+  }
+  if (a.avisos && a.avisos.length) {
     h.push('<div class="lp-wrap"><table class="lp-tb"><thead><tr>'
       + '<th>Código del laboratorio</th><th>Descripción de la lista</th>'
       + '<th>Precio de lista</th><th>Cód. Artículo</th><th>Por qué</th>'

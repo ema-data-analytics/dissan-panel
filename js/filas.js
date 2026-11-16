@@ -79,7 +79,15 @@ function filasPintar(est){
     '<span class="fl-sep"></span>' +
     '<label class="fl-lab">Filas por página ' +
     '<select class="fl-sel" data-no-filtro="1">' + ops + '</select></label>' +
-    '<span class="fl-baj">el Excel y el PDF bajan las <b>' + filasNum(total) + '</b>, no esta página</span>';
+    /* ARRANCA OCULTO Y LO PRENDE bajar.js.                     16/11/2026
+       Esta frase se escribia SIEMPRE que habia paginado, hubiera botones o no.
+       En Listas la grilla «El archivo para Tango» lleva data-bajar="1" desde el
+       27/10 —a proposito, para que el bajador generico no le ponga su barra: su
+       Excel lleva titulo y filtros arriba y Tango no lo leeria— asi que el pie
+       prometia un Excel y un PDF que ahi nunca existieron. El usuario los
+       busco y no estaban. Lo prende bajarPonerBotones() solo en las tablas a
+       las que de verdad les puso la barra. */
+    '<span class="fl-baj" hidden>el Excel y el PDF bajan las <b>' + filasNum(total) + '</b>, no esta página</span>';
 }
 
 function filasPonerControl(){
@@ -135,7 +143,39 @@ function filasPonerControl(){
       envoltorio.parentNode.insertBefore(barra, envoltorio.nextSibling);
     else
       envoltorio.parentNode.appendChild(barra);
+
+    filasAvisoDeBajar(t);
   }
+}
+
+/* EL AVISO «el Excel y el PDF bajan las N» SE PRENDE SI HAY BOTONES, Y NO
+   ANTES.                                                       16/11/2026
+   Se escribia siempre que habia paginado. En Listas la grilla «El archivo para
+   Tango» lleva data-bajar="1" desde el 27/10 —a proposito: su Excel lleva
+   titulo y filtros arriba y Tango no lo leeria— asi que el pie prometia un
+   Excel y un PDF que ahi nunca existieron. El usuario los busco y no estaban.
+
+   UNA SOLA COPIA, llamada desde los dos lados, porque filas.js y bajar.js
+   corren con MutationObserver y NO hay orden garantizado entre ellos: el que
+   llegue segundo prende el aviso. Dos copias de esta busqueda se separarian
+   con el tiempo (30/10).
+   El discriminante es `.bajar-barra`, no `data-bajar`: ese atributo lo pone
+   tambien el HTML como opt-out, y entonces no distinguiria «no le toca barra»
+   de «ya tiene barra». */
+function filasAvisoDeBajar(t){
+  var cont = document.getElementById('contenido');
+  if (!t || !cont) return;
+  var caja = t.parentElement;
+  var envoltorio = (caja && caja !== cont && /caja|wrap|tb/.test(caja.className || ''))
+                   ? caja : t;
+  var sig = envoltorio.nextElementSibling;
+  if (!sig || !/fl-barra/.test(sig.className || '')) return;   /* todavia sin paginado */
+  var span = sig.querySelector('.fl-baj');
+  if (!span) return;
+  var ant = envoltorio.previousElementSibling;
+  var hayBotones = !!(ant && /bajar-barra/.test(ant.className || ''));
+  if (hayBotones) span.removeAttribute('hidden');
+  else span.setAttribute('hidden', '');
 }
 
 (function(){

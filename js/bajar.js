@@ -624,6 +624,13 @@ function bajarPonerBotones(){
     var envoltorio = (caja && caja !== cont && /caja|wrap|tb/.test(caja.className || ''))
                      ? caja : t;
     envoltorio.parentNode.insertBefore(barra, envoltorio);
+
+    /* y recien ahora se prende el «el Excel y el PDF bajan las N» del paginado
+       de ESA tabla, que filas.js escribe oculto. La funcion vive en filas.js,
+       que es el dueño del span: UNA sola copia, llamada desde los dos lados,
+       porque los dos archivos corren con MutationObserver y no hay orden
+       garantizado entre ellos.                                  16/11/2026 */
+    if (typeof filasAvisoDeBajar === 'function') filasAvisoDeBajar(t);
   }
 }
 

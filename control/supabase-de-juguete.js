@@ -280,6 +280,44 @@
      Las tres ramas del bloque, a proposito, una por renglon: uno que Tango
      tiene POR BULTO (el precio se corrige), uno SIN precio previo (viaja por
      unidad y se declara sin control) y uno normal por unidad. */
+  /* EL CASO VACIO, QUE NINGUNA PUERTA HABIA VISTO NUNCA.        16/11/2026
+     POR QUE EXISTE. El juguete contestaba SIEMPRE el caso lleno —por_caja con
+     3 filas y avisos con 1— asi que la puerta 17 jamas vio como queda la
+     pantalla cuando una seccion esta VACIA. El 16/11 el usuario abrio Listas
+     con ICU (42 de 42 entran, 0 por bulto, 0 afuera), las dos secciones se
+     esfumaron, y pregunto que le habia sacado. No le habia sacado nada: la
+     pantalla callaba. Es textual el golpe del 14/11 con la fila de totales —un
+     control que pasa sin haber mirado nunca el caso que importa— y el del
+     10/11. Con CONTROL_LISTA=vacia el juguete contesta el caso de ICU. */
+  RPC['api_listas_armar_v2_vacia'] = (function(){
+    var enc = ['Cód. Artículo','Descripción artículo','Descripción adicional artículo',
+               'Sinónimo','Cód. Lista','Desc. Lista','Moneda','Unidad','Precio','Bonif.',
+               'Fecha vigencia desde','Fecha vigencia hasta'];
+    var VIG = '01/11/2026', HASTA = '31/12/2026', filas = [], i;
+    for (i = 0; i < 42; i++){
+      filas.push(['ICU' + String(1000 + i), 'Set Primario de juguete ' + i, 'ICU MEDICAL',
+                  String(14000 + i), '8', 'ICU MEDICAL', 'PESOS', 'UNI',
+                  sdRedondo(900 + (i * 4567) % 60000), 0, VIG, HASTA]);
+    }
+    return {
+      ok: true,
+      lista: { id: 9, proveedor: 'ICU MEDICAL', cuit: '30-71168743-9', codigo_lista: '8',
+               desc_lista: 'ICU MEDICAL', moneda: 'PESOS', moneda_tango: 'PESOS',
+               vigencia: VIG, vigencia_hasta: HASTA, regla: 'precio de lista',
+               tipo_regla: 'directo', factor: 1 },
+      encabezado: enc,
+      filas: filas,
+      avisos: [],       /* 0 afuera */
+      por_caja: [],     /* 0 por bulto */
+      resumen: { leidas: filas.length, entran: filas.length, afuera: 0,
+                 por_caja_que_entran: 0, corregidos_por_bulto: 0,
+                 por_bulto_sin_control: 0, dif_costo_contra_la_lectura: 0,
+                 sin_codigo_de_lista: false, vigencia_ya_vencida: false,
+                 dias_vencida: 0, regla_pendiente: false },
+      por_que_queda_afuera: {}
+    };
+  })();
+
   RPC['api_listas_armar_v2'] = (function(){
     var enc = ['Cód. Artículo','Descripción artículo','Descripción adicional artículo',
                'Sinónimo','Cód. Lista','Desc. Lista','Moneda','Unidad','Precio','Bonif.',

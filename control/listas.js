@@ -225,8 +225,38 @@ function servidor() {
     sin_aviso_vigencia: ['if (res.vigencia_ya_vencida) {',
                 'if (false && res.vigencia_ya_vencida) { /* ARNES */',
                 'el aviso de la vigencia vencida apagado, o sea un archivo que entra a Tango '
-                  + 'y no rige sin que nadie lo diga']
+                  + 'y no rige sin que nadie lo diga'],
+    /* el defecto del 16/11 guardado: la seccion que se esfuma cuando no hay
+       nada que mostrar, y deja a la pantalla muda. */
+    secciones_se_esfuman: [
+                'h.push(\'<div class="lp-sec">Los artículos que vienen por bulto</div>\');',
+                'if (hayBulto) h.push(\'<div class="lp-sec">Los artículos que vienen por '
+                  + 'bulto</div>\'); /* ARNES */',
+                'la seccion «vienen por bulto» esfumandose cuando esta vacia, que es lo que '
+                  + 'dejo la pantalla muda con ICU el 16/11']
   };
+  /* este se planta en filas.js, no en listas.js: es el pie del paginado
+     prometiendo un Excel que esa grilla no tiene.               16/11/2026 */
+  if (PLANTAR === 'promete_excel') {
+    await pg.route('**/js/filas.js*', function (r) {
+      let cuerpo = fs.readFileSync(path.join(RAIZ, 'js', 'filas.js'), 'utf8');
+      const antes = cuerpo;
+      /* la defensa esta en DOS lugares —el span arranca oculto Y
+         filasAvisoDeBajar lo apaga si no hay botones— asi que el defecto hay
+         que plantarlo entero: sacar uno solo lo dejaba apagado igual y el
+         arnes daba «no lo agarro» sin haber reproducido nada. */
+      const paso1 = cuerpo.replace('<span class="fl-baj" hidden>', '<span class="fl-baj">');
+      const paso2 = paso1.replace('else span.setAttribute(\'hidden\', \'\');',
+                                  '/* ARNES: no se apaga */;');
+      cuerpo = paso2;
+      if (paso1 === antes || paso2 === paso1) {
+        throw new Error('EL ARNES NO PUDO PLANTAR EL DEFECTO (promete_excel) ENTERO: '
+          + 'span oculto ' + (paso1 !== antes) + ', apagado activo ' + (paso2 !== paso1)
+          + '. Un arnes que no planta nada da verde sin haber probado.');
+      }
+      r.fulfill({ status: 200, contentType: 'application/javascript', body: cuerpo });
+    });
+  }
   if (ARNESES[PLANTAR]) {
     const arn = ARNESES[PLANTAR];
     await pg.route('**/js/listas.js*', function (r) {
@@ -284,9 +314,15 @@ function servidor() {
        contesta el juguete) y se pinta con lpPintar, que es el codigo que ve el
        usuario. No se puede soltar el archivo del proveedor desde un control,
        pero SI se puede pintar lo que sale de el. */
-    let pintado = null;
-    try {
-      const ar = await rpc('api_listas_armar_v2', { p_lista_id: 6, p_filas: [] });
+    /* SE PINTA DOS VECES: EL CASO LLENO Y EL VACIO.             16/11/2026
+       El juguete contestaba siempre el caso lleno, asi que esta puerta nunca
+       vio como queda la pantalla cuando una seccion esta VACIA. El 16/11 el
+       usuario abrio Listas con ICU —42 de 42 entran, 0 por bulto, 0 afuera—,
+       las dos secciones se esfumaron y pregunto que le habian sacado. No le
+       habian sacado nada: la pantalla callaba. */
+    let pintado = null, vacio = null;
+    async function pintarCon(fn){
+      const ar = await rpc(fn, { p_lista_id: 6, p_filas: [] });
       LP_LEIDO = { ok: true, filas: [],
                    lectura: { filas_leidas: ar.data.resumen.leidas,
                               con_precio: ar.data.resumen.leidas,
@@ -295,11 +331,56 @@ function servidor() {
                    avisos: [] };
       LP_ARMADO = ar.data; LP_ARMADO._ms = ar.ms || 1;
       lpPintar();
+      /* filas.js y bajar.js pintan con MutationObserver, o sea SIEMPRE un poco
+         despues que la tabla (150 ms de calma). Relevar sin esperarlos daba
+         «sin_paginado» y el control se declaraba no ejercitado — el golpe del
+         14/11, cuando los botones se buscaban antes de que existieran. */
+      function seccion(re){
+        return Array.prototype.slice.call(document.querySelectorAll('.lp-sec'))
+          .filter(function (s) { return re.test(s.textContent || ''); })[0];
+      }
+      function tablaDeSec(s){
+        var n = s ? s.nextElementSibling : null;
+        while (n && !/lp-sec$/.test(n.className || '')){
+          if (/lp-wrap/.test(n.className || '')) return n.querySelector('table.lp-tb');
+          n = n.nextElementSibling;
+        }
+        return null;
+      }
+      function barraDe(g){
+        var env = g && g.parentElement && /lp-wrap/.test(g.parentElement.className || '')
+                  ? g.parentElement : g;
+        var sig = env ? env.nextElementSibling : null;
+        return (sig && /fl-barra/.test(sig.className || '')) ? sig : null;
+      }
+      for (let w = 0; w < 40; w++){
+        if (barraDe(tablaDeSec(seccion(/archivo para Tango/i)))) break;
+        await new Promise(function (ok){ setTimeout(ok, 50); });
+      }
       const sec = Array.prototype.slice.call(document.querySelectorAll('.lp-sec'))
         .filter(function (s) { return /vienen por bulto/i.test(s.textContent || ''); })[0];
-      const tb = sec ? sec.parentElement.querySelector('.lp-wrap table.lp-tb') : null;
-      pintado = {
+      /* LA TABLA DE ESA SECCION, NO LA PRIMERA DEL CONTENEDOR.  16/11/2026
+         Era `sec.parentElement.querySelector(...)`, que devuelve la primera de
+         TODA la pantalla. En el caso lleno coincidia —la de por bulto va
+         primera— y en el vacio agarraba la del archivo y contaba sus 504
+         celdas como si fueran del bloque de bultos. Lo encontro esta misma
+         puerta al correr el caso vacio por primera vez. Se camina a los
+         hermanos siguientes y se corta en la proxima seccion. */
+      function tablaDe(s){
+        var n = s ? s.nextElementSibling : null;
+        while (n && !/lp-sec$/.test(n.className || '')){
+          if (/lp-wrap/.test(n.className || '')) return n.querySelector('table.lp-tb');
+          n = n.nextElementSibling;
+        }
+        return null;
+      }
+      const tb = tablaDe(sec);
+      const secAf = Array.prototype.slice.call(document.querySelectorAll('.lp-sec'))
+        .filter(function (s) { return /queda afuera/i.test(s.textContent || ''); })[0];
+      return {
         hay_bloque: !!sec,
+        hay_bloque_afuera: !!secAf,
+        pie_afuera: secAf ? (secAf.nextElementSibling ? secAf.nextElementSibling.textContent : '') : '',
         pie: sec ? (sec.nextElementSibling ? sec.nextElementSibling.textContent : '') : '',
         avisos: [].map.call(document.querySelectorAll('.lp-aviso li'),
                             function (l) { return (l.textContent || '').trim(); }),
@@ -314,13 +395,44 @@ function servidor() {
         celdas: tb ? Array.prototype.map.call(tb.querySelectorAll('tbody td'),
                         function (t) { return (t.textContent || '').trim(); }) : [],
         renglones: tb ? tb.querySelectorAll('tbody tr').length : 0,
-        filas_del_archivo: document.querySelectorAll('table.lp-tb[data-bajar="1"] tbody tr').length,
+        /* la grilla del archivo se busca por SU SECCION, no por data-bajar:
+           bajar.js le pone ese atributo a toda tabla que equipa, asi que el
+           selector agarraba tambien la de bultos y la de afuera y sumaba 44
+           renglones donde el armado trae 40.                     16/11/2026 */
+        filas_del_archivo: (function(){
+          var g = tablaDeSec(seccion(/archivo para Tango/i));
+          return g ? g.querySelectorAll('tbody tr').length : 0;
+        })(),
+        /* EL PIE DE LA GRILLA DEL ARCHIVO NO PUEDE PROMETER UN EXCEL QUE AHI
+           NO ESTA. Esa grilla lleva data-bajar="1" desde el 27/10 para que el
+           bajador generico no le ponga su barra, y el paginado igual escribia
+           «el Excel y el PDF bajan las N». El usuario los busco y no estaban.
+           pantallas.js no puede ver este caso: para que esa grilla exista hay
+           que soltar un archivo.                                 16/11/2026 */
+        archivo_promete_excel: (function(){
+          var g = tablaDeSec(seccion(/archivo para Tango/i));
+          if (!g) return 'sin_grilla';
+          var sig = barraDe(g);
+          if (!sig) return 'sin_paginado';
+          var s = sig.querySelector('.fl-baj');
+          if (!s) return 'sin_aviso';
+          return s.hasAttribute('hidden') ? 'apagado' : 'PROMETE';
+        })(),
         esperado: { renglones: (LP_ARMADO.por_caja || []).length,
                     filas: (LP_ARMADO.filas || []).length,
                     corregidos: LP_ARMADO.resumen.corregidos_por_bulto,
-                    sin_control: LP_ARMADO.resumen.por_bulto_sin_control }
+                    sin_control: LP_ARMADO.resumen.por_bulto_sin_control,
+                    afuera: (LP_ARMADO.avisos || []).length }
       };
-    } catch (e) { pintado = { error: String(e && e.message || e).slice(0, 200) }; }
+    }
+    try { pintado = await pintarCon('api_listas_armar_v2'); }
+    catch (e) { pintado = { error: String(e && e.message || e).slice(0, 200) }; }
+    try { vacio = await pintarCon('api_listas_armar_v2_vacia'); }
+    catch (e) { vacio = { error: String(e && e.message || e).slice(0, 200) }; }
+    /* se vuelve a dejar el caso lleno pintado, que es sobre el que se arma el
+       .xlsx mas abajo */
+    try { pintado = await pintarCon('api_listas_armar_v2'); }
+    catch (e) { pintado = { error: String(e && e.message || e).slice(0, 200) }; }
 
     /* EL ARCHIVO QUE SE SUBE A TANGO, ARMADO DE VERDAD.      15/11/2026
        El usuario pregunto "que salga bien para poder subirlas". Esa pregunta
@@ -348,7 +460,7 @@ function servidor() {
                   filas: LP_ARMADO.filas || [] };
     } catch (e) { archivo = { error: String(e && e.message || e).slice(0, 200) }; }
 
-    return { leido: leido, huecos: huecos, pintado: pintado, archivo: archivo };
+    return { leido: leido, huecos: huecos, pintado: pintado, vacio: vacio, archivo: archivo };
   }, [b64, cfg]);
 
   await b.close();
@@ -487,6 +599,54 @@ function servidor() {
     }
   }
 
+  /* ---- EL CASO VACIO: LAS SECCIONES NO SE PUEDEN ESFUMAR ---- 16/11/2026
+     Con ICU entran los 42 de 42: 0 por bulto y 0 afuera. Antes las dos
+     secciones desaparecian y la pantalla quedaba muda — el usuario pregunto
+     que le habian sacado, y no le habian sacado nada. Ahora tienen que estar
+     IGUAL y decir «ninguno» con el motivo. */
+  const V = r.vacio || {};
+  if (V.error) {
+    falla('la lista vacia', 'no_se_pudo_pintar', V.error);
+  } else {
+    if ((V.esperado || {}).renglones !== 0 || (V.esperado || {}).afuera !== 0) {
+      falla('la lista vacia', 'el_juguete_no_contesta_el_caso_vacio',
+            'api_listas_armar_v2_vacia tiene que traer 0 por bulto y 0 afuera, y trajo '
+          + JSON.stringify(V.esperado) + '. ESE CONTROL NO SE EJERCITO.');
+    }
+    if (!V.hay_bloque) {
+      falla('la lista vacia', 'la_seccion_por_bulto_se_esfumo',
+            'con 0 artículos por bulto la sección desaparece, y una sección que desaparece '
+          + 'se lee como que falta algo: tiene que estar y decir «ninguno»');
+    } else if (!/[Nn]inguno/.test(V.pie || '')) {
+      falla('la lista vacia', 'la_seccion_por_bulto_no_dice_ninguno',
+            'la sección está pero no declara que no hay: "' + String(V.pie || '').slice(0, 110) + '"');
+    }
+    if (!V.hay_bloque_afuera) {
+      falla('la lista vacia', 'la_seccion_de_afuera_se_esfumo',
+            'con 0 renglones afuera la sección desaparece, y eso se lee como que falta algo');
+    } else if (!/[Nn]inguno/.test(V.pie_afuera || '')) {
+      falla('la lista vacia', 'la_seccion_de_afuera_no_dice_ninguno',
+            'la sección está pero no declara que no hay: '
+          + '"' + String(V.pie_afuera || '').slice(0, 110) + '"');
+    }
+    if ((V.celdas || []).length) {
+      falla('la lista vacia', 'pinto_renglones_que_no_existen',
+            'con 0 artículos por bulto la tabla no tiene que tener ni una celda, y tiene '
+          + V.celdas.length);
+    }
+  }
+
+  /* el pie de la grilla del archivo para Tango           16/11/2026 */
+  if (P.archivo_promete_excel === 'PROMETE') {
+    falla('el pie del archivo', 'el_pie_promete_un_excel_que_no_esta',
+          'la grilla «El archivo para Tango» dice «el Excel y el PDF bajan las N» y no tiene '
+        + 'esos botones: lleva data-bajar="1" a proposito');
+  } else if (P.archivo_promete_excel !== 'apagado') {
+    falla('el pie del archivo', 'no_se_pudo_mirar_el_pie',
+          'se esperaba el paginado de la grilla del archivo y dio: '
+        + String(P.archivo_promete_excel) + '. ESE CONTROL NO SE EJERCITO.');
+  }
+
   /* el aviso de que el archivo NO SE PUEDE SUBIR.           15/11/2026
      `sin_codigo_de_lista` lo medía la base y la pantalla no lo leía en ningún
      lado. El juguete lo manda en true a proposito para que esto se ejercite. */
@@ -566,26 +726,36 @@ function servidor() {
       + P.filas_del_archivo + ' de ' + P.esperado.filas + ' renglones en la grilla del '
       + 'archivo y 0 celdas con undefined, mas los dos avisos que importan antes de subir '
       + '—que el archivo NO SE PUEDE SUBIR sin lista en Tango, y que la vigencia YA VENCIO— '
-      + 'y los dos campos de fecha con su rotulo'
+      + 'y los dos campos de fecha con su rotulo. Y EL CASO VACIO, el de ICU: con 0 por '
+      + 'bulto y 0 afuera las DOS secciones siguen estando y dicen «ninguno» con el motivo, '
+      + 'y la tabla de bultos no pinta una sola celda'
     : 'el bloque «vienen por bulto» NO SE PINTO, asi que ESE CONTROL NO SE EJERCITO';
 
   try { fs.rmSync(TMP, { recursive: true, force: true }); } catch (e) {}
 
   /* ---- el informe ---- */
-  if (ARNESES[PLANTAR]) {
+  if (ARNESES[PLANTAR] || PLANTAR === 'promete_excel') {
     /* cada arnes exige SU clase de falla, no una cualquiera: si el de sin_bulto
        pasara porque se rompio la lectura, estaria dando verde por el motivo
        equivocado. */
     const ESPERA = {
+      promete_excel: ['el_pie_promete_un_excel_que_no_esta'],
       sin_borde: ['el_codigo_salio_mal', 'la_descripcion_perdio_su_primera_palabra'],
-      sin_bulto: ['la_pantalla_no_pinto_el_bloque'],
+      /* desde el 16/11 esa linea ya no envuelve la SECCION, solo su tabla: el
+         defecto plantado es que la tabla no se pinta, y eso suena como
+         faltan_renglones. La seccion ausente la planta secciones_se_esfuman. */
+      sin_bulto: ['faltan_renglones', 'la_pantalla_no_pinto_el_bloque'],
       precio_texto: ['el_precio_viaja_como_texto'],
       sin_aviso_lista: ['no_avisa_que_el_archivo_no_se_puede_subir'],
-      sin_aviso_vigencia: ['no_avisa_que_la_vigencia_vencio']
+      sin_aviso_vigencia: ['no_avisa_que_la_vigencia_vencio'],
+      secciones_se_esfuman: ['la_seccion_por_bulto_se_esfumo',
+                             'la_seccion_de_afuera_se_esfumo']
     }[PLANTAR];
     const agarro = fallas.filter(function (f) { return ESPERA.indexOf(f.clase) >= 0; });
-    console.log('\nARNES «' + PLANTAR + '» — se sirvio un js/listas.js con '
-              + ARNESES[PLANTAR][2] + '.');
+    console.log('\nARNES «' + PLANTAR + '» — se sirvio un '
+              + (ARNESES[PLANTAR] ? 'js/listas.js con ' + ARNESES[PLANTAR][2]
+                                  : 'js/filas.js con el aviso «el Excel y el PDF bajan las N» '
+                                  + 'escrito siempre, con botones o sin ellos') + '.');
     if (agarro.length) {
       console.log('  OK  la puerta lo agarro: ' + agarro.length + ' falla(s) de la clase que '
                 + 'corresponde (' + ESPERA.join(' o ') + ').');

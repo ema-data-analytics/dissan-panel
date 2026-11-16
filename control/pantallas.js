@@ -60,7 +60,8 @@ const PLANTAR = process.env.CONTROL_PLANTAR || '';
 const fallas = [];
 /* lo que el control MIDIO. Sin esto, "0 fallas" tambien es lo que
    imprime un control que no llego a mirar nada. */
-const medido = { grillas:0, paginas:0, botones:0, descargas:0, paginados:0, avisos:0 };
+const medido = { grillas:0, paginas:0, botones:0, descargas:0, paginados:0, avisos:0,
+                 conAviso:0, sinAviso:0 };
 function falla(pantalla, clase, que){ fallas.push({ pantalla, clase, que }); }
 
 /* --------------------------------------------------------------- */
@@ -232,6 +233,14 @@ async function main(){
          queda ningun control para llegar a ellas: EXACTAMENTE el defecto que
          esta puerta tiene que agarrar- y al final se exige que haya gritado.
          El archivo del repositorio no se toca: se intercepta el pedido. */
+      /* EL ARNES `promete_excel` NO VIVE ACA, Y ESO SE MIDIO.    16/11/2026
+         Se planto y la puerta NO canto, y tenia razon: en las 17 pantallas
+         del juguete las 16 grillas paginadas tienen botones, asi que la
+         condicion «aviso visible Y sin botones» no puede darse. El unico caso
+         real es la grilla de Listas, y para que exista hay que soltar un
+         archivo. El arnes de verdad vive en control/listas.js, donde si hay
+         caso. Aca el control se queda para el futuro, pero DECLARA cuando no
+         se ejercito en vez de cantar un pase. */
       if (PLANTAR === 'sin_barra'){
         await pg.route('**/js/filas.js*', async r => {
           let cuerpo = fs.readFileSync(path.join(RAIZ, 'js', 'filas.js'), 'utf8');
@@ -242,8 +251,8 @@ async function main(){
             .replace('envoltorio.parentNode.appendChild(barra);',
                      '/* ARNES: barra no insertada */;');
           if (cuerpo === antes)
-            throw new Error('EL ARNES NO PUDO PLANTAR EL DEFECTO: no encontro donde '
-                          + 'filas.js inserta la barra. Un arnes que no planta nada '
+            throw new Error('EL ARNES NO PUDO PLANTAR EL DEFECTO (' + PLANTAR + '): no '
+                          + 'encontro donde tocar js/filas.js. Un arnes que no planta nada '
                           + 'da verde sin haber probado.');
           r.fulfill({ status:200, contentType:'application/javascript', body: cuerpo });
         });
@@ -480,15 +489,37 @@ async function main(){
           const trs = [...t.querySelectorAll('tbody tr')];
           const datos = trs.filter(tr => !/tot\b|\btot/.test(tr.className || '') &&
                                          !(tr.children.length === 1 && trs.length > 1));
+          /* EL PIE NO PUEDE PROMETER UN EXCEL QUE NO ESTA.       16/11/2026
+             «el Excel y el PDF bajan las N, no esta pagina» se escribia
+             SIEMPRE que habia paginado. En Listas la grilla del archivo para
+             Tango lleva data-bajar="1" desde el 27/10 —para que el bajador
+             generico no le ponga su barra— asi que el pie prometia dos botones
+             que ahi nunca existieron, y el usuario los busco. Ahora se mide:
+             el aviso visible tiene que ir de la mano de la barra de botones. */
+          let caja = t.parentElement;
+          const env = (caja && caja.id !== 'contenido'
+                       && /caja|wrap|tb/.test(caja.className || '')) ? caja : t;
+          const ant = env.previousElementSibling;
+          const baj = sig ? sig.querySelector('.fl-baj') : null;
           return {
             i, total: datos.length,
             visibles: datos.filter(tr => tr.offsetParent !== null).length,
             paginado: !!(sig && /fl-barra/.test(sig.className || '')),
+            promete_excel: !!(baj && !baj.hasAttribute('hidden')),
+            tiene_botones: !!(ant && /bajar-barra/.test(ant.className || '')),
             titulo: (t.querySelector('thead th') || {}).textContent || ('tabla ' + (i + 1))
           };
         });
       });
       for (const g of grillas){
+        if (g.paginado){
+          if (g.promete_excel) medido.conAviso++; else medido.sinAviso++;
+        }
+        if (g.promete_excel && !g.tiene_botones){
+          falla(p, 'el_pie_promete_un_excel_que_no_esta',
+                '«' + String(g.titulo).trim().slice(0, 24) + '…» dice «el Excel y el PDF '
+              + 'bajan las ' + g.total + '» y esa grilla NO tiene botones de bajar');
+        }
         if (g.visibles >= g.total) continue;
         const que = '«' + String(g.titulo).trim().slice(0, 24) + '…» muestra ' + g.visibles +
                     ' de ' + g.total + ' renglones';
@@ -615,15 +646,16 @@ async function main(){
      Con el defecto plantado, 0 fallas NO es un pase: es la prueba de que
      esta puerta esta ciega. */
   if (PLANTAR === 'sin_barra'){
-    const agarro = fallas.filter(f => f.clase === 'filas_inalcanzables').length;
-    console.log('\nARNES «sin_barra» — se sirvio un js/filas.js SIN la barra de paginado.');
+    const clase = 'filas_inalcanzables';
+    const agarro = fallas.filter(f => f.clase === clase).length;
+    console.log('\nARNES «' + PLANTAR + '» — se sirvio un js/filas.js con el defecto puesto.');
     if (agarro){
-      console.log('  OK  la puerta lo agarro: ' + agarro + ' falla(s) filas_inalcanzables.');
-      console.log('  midio: el defecto plantado se detecto en las grillas que esconden '
-                + 'filas, y la puerta nombro su clase.');
+      console.log('  OK  la puerta lo agarro: ' + agarro + ' falla(s) ' + clase + '.');
       process.exit(0);
     }
-    console.log('  LA PUERTA NO LO AGARRO: con la barra sacada no canto ni una vez.');
+    console.log('  LA PUERTA NO LO AGARRO: no canto ' + clase + ' ni una vez. Las que si '
+              + 'hubo: ' + (fallas.length ? [...new Set(fallas.map(f => f.clase))].join(' · ')
+                                          : 'ninguna'));
     console.log('  Una puerta que no ve el defecto plantado no es una puerta.');
     process.exit(1);
   }
@@ -636,7 +668,16 @@ async function main(){
                 medido.paginas + ' paginas) · ' + medido.descargas +
                 ' con el archivo comprobado que baja TODAS las filas · ' + medido.paginados +
                 ' pantallas que traen las 5.108 filas enteras pese al tope de 1.000 del servidor \u00b7 ' +
-                medido.avisos + ' avisos del menu leidos con el mouse encima.');
+                medido.avisos + ' avisos del menu leidos con el mouse encima · '
+              + medido.conAviso + ' grillas con el aviso «el Excel y el PDF bajan las N» '
+              + 'visible, las ' + medido.conAviso + ' con sus botones al lado.'
+              + (medido.sinAviso === 0
+                   ? ' NINGUNA grilla de estas 17 pantallas queda sin botones, asi que el '
+                   + 'control de «el pie promete un Excel que no esta» NO SE EJERCITO aca: '
+                   + 'el unico caso real es la grilla de Listas, que necesita que se suelte '
+                   + 'un archivo, y lo mide control/listas.js con su propio arnes.'
+                   : ' Y ' + medido.sinAviso + ' con el aviso apagado porque esa grilla no '
+                   + 'tiene botones.'));
     process.exit(0);
   }
   console.log('CONTROL DE PANTALLAS: ' + fallas.length + ' falla(s)\n');

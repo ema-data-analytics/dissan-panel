@@ -1499,3 +1499,69 @@ apareciera, `por_caja` muestra **todos** los articulos que Tango compra por
 bulto con su veredicto, no solo los corregidos: la fuente independiente que
 queda es `cpa46.precio_net` (lo que DISSAN pago de verdad) y el precio del
 bulto que el PDF de COLOPLAST publica en su propia columna.
+
+## 16/11/2026 (mañana) — EL JUGUETE CONTESTABA SIEMPRE EL CASO LLENO
+
+**PROBE LA FUNCION Y DIJE QUE HABIA PROBADO LA PANTALLA.** Anoche entregue
+Listas diciendo que estaba probado. A la mañana el usuario la abrio con **ICU**
+—la lista que el me habia mandado— y **las dos secciones de abajo no estaban**.
+Mi prueba habia sido: llamar a `api_listas_armar_v2` por consola con COLOPLAST
+y mirar los bloques que yo habia tocado. **Nunca abri la pantalla con ICU, ni
+mire la pantalla entera de arriba a abajo como la ve el.**
+
+**Y NINGUNA PUERTA PODIA VERLO, PORQUE EL JUGUETE CONTESTA SIEMPRE EL CASO
+LLENO.** `RPC['api_listas_armar_v2']` devolvia `por_caja` con 3 filas y
+`avisos` con 1, **todas las corridas**. Asi que la puerta 17 nunca vio —ni
+podia ver— como queda la pantalla cuando una seccion esta **VACIA**. Es textual
+el golpe del 14/11 con la fila de totales y el del 10/11 con el Tablero:
+*un control que pasa sin haber mirado nunca el caso que importa*.
+
+**UN CASO DE PRUEBA QUE SIEMPRE TRAE DATOS NO PRUEBA LA PANTALLA VACIA, Y LA
+VACIA ES LA QUE ASUSTA.** Ahora el juguete tiene **`api_listas_armar_v2_vacia`**
+—el caso de ICU: 42 de 42 entran, 0 por bulto, 0 afuera— y la puerta 17 **pinta
+las DOS**: la lista llena y la vacia. **Al agregar una respuesta al juguete, va
+tambien su caso vacio.**
+
+**UNA SECCION QUE DESAPARECE SE LEE COMO «FALTA ALGO».** No estaba rota —estaba
+vacia con razon— pero la pantalla callaba, y una pantalla que calla no se
+distingue de una rota. Las dos secciones aparecen **siempre** y dicen
+**«Ninguno»** con el motivo. Es la misma regla del pie de la puerta 12 del
+14/11, aplicada a lo que ve la persona y no al control.
+
+**EL PIE PROMETIA UN EXCEL QUE ESA GRILLA NUNCA TUVO.** `js/filas.js` escribia
+*«el Excel y el PDF bajan las N, no esta pagina»* **siempre que habia
+paginado**, y la grilla «El archivo para Tango» lleva `data-bajar="1"` desde el
+**27/10** —a proposito: su Excel generico lleva titulo y filtros arriba y Tango
+no lo leeria—. El usuario busco esos botones y no estaban. Ahora el span arranca
+`hidden` y lo prende **`filasAvisoDeBajar(t)`**, UNA sola funcion llamada desde
+`filas.js` y desde `bajar.js`: los dos corren con MutationObserver y **no hay
+orden garantizado entre ellos**, asi que el que llegue segundo lo prende. El
+discriminante es **`.bajar-barra`**, no `data-bajar`, porque ese atributo lo
+pone tambien el HTML como opt-out y no distinguiria «no le toca barra» de «ya
+tiene barra».
+
+**Y TRES ERRORES DE MI PROPIO CONTROL, LOS TRES ENCONTRADOS POR EL CONTROL
+MISMO al correr el caso vacio por primera vez:**
+1. `sec.parentElement.querySelector('.lp-wrap table.lp-tb')` devuelve la
+   **primera de toda la pantalla**. En el caso lleno coincidia; en el vacio
+   agarraba la del archivo y contaba sus **504 celdas** como si fueran del
+   bloque de bultos.
+2. `querySelectorAll('table.lp-tb[data-bajar="1"] tbody tr')` sumaba **44**
+   renglones donde el armado trae 40: `bajar.js` le pone ese atributo a **toda**
+   tabla que equipa. La grilla se busca por SU SECCION.
+3. El relevamiento corria **antes** que el paginado: `filas.js` pinta con
+   MutationObserver a los 150 ms, y el control declaraba «sin_paginado». Es el
+   golpe del 14/11 otra vez.
+
+**UN ARNES TIENE QUE PLANTAR EL DEFECTO ENTERO.** La defensa del pie quedo en
+**dos** lugares —el span arranca oculto Y se apaga activo— y el arnes sacaba
+uno solo: el aviso quedaba apagado igual y el arnes cantaba «no lo agarro» sin
+haber reproducido nada. Ahora planta los dos y **revienta si alguno de los dos
+reemplazos no encuentra su ancla**.
+
+**LAS SIETE CARAS DE LA PUERTA 17:** limpio 0 fallas · `sin_borde` ·
+`sin_bulto` · `precio_texto` · `sin_aviso_lista` · `sin_aviso_vigencia` ·
+`secciones_se_esfuman` · `promete_excel`. Y en `control/pantallas.js`, el mismo
+control sobre las 17 pantallas con su arnes `promete_excel` — pero **ese no
+puede ver la grilla de Listas**, porque para que exista hay que soltar un
+archivo: por eso el control vive tambien en la puerta 17.
