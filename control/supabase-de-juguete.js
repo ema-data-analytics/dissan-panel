@@ -210,6 +210,38 @@
     return a;
   })();
 
+  /* LA v4: EL SUBDIARIO CON LA IMPUTACION ADENTRO.               16/11/2026
+     Pedido por DISSAN: la imputacion EN el subdiario y no en un reporte
+     aparte. La v4 devuelve lo mismo que la v3 mas `imputacion` y
+     `imputacion_de_donde`, asi que el juguete la arma DE la v3 y le agrega
+     las dos: si maniana cambia el subdiario, cambian las dos juntas y no se
+     separan con el tiempo (30/10).
+     LAS TRES PROCEDENCIAS MEDIDAS EN LA BASE, en esta proporcion, para que el
+     control vea las tres y no solo la comoda: tipo de gasto · cuenta del
+     asiento · sin contabilizar. */
+  RPC['api_subdiario_compras_v4'] = (function(){
+    var G = ['AGUA','LIMPIEZA','FLETES','PAPELERIA','ENERGIA ELECTRICA'];
+    var C = ['Mercadería Gravada','Combustibles y Lubricantes','Estacionamiento',
+             'Comidas','Refrigerios al Personal'];
+    return RPC['api_subdiario_compras_v3'].map(function(f, i){
+      var o = {}, k;
+      for (k in f) if (Object.prototype.hasOwnProperty.call(f, k)) o[k] = f[k];
+      /* LAS DOS COLUMNAS NO DICEN LO MISMO: `de_donde` es la FUENTE, y si no
+         hay imputacion no hay fuente, asi que va «—». La primera version
+         repetia «sin contabilizar» en las dos y se veia como ruido apenas
+         abri la pantalla. */
+      if (i % 13 === 0){ o.imputacion = 'sin contabilizar'; o.imputacion_de_donde = '—'; }
+      else if (i % 5 === 0){ o.imputacion = C[i % C.length];
+                             o.imputacion_de_donde = 'cuenta del asiento'; }
+      else { o.imputacion = G[i % G.length]; o.imputacion_de_donde = 'tipo de gasto'; }
+      return o;
+    });
+  })();
+  /* Y SU CASO VACIO, que es la regla desde hoy: al agregar una respuesta al
+     juguete va tambien la vacia, o el control nunca ve la pantalla sin datos
+     -que es la que asusta-. */
+  RPC['api_subdiario_compras_v4_vacia'] = [];
+
   /* el detalle por tipo de gasto, misma regla: nombres medidos del catalogo,
      valores generados. 171 = los renglones reales de octubre 2024. */
   RPC['api_subdiario_compras_gastos_v1'] = (function(){

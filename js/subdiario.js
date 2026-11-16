@@ -67,19 +67,36 @@
 var SD_DEF = {
   SubdiarioCompras: {
     titulo: 'Subdiario de IVA — Compras',
-    fn: 'api_subdiario_compras_v3',
+    /* LA IMPUTACION VA ADENTRO DEL SUBDIARIO, NO EN UN REPORTE APARTE.
+                                                                  16/11/2026
+       Pedido por DISSAN. La v4 se construyo AL LADO de la v3 -que no se
+       toco- y no recalcula nada: delega en la v2 igual que la v3 y solo
+       agrega dos columnas. Medido contra la v3 con la huella md5 de CADA
+       renglon: octubre 2024 297=297 y octubre 2026 392=392, totales y huellas
+       identicos. No cambia un solo numero del subdiario. */
+    fn: 'api_subdiario_compras_v4',
     nota: 'Va por <b>fecha contable</b>, no por fecha de emisión: adentro hay comprobantes ' +
           'emitidos en meses anteriores que se registraron en este. Las órdenes de pago ' +
           '(O/P) no entran, y las notas de crédito <b>restan</b>. El neto se <b>deriva del ' +
           'IVA</b> (IVA ÷ alícuota), que es la forma en que lo pide el contador; en los ' +
           'comprobantes en dólares eso deja centavos de deriva contra el neto propio de ' +
-          'Tango, y esa diferencia es la columna <b>CONTROL NETO</b>.',
+          'Tango, y esa diferencia es la columna <b>CONTROL NETO</b>. ' +
+          'La columna <b>IMPUTACION</b> sale del <b>tipo de gasto</b> cargado en el ' +
+          'comprobante; donde Tango no lo tiene, de la <b>cuenta del asiento contable</b>, ' +
+          'y la columna <b>DE DÓNDE</b> dice cuál de las dos fue. Si el comprobante ' +
+          'todavía no se contabilizó, dice <b>«sin contabilizar»</b>: no es un hueco, es ' +
+          'lo que falta hacer en Tango.',
     cols: [
       { k:'fecha',        r:'FECHA',             t:'fecha' },
       { k:'proveedor',    r:'PROVEEDOR',         t:'txt'   },
       { k:'cuit',         r:'CUIT',              t:'cod'   },
       { k:'tipo',         r:'TIPO',              t:'cod'   },
       { k:'numero',       r:'NUMERO',            t:'cod'   },
+      /* LA IMPUTACION VA ACA, pegada al comprobante y antes de la plata, que
+         es donde la pone el contador en su planilla. Y lleva la DESCRIPCION,
+         no la sigla -dicho por el usuario, textual, el 14/11-.          16/11 */
+      { k:'imputacion',   r:'IMPUTACION',        t:'txt'   },
+      { k:'imputacion_de_donde', r:'DE DÓNDE',   t:'txt'   },
       { k:'exento',       r:'EXENTO',            t:'num'   },
       { k:'neto_21',      r:'NETO 21%',          t:'num'   },
       { k:'neto_27',      r:'NETO 27%',          t:'num'   },
