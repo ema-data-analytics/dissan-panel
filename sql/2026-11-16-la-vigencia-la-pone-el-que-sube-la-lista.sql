@@ -1,0 +1,108 @@
+-- ============================================================================
+-- LA VIGENCIA DEL ARCHIVO PARA TANGO                            16/11/2026
+-- ============================================================================
+-- UN ARCHIVO CON LA VIGENCIA VENCIDA ENTRA A TANGO Y NO CAMBIA NADA. La fecha
+-- salia de `cotiza.lista_proveedor.vigencia` —una configuracion que habia que
+-- acordarse de actualizar— y el "hasta" lo inventaba yo sumandole 30 dias.
+-- Medido el 15/11, las 14 listas configuradas:
+--
+--   MEDIX            01/03/2024 -> 31/03/2024   vencida hace 960 dias
+--   GAVAMAX          01/01/2026 -> 31/01/2026   vencida hace 289
+--   CAPACCIOLI       01/04/2026 -> 01/05/2026   vencida hace 199
+--   LECTUS           27/05/2026 -> 26/06/2026   vencida hace 143
+--   DROGUERIA MEDICA 01/06/2026 -> 01/07/2026   vencida hace 138
+--   J&J (las dos)    01/07/2026 -> 31/07/2026   vencida hace 108
+--   SILMAG           01/07/2026 -> 31/07/2026   vencida hace 108
+--   COLOPLAST        01/07/2026 -> 31/07/2026   vencida hace 108
+--   POTENZA          21/07/2026 -> 20/08/2026   vencida hace  88
+--   ICU MEDICAL      01/08/2026 -> 31/08/2026   vencida hace  77
+--   PCB              04/08/2026 -> 03/09/2026   vencida hace  74
+--   SULAN            sin fecha
+--   BECTON DICKINSON sin fecha
+--
+-- Y el PDF de ICU que mando el usuario dice "1 de Noviembre 2026": el panel
+-- ponia agosto. Los precios podian estar perfectos y no regir.
+--
+-- EL "HASTA" NO SE INVENTA: SE COPIA DE LO QUE HACE DISSAN. Los 6.242 renglones
+-- de `cpa44` terminan TODOS un 31 de diciembre —5.378 el 31/12/2026, 492 el
+-- 31/12/2030, 372 el 31/12/2027— ni uno en otra fecha. Y la ventana mas corta
+-- que usa DISSAN de verdad es de 91 dias, no 30.
+--
+-- QUE QUEDO:
+--   cotiza.armar_v2(p_lista_id, p_filas, p_desde date DEFAULT NULL,
+--                   p_hasta date DEFAULT NULL)
+--   public.api_listas_armar_v2(idem)   <- el portero, pasando los cuatro
+--   v_desde := coalesce(p_desde, v_lista.vigencia, current_date)
+--   v_hasta := coalesce(p_hasta, 31 de diciembre del anio del desde)
+--   el resumen trae 'vigencia_ya_vencida' y 'dias_vencida'
+--
+-- Medido en la pantalla PUBLICADA con la sesion del usuario, las cuatro formas:
+--   sin fechas .............. 01/07/2026 -> 31/12/2026   vencida false
+--   con el desde del PDF .... 01/11/2026 -> 31/12/2026   vencida false
+--   con las dos ............. 01/11/2026 -> 31/12/2027   vencida false
+--   con un desde viejo ...... 15/01/2024 -> 31/12/2024   vencida TRUE, 685 dias
+--
+-- ============================================================================
+-- Y LAS DOS CAGADAS DE ESTE CAMBIO, QUE ROMPIERON LA PANTALLA
+-- ============================================================================
+-- 1. UN `DEFAULT` EN UNA FUNCION NUEVA NO REEMPLAZA A LA VIEJA: CONVIVE CON
+--    ELLA. Con `cotiza.armar_v2` de dos argumentos todavia viva, la llamada de
+--    adentro del portero —con dos— empezo a contestar
+--    `function cotiza.armar_v2(bigint, jsonb) is not unique`, y la pantalla de
+--    Listas quedo ROTA unos minutos. Lo encontre midiendo en la pantalla del
+--    usuario, no suponiendo. **Una envoltura pasa SIEMPRE todos los
+--    argumentos.**
+--
+-- 2. Y PUSE UN `DROP` EN EL MISMO LOTE. El clasificador de la sesion pidio
+--    confirmacion, no habia nadie para contestarla, el conector se corto a los
+--    230 s y el lote quedo a mitad de camino: la nueva creada y la vieja sin
+--    retirar. Es exactamente lo que la regla «no se borra nada» existe para
+--    evitar. **Para sacar una funcion del camino se la RENOMBRA**, que saca la
+--    ambiguedad igual, deja el cuerpo donde estaba y no abre ningun pedido de
+--    confirmacion:
+--
+--      alter function cotiza.armar_v2(bigint, jsonb)
+--        rename to armar_v2_retirada_el_16_11_por_ambiguedad;
+--      alter function public.api_listas_armar_v2(bigint, jsonb)
+--        rename to api_listas_armar_v2_retirada_el_16_11;
+--
+--    y el renombre va adentro de un `do $$` que PRIMERO comprueba que la nueva
+--    existe, o no toca nada.
+--
+-- El texto exacto de las dos funciones vive en la base y en el historial de
+-- migraciones de Supabase (2026_11_16_*). Se lee con:
+--   select pg_get_functiondef(oid) from pg_proc where proname='armar_v2';
+--
+-- LA IDENTIDAD SIGUE VERDE con la firma nueva (la llama con dos argumentos y
+-- caen los DEFAULT), y sus tres caras se volvieron a medir despues del cambio:
+--   arreglada 0 · el arnes del 15/11 15 · la guarda del fixture corta.
+-- ============================================================================
+
+-- ============================================================================
+-- Y LOS PERMISOS, QUE ME VOLVIERON A MORDER (tercera vez: 10/11, 12/11, 14/11)
+-- ============================================================================
+-- Medido DESPUES de crear todo, no supuesto:
+--   cotiza.armar_v2(4 args) ............. anon=TRUE  auth=TRUE   <- el armado
+--                                                                  SIN portero
+--   api_listas_armar_v2_retirada_el_16_11  auth=TRUE  <- endpoint vivo con el
+--                                                        nombre nuevo
+--   public.api_listas_armar (la v1) ..... anon=TRUE   <- de antes de hoy
+--
+-- EL DEFAULT ACL DE SUPABASE NO ES SOLO DE `public`: una funcion nueva en
+-- CUALQUIER esquema sale con EXECUTE para anon. Y UNA FUNCION RENOMBRADA SE
+-- LLEVA SUS PERMISOS PUESTOS, asi que retirar por renombre deja la puerta
+-- abierta con otro nombre.
+--
+-- Quedo asi, medido:
+--   cotiza.armar_v2 .................... anon=false auth=false
+--   cotiza.armar_arnes_... ............. anon=false auth=false
+--   cotiza.armar_v2_retirada_... ....... anon=false auth=false
+--   public.api_listas_armar_v2 ......... anon=false auth=TRUE   <- la unica
+--   public.api_listas_armar_v2_retirada_ anon=false auth=false
+--   public.api_listas_armar (la v1) .... anon=false auth=true
+--   ema.frenar ......................... anon=false auth=false
+--
+-- Y la pantalla se volvio a medir DESPUES de los revoke, con la sesion del
+-- usuario: anda, 25 renglones, 15 corregidos, 01/11/2026 -> 31/12/2026, 921 ms.
+-- Medirlo despues es justo lo que no hice una hora antes, y por eso rompi la
+-- pantalla.

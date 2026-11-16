@@ -1443,3 +1443,22 @@ estaba, y no abre ningun pedido de confirmacion. Y el renombre va adentro de un
 **LOS SEIS ARNESES DE LA PUERTA 17**, los cinco agarrados y cada uno exigiendo
 SU clase de falla: `sin_borde` · `sin_bulto` · `precio_texto` ·
 `sin_aviso_lista` · `sin_aviso_vigencia` · y la corrida limpia en 0 fallas.
+
+**UNA FUNCION RENOMBRADA SE LLEVA SUS PERMISOS PUESTOS.** Retirar por renombre
+saca la ambiguedad, pero `api_listas_armar_v2_retirada_el_16_11` quedo con
+`authenticated` en true: **un endpoint vivo con el nombre nuevo que no mira
+nadie**. Despues de renombrar, se revoca.
+
+**Y EL DEFAULT ACL DE SUPABASE NO ES SOLO DE `public`:** `cotiza.armar_v2`
+—que es el armado **sin el portero**— salio con **anon=true y
+authenticated=true**. Si el esquema `cotiza` se expusiera, cualquiera con la
+clave publishable del repositorio entraba sin pasar por el modulo 'Listas'. Van
+los dos revoke y tambien `authenticated`, porque la puerta de entrada es
+`public.api_listas_armar_v2` y no esta. Tercera vez que esto muerde: 10/11,
+12/11, 14/11 — y ahora en un esquema que no es `public`.
+
+**Y LA PUERTA 13 SE PAGO SOLA OTRA VEZ.** El rojo de `en vivo: listas.html`
+—*"1 llamada(s) con ERROR"*— es el error que yo cause con el `DEFAULT` ambiguo,
+anotado desde el navegador del usuario. **No se borra**: es el registro de algo
+que de verdad paso, y taparlo seria esconder mi propia rotura. Se va solo
+cuando pasa su ventana.
