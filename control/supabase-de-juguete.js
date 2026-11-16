@@ -242,6 +242,33 @@
      -que es la que asusta-. */
   RPC['api_subdiario_compras_v4_vacia'] = [];
 
+  /* LA v5: EL COMPROBANTE SIN NADA DE IVA VA ENTERO A EXENTO.    16/11/2026
+     Se arma DE la v4 -una sola copia, 30/10- y le PLANTA el caso que el
+     juguete nunca habia tenido y que por eso ninguna puerta podia ver: un
+     comprobante exento mal tipeado en Tango, con los tres netos y los tres
+     IVA en cero y toda la plata en EXENTO. Sin esta fila el control pasa sin
+     haber mirado nunca el renglon que origino el arreglo -es el golpe del
+     10/11 con el Tablero y el del 14/11 con la fila de totales-.
+     control_neto y control_total van en CERO en esa fila, que es justamente
+     lo que el arreglo tiene que lograr. */
+  RPC['api_subdiario_compras_v5'] = (function(){
+    return RPC['api_subdiario_compras_v4'].map(function(f, i){
+      var o = {}, k;
+      for (k in f) if (Object.prototype.hasOwnProperty.call(f, k)) o[k] = f[k];
+      if (i % 29 === 0){
+        o.exento = sdRedondo(o.neto_21 + o.neto_27 + o.neto_105 + o.exento
+                             + o.iva_21 + o.iva_27 + o.iva_105);
+        o.neto_21 = 0; o.neto_27 = 0; o.neto_105 = 0;
+        o.iva_21  = 0; o.iva_27  = 0; o.iva_105  = 0;
+        o.imp_total = sdRedondo(o.exento + o.perc_iva_3 + o.perc_ib_mza + o.perc_ib_sl
+                                + o.imp_debitos + o.imp_creditos + o.sircreb + o.otros_imp);
+        o.control_iva = 0; o.control_total = 0; o.control_neto = 0;
+      }
+      return o;
+    });
+  })();
+  RPC['api_subdiario_compras_v5_vacia'] = [];
+
   /* el detalle por tipo de gasto, misma regla: nombres medidos del catalogo,
      valores generados. 171 = los renglones reales de octubre 2024. */
   RPC['api_subdiario_compras_gastos_v1'] = (function(){
@@ -298,6 +325,30 @@
     }
     return a;
   })();
+
+  /* LA v5 DE VENTAS: EL IMPORTE ES EL TOTAL PROPIO DE TANGO.     16/11/2026
+     Se arma DE la v4 -una sola copia, 30/10- y le PLANTA el caso que el
+     juguete no tenia: el comprobante B con total REDONDO, donde las partes
+     NO vuelven a dar el total porque Tango fija el precio al consumidor
+     final y despeja el neto hacia atras. Hasta hoy el juguete componia el
+     importe sumando las partes, asi que SIEMPRE cerraba y el control nunca
+     veia el unico caso en que no cierra.
+     El desvio va de pocos pesos a proposito: tiene que quedar MUY por debajo
+     del corte de la puerta (hueco > $1 Y > 1% del renglon). Medido sobre la
+     base real, el peor de 2026 es 0,0062% del comprobante. */
+  RPC['api_subdiario_ventas_v5'] = (function(){
+    return RPC['api_subdiario_ventas_v4'].map(function(f, i){
+      var o = {}, k;
+      for (k in f) if (Object.prototype.hasOwnProperty.call(f, k)) o[k] = f[k];
+      if (i % 5 === 0){
+        var desvio = sdRedondo(((i % 7) + 1) * 1.37);
+        o.importe = sdRedondo(o.importe - desvio);
+        o.control_importe = desvio;
+      }
+      return o;
+    });
+  })();
+  RPC['api_subdiario_ventas_v5_vacia'] = [];
 
   /* api_listas_armar_v2 — el armado del archivo para Tango.      15/11/2026
      POR QUE EXISTE. Hasta hoy el juguete NO contestaba ninguna funcion de

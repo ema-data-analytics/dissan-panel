@@ -130,7 +130,32 @@ async function main(){
        de pantallas tenia el 31/10 y que lo dejaba midiendo contra la base real */
     await pg.route('**/supabase-js@*/**', r => r.fulfill({
       status:200, contentType:'application/javascript', body:'/* cortado: manda el juguete */' }));
-    if (fs.existsSync(JUGUETE)) await pg.addInitScript({ path: JUGUETE });
+    /* EL ARNES DE «LAS PARTES DEL RENGLON DAN SU TOTAL».        16/11/2026
+       Esta puerta nacio hoy, y una puerta que nunca vio su defecto puede
+       estar bien o estar ciega: desde afuera se ven igual. Con
+       CONTROL_PLANTAR=partes_no_dan_el_total se le pone al juguete el defecto
+       EXACTO de NACION SEGUROS —el comprobante sin una sola alicuota de IVA
+       se queda con el exento en cero y la plata no cae en ninguna columna,
+       mientras IMP_TOTAL sigue entero—. El archivo del repositorio no se
+       toca: se parchea el texto en memoria antes de inyectarlo. Y si el
+       parche no encuentra su ancla, revienta: un arnes que no planta nada da
+       verde sin haber probado (14/11). */
+    if (fs.existsSync(JUGUETE)){
+      if (PLANTAR === 'partes_no_dan_el_total'){
+        let j = fs.readFileSync(JUGUETE, 'utf8');
+        const antes = j;
+        j = j.replace('        o.control_iva = 0; o.control_total = 0; o.control_neto = 0;',
+                      '        o.exento = 0; /* ARNES: la plata no cae en ninguna columna */\n'
+                    + '        o.control_iva = 0; o.control_total = 0; o.control_neto = 0;');
+        if (j === antes)
+          throw new Error('EL ARNES NO PUDO PLANTAR EL DEFECTO: no encontro el renglon '
+                        + 'sin IVA en control/supabase-de-juguete.js. Un arnes que no '
+                        + 'planta nada da verde sin probar.');
+        await pg.addInitScript({ content: j });
+      } else {
+        await pg.addInitScript({ path: JUGUETE });
+      }
+    }
 
     /* EL ARNES DE «DOS ARCHIVOS CON EL MISMO NOMBRE».          14/11/2026
        El detector de colision nacio hoy, y un detector que nunca vio una
@@ -273,6 +298,17 @@ async function main(){
           const baja = ths.map(x => !x.hasAttribute('data-no-baja'));
           const enc  = ths.filter((x, j) => baja[j])
                           .map(x => (x.textContent || '').trim());
+          /* QUE LAS PARTES DEL RENGLON DEN SU PROPIO TOTAL.       16/11/2026
+             La pantalla declara con `data-plata` cuales columnas son plata y
+             con `data-total` cual es el total. El control no lleva ninguna
+             lista de nombres. La formula es la que DISSAN escribio A MANO en
+             una columna agregada al Excel que nos devolvio:
+               =SUM(Tabla1[[#This Row],[EXENTO]:[OTROSIMP]]) - [IMP_TOTAL]
+             y es la que encontro el exento perdido de NACION SEGUROS. Si la
+             corre el control antes de que el archivo salga, DISSAN no tiene
+             que encontrarlo despues. */
+          const plata = ths.filter((x, j) => baja[j]).map(x => x.hasAttribute('data-plata'));
+          const esTot = ths.filter((x, j) => baja[j]).map(x => x.hasAttribute('data-total'));
           const soloLasQueBajan = tds => tds.filter((td, j) => baja[j] !== false);
           const leerCelda = td => ({
             texto: (td.textContent || '').trim(),
@@ -297,7 +333,8 @@ async function main(){
              no miro. */
           const totales = [...t.querySelectorAll('tfoot tr')]
                             .map(tr => soloLasQueBajan([...tr.children]).map(leerCelda));
-          return { encabezados: enc, filas: filas, totales: totales };
+          return { encabezados: enc, filas: filas, totales: totales,
+                   plata: plata, esTotal: esTot };
         });
       } catch (e){ vista = null; }
 
@@ -433,6 +470,26 @@ async function main(){
                           { encoding:'utf8' });
   const salidaPy = (py.stdout || '') + (py.stderr || '')
                  + '\n' + (pyPdf.stdout || '') + (pyPdf.stderr || '');
+
+  /* ESTE ARNES SE CONTESTA ACA Y NO ARRIBA, porque su falla la canta el lado
+     que ABRE el archivo (archivo.py), no el que lo baja. Ponerlo junto al de
+     `mismo_nombre` lo habria hecho salir antes de que el python corriera, y
+     habria dado «no lo agarro» sin haber mirado. */
+  if (PLANTAR === 'partes_no_dan_el_total'){
+    const agarro = /LAS_PARTES_DEL_RENGLON_NO_DAN_SU_TOTAL/i.test(salidaPy);
+    console.log('\nARNES «partes_no_dan_el_total» — al comprobante sin una sola alicuota '
+              + 'de IVA se le dejo el EXENTO en cero, asi la plata no cae en ninguna '
+              + 'columna y IMP_TOTAL queda entero. Es el defecto de NACION SEGUROS.');
+    if (agarro){
+      console.log('  OK  la puerta lo agarro.');
+      console.log(salidaPy.trim());
+      process.exit(0);
+    }
+    console.log('  LA PUERTA NO LO AGARRO: el renglon no suma y no canto.');
+    console.log('  Una puerta que no ve el defecto plantado no es una puerta.');
+    console.log(salidaPy.trim());
+    process.exit(1);
+  }
 
   if (fallas.length || py.status !== 0 || pyPdf.status !== 0){
     console.log('CONTROL DEL ARCHIVO BAJADO: ' + fallas.length + ' falla(s) al bajar'

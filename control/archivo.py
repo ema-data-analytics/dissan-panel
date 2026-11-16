@@ -244,6 +244,10 @@ def revisar(ruta):
     # resto de la comparacion igual corre y se ve todo junto.
     revisar_fila_de_totales(nombre, ws, vista, fila_enc, encs, ultima_con_datos)
 
+    # y que las partes de CADA renglon den su propio total.
+    revisar_que_las_partes_den_el_total(nombre, ws, vista, fila_enc, encs,
+                                        ultima_con_datos)
+
     # EL ARCHIVO NO PUEDE TRAER MENOS DE LO QUE SE VE. Puede traer MAS:
     # bajar.js recorre todas las paginas, y eso ya lo mide el control de
     # pantallas. Lo que no puede es traer menos.
@@ -407,6 +411,92 @@ def revisar(ruta):
                       % (donde, texto[:60], v.strip()[:60]))
 
 
+def revisar_que_las_partes_den_el_total(nombre, ws, vista, fila_enc, encs,
+                                        ultima_con_datos):
+    """QUE LAS PARTES DEL RENGLON DEN SU PROPIO TOTAL.             16/11/2026
+
+    ESTA PUERTA NO LA INVENTE YO: ES LA FORMULA DE DISSAN. Ellos agregaron a
+    mano una columna al Excel que les mandamos —
+
+        =SUM(Tabla1[[#This Row],[EXENTO]:[OTROSIMP]]) - [IMP_TOTAL]
+
+    — y esa columna fue la que encontro que NACION SEGUROS perdia $296.121,12
+    por renglon: el comprobante no tiene una sola alicuota de IVA, los netos
+    salen DERIVADOS del IVA y daban cero, y el exento salia de importe_ex, que
+    en esos esta en cero. La plata no quedaba en ninguna columna.
+
+    Lo grave no es el defecto: es que el archivo salio con su propio veredicto
+    escrito adentro —la hoja de Controles decia «233 renglones, $895.536,53»—
+    y nadie lo leyo. Un archivo que se entrega sin abrir su hoja de controles
+    es media entrega.
+
+    SIN UNA SOLA LISTA DE NOMBRES. Las columnas de plata y la del total las
+    DECLARA la pantalla con `data-plata` y `data-total`, igual que ya declara
+    `data-no-baja`. Si manana se agrega una columna de plata, entra sola.
+
+    EL CORTE, MEDIDO Y NO TIPEADO A OJO. Se exige hueco > $1 **y** > 1% del
+    total del renglon, las dos cosas:
+      · el peso saca los centavos de redondeo del IVA derivado en los
+        comprobantes en dolares, que son una deriva conocida y explicada desde
+        el 05/11 — un control que grita todos los meses se apaga;
+      · el porcentaje lo hace libre de escala, asi que no hay un numero mio
+        atado al tamanio de la empresa.
+    Medido sobre octubre 2026, las dos caras: con la funcion rota corta 9
+    renglones (el peor $296.121,12, el 99,4% del comprobante); con la
+    arreglada corta 0, y el peor hueco que queda es $31,00 — tres ordenes de
+    magnitud de distancia, sin nada en el medio.
+
+    Y SI NO HAY COLUMNA DECLARADA, SE DICE. No se pasa en silencio: un control
+    que no se ejercito no es un pase (14/11).
+    """
+    plata = vista.get('plata') or []
+    es_tot = vista.get('esTotal') or []
+    if not plata or not es_tot or not any(es_tot):
+        return                      # esta grilla no declara total: se cuenta en el pie
+    medido['con_total_declarado'] = medido.get('con_total_declarado', 0) + 1
+
+    i_tot = es_tot.index(True)
+    i_partes = [j for j in range(min(len(plata), len(encs)))
+                if plata[j] and not es_tot[j]]
+    if not i_partes:
+        falla(nombre, 'ninguna_columna_de_plata',
+              'la pantalla declara la columna del total pero ninguna parte: '
+              'la suma no tiene contra que compararse.')
+        return
+
+    def num(r, j):
+        v = ws.cell(row=r, column=j + 1).value
+        return float(v) if isinstance(v, (int, float)) else 0.0
+
+    peor, peor_donde, cortan = 0.0, '', 0
+    for r in range(fila_enc + 1, ultima_con_datos + 1):
+        total = num(r, i_tot)
+        if abs(total) < 0.005:
+            continue                # sin total no hay proporcion que medir
+        hueco = sum(num(r, j) for j in i_partes) - total
+        medido['renglones_sumados'] = medido.get('renglones_sumados', 0) + 1
+        if abs(hueco) <= 1.0 or abs(hueco) / abs(total) <= 0.01:
+            continue
+        cortan += 1
+        if abs(hueco) > abs(peor):
+            peor = hueco
+            peor_donde = ' · '.join(
+                str(ws.cell(row=r, column=j + 1).value)
+                for j in range(min(5, len(encs)))
+                if ws.cell(row=r, column=j + 1).value not in (None, ''))
+        if cortan <= 4:
+            falla(nombre, 'las_partes_del_renglon_no_dan_su_total',
+                  'fila %d: las %d columnas de plata suman %.2f y %s dice %.2f. '
+                  'Faltan %.2f, que es el %.2f%% del renglon. Es la formula que '
+                  'DISSAN escribio a mano en su Excel.'
+                  % (r, len(i_partes), sum(num(r, j) for j in i_partes),
+                     encs[i_tot], total, hueco, abs(hueco) / abs(total) * 100))
+    if cortan > 4:
+        falla(nombre, 'las_partes_del_renglon_no_dan_su_total',
+              '... y %d renglon(es) mas. El peor: %s, por %.2f.'
+              % (cortan - 4, peor_donde, peor))
+
+
 def revisar_fila_de_totales(nombre, ws, vista, fila_enc, encs, ultima_con_datos):
     """LA FILA DE TOTALES TIENE QUE SER LA DE UNA TABLA DE EXCEL.   14/11/2026
 
@@ -540,6 +630,18 @@ def main():
         pie += ('\n  la fila de totales: NINGUNA pantalla mostro totales en esta '
                 'corrida, asi que ESE CONTROL NO SE EJERCITO. No es un pase: '
                 'es un control que no llego a mirar.')
+
+    # QUE LAS PARTES DEN EL TOTAL — se declara igual que la fila de totales.
+    con_dec = medido.get('con_total_declarado', 0)
+    if con_dec:
+        pie += ('\n  que las partes den el total: %d grilla(s) declararon su columna '
+                'de total · %d renglon(es) sumados columna por columna, con la '
+                'formula que DISSAN escribio a mano en su Excel.'
+                % (con_dec, medido.get('renglones_sumados', 0)))
+    else:
+        pie += ('\n  que las partes den el total: NINGUNA grilla declaro columna de '
+                'total en esta corrida, asi que ESE CONTROL NO SE EJERCITO. '
+                'No es un pase: es un control que no llego a mirar.')
 
     if not fallas:
         print('  ADENTRO DE LOS ARCHIVOS: 0 fallas.')

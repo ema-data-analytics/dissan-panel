@@ -1772,3 +1772,92 @@ primaria y **nunca hice nada con eso** hasta que una consulta tardó 15 segundos
 tenía escrito *«un solo valor en toda la tabla: filtrar o agrupar por este campo
 no cambia nada»*. Gasté una medición en averiguar lo que el mapa ya decía. Es la
 regla del 09/10, otra vez: **primero preguntarle al mapa.**
+
+## 16/11/2026 (tarde, 4) — EL ARCHIVO SALIÓ CON SU PROPIO VEREDICTO ADENTRO
+
+**ENTREGUÉ UN EXCEL CUYA SEGUNDA HOJA SE LLAMA «RENGLONES QUE NO CIERRAN, DEL
+PEOR AL MEJOR» Y NUNCA LA ABRÍ.** Decía *CONTROL NETO: 233 renglones,
+$895.536,53*, y $895.400,64 de esos son los nueve de NACION SEGUROS. El panel
+sabía que estaba roto, lo escribió en el archivo, y el archivo salió para
+DISSAN. **Un archivo que se entrega sin abrir su hoja de controles es media
+entrega.**
+
+**Y EL DEFECTO LO ENCONTRÓ UNA FÓRMULA QUE ESCRIBIÓ DISSAN A MANO**, en una
+columna que agregaron al Excel que les mandamos:
+`=SUM(Tabla1[[#This Row],[EXENTO]:[OTROSIMP]]) - [IMP_TOTAL]` — la suma de las
+partes menos el total. Estuve por inventar esa misma puerta; la copié de ellos.
+**Puerta nueva en `el archivo bajado`:** las columnas de plata y la del total
+las DECLARA la pantalla con `data-plata` y `data-total` (como ya declaraba
+`data-no-baja`), **ninguna lista de nombres**. Corta con hueco **> $1 y > 1%
+del total del renglón**: el peso saca los centavos de redondeo, el porcentaje
+lo hace libre de escala. Las dos caras: la función rota corta 9 renglones (el
+peor, $296.121,12, el 99,4% del comprobante), la sana 0, y el peor hueco que
+queda es $31,00.
+
+**UN COMPROBANTE SIN UNA SOLA ALÍCUOTA DE IVA PERDÍA SU IMPORTE ENTERO.** Los
+netos salen DERIVADOS del IVA (`iva/alícuota`), así que con IVA cero dan cero, y
+`exento` sale de `importe_ex`, que en estos está en cero. **La plata no quedaba
+en ninguna columna.** Son **16 en toda la historia, $1.442.884,39**: seguros de
+vida, mutual médica, asociaciones — operaciones exentas **tipeadas en el campo
+de gravado en Tango**. La prueba de que van a EXENTO no es mi criterio: **los
+mismos proveedores** (SANCOR SALUD, BIO-LAP, LEM MEDICAL, IMATIONTY) van en
+EXENTO en la planilla del contador cuando Tango los trae bien cargados. La
+condición se escribe **«todo el IVA que no es percepción suma cero»**, nunca
+`i21=0 and i27=0 and i105=0` — es la lista fija del 14/10 otra vez.
+
+**EL NETO SE DERIVA DE LA CIFRA QUE SE VE, NO DE UNA QUE NO SE VE.** Comparando
+renglón por renglón contra la planilla del contador, 402 de 403 daban idénticos
+y uno difería **$0,02**: `A0000900137635`, BECTON DICKINSON, en dólares,
+cotización 1.508,50. El IVA en pesos es **1.764.567,875**, la columna muestra
+**1.764.567,88**, y el contador deriva de lo que muestra. **Un archivo que se
+pone al lado del suyo no puede salir de un número que no figura en ninguna
+parte.** Toca 52 renglones en cuatro años, todos por centavos.
+
+**«403 DE 403 CON HUELLA MD5» ERA MI FUNCIÓN CONTRA MI PROPIA FUNCIÓN.** Me
+colgué de ese número durante once días. La comparación de verdad contra la
+planilla del contador la hice recién hoy: **403 = 403 renglones, huella
+`424dd1e1a091f38cb0765bb622fc13d6` de los dos lados**, con número, exento, neto
+21%, IVA 21% e importe total de **cada** renglón. Que los totales cierren contra
+sí mismos no es control, y acá lo volví a hacer sin darme cuenta.
+
+**Y EL ARCHIVO QUE EL USUARIO ME PASA Y NO ABRO ES PEOR QUE NO TENERLO**, porque
+creo que lo tengo. `2026.09_COMPRAS_contador_asi_lo_envio.xlsx` estaba en la
+conversación **desde el 14/11** y dije *"no la puedo abrir ahora"* sin buscarla.
+**Antes de decir que falta un archivo, listar lo adjunto.**
+
+**CERO IVA ES EL CASO QUE NINGÚN JUGUETE TENÍA**, y por eso lo dejaron pasar
+dieciocho puertas. Ahora el juguete lo trae: 289 renglones, 25 sin una sola
+alícuota. *Al agregar una respuesta al juguete va también el caso raro, no sólo
+el cómodo.*
+
+**LO QUE QUEDA DECLARADO:** midiendo dónde poner el corte aparecieron **16
+renglones (2022 a 2025)** donde las partes no dan el total por más del 1%. El
+peor es **MEDIX A0000400001193** del 30/04/2023: el neto derivado da
+**exactamente la mitad** del de Tango, $19.447.005,91. Es la trampa de moneda de
+los proveedores en dólares, anotada el 05/11. **En 2026 el único arriba del 1%
+es de un centavo.** No se toca en este cambio: se declara.
+
+**VENTAS NO TIENE ESTE DEFECTO, MEDIDO:** `gva12` con `importe_iv = 0` e
+`importe_gr <> 0` son **4 comprobantes en cuatro años, $0,04**.
+
+**Y VENTAS: LA COLUMNA IMPORTE TRAÍA UNA SUMA MÍA, NO EL TOTAL DE TANGO.**
+Dicho por el usuario: *"trae de lo que manda tango, como que sumando partes no
+da lo mismo?? ... sin un centavo ni de más ni de menos"*. Tenía razón. Medido
+contra su planilla de septiembre: compuesto por mí **756.126.507,99**,
+`gva12.importe` **756.126.563,66**, el contador **756.126.563,66** — el de
+Tango, diferencia **$0,00**. Son los 152 comprobantes **B con total redondo**,
+donde Tango fija el precio al consumidor final y despeja el neto hacia atrás.
+**El archivo que se pone al lado del suyo tiene que traer la cifra que él
+trae**; la diferencia no desaparece, se muestra en `control_importe` dentro del
+renglón. Con eso y el redondeo del neto: **250 = 250 renglones y huella md5
+`b533413a…ac8b` idéntica a la suya.**
+
+**Y LOS $0,03 QUE QUEDABAN NO ERAN DE NINGÚN RENGLÓN.** Su fila de Total dice
+374.946.636,19 y la pantalla 374.946.636,16. Sumando **sus propios valores
+redondeados a dos decimales** da **374.946.636,16**: su columna guarda decimales
+escondidos (`34847.2380952381`) y su Total los suma. **Antes de dar por mala una
+diferencia, mirar si está en los renglones o en cómo se suman.**
+
+**EL JUGUETE COMPONÍA EL IMPORTE SUMANDO LAS PARTES, ASÍ QUE SIEMPRE CERRABA.**
+El único caso en que no cierra —el comprobante B— no existía en el control.
+*Un caso de prueba que siempre cierra no prueba el control que mira si cierra.*

@@ -67,36 +67,55 @@
 var SD_DEF = {
   SubdiarioCompras: {
     titulo: 'Subdiario de IVA — Compras',
-    /* LA IMPUTACION VA ADENTRO DEL SUBDIARIO, NO EN UN REPORTE APARTE.
+    /* LA v5: EL EXENTO MAL TIPEADO EN TANGO, Y LA IMPUTACION ADENTRO.
                                                                   16/11/2026
-       Pedido por DISSAN. La v4 se construyo AL LADO de la v3 -que no se
-       toco- y no recalcula nada: delega en la v2 igual que la v3 y solo
-       agrega dos columnas. Medido contra la v3 con la huella md5 de CADA
-       renglon: octubre 2024 297=297 y octubre 2026 392=392, totales y huellas
-       identicos. No cambia un solo numero del subdiario. */
-    fn: 'api_subdiario_compras_v4',
+       Un comprobante SIN NADA DE IVA perdia su importe entero: las columnas
+       de neto salen DERIVADAS del IVA, asi que con IVA cero dan cero, y el
+       exento salia de importe_ex, que en estos esta en cero. El renglon no
+       sumaba contra su propio total y la plata no aparecia en ninguna
+       columna. Lo encontro DISSAN, no yo, y mi propia hoja de Controles lo
+       venia gritando: 233 renglones, $895.536,53.
+
+       LA PRUEBA DE QUE VAN A EXENTO LA DA LA PLANILLA DEL CONTADOR, no mi
+       criterio: los MISMOS proveedores (SANCOR SALUD, IMATIONTY, LEM MEDICAL,
+       BIO-LAP) van en EXENTO cuando Tango los trae bien cargados, y esos
+       mismos aparecen en otros meses con la plata en importe_ne y cero IVA.
+       Es la misma operacion exenta tipeada en el campo de gravado: 16 en toda
+       la historia, $1.442.884,39.
+
+       MEDIDO v5 CONTRA v4, renglon por renglon con huella md5 de las 18
+       columnas de datos: octubre 2026 392=392 y oct 2024 297=297, huellas
+       IDENTICAS, 0 filas cambiadas fuera de EXENTO. Octubre 2026 recupera
+       $895.400,65 y el grito del control del neto baja de $895.536,53 a
+       $135,88 -los centavos de los comprobantes en dolares, ya explicados-.
+       Septiembre 2026 queda en $76,97, que es el numero exacto escrito el
+       05/11. v2, v3 y v4 quedan vivas y sin tocar. */
+    fn: 'api_subdiario_compras_v5',
     nota: 'Va por <b>fecha contable</b>, no por fecha de emisión: adentro hay comprobantes ' +
           'emitidos en meses anteriores que se registraron en este. Las órdenes de pago ' +
           '(O/P) no entran, y las notas de crédito <b>restan</b>. El neto se <b>deriva del ' +
           'IVA</b> (IVA ÷ alícuota), que es la forma en que lo pide el contador; en los ' +
           'comprobantes en dólares eso deja centavos de deriva contra el neto propio de ' +
           'Tango, y esa diferencia es la columna <b>CONTROL NETO</b>. ' +
+          'Un comprobante <b>sin nada de IVA</b> va entero a <b>EXENTO</b>, aunque Tango lo ' +
+          'tenga cargado en el campo de gravado: son operaciones exentas (seguros, mutuales, ' +
+          'asociaciones) tipeadas en el campo equivocado, y así las informa el contador. ' +
           'La columna <b>IMPUTACION</b> sale del <b>tipo de gasto</b> cargado en el ' +
-          'comprobante; donde Tango no lo tiene, de la <b>cuenta del asiento contable</b>, ' +
-          'y la columna <b>DE DÓNDE</b> dice cuál de las dos fue. Si el comprobante ' +
-          'todavía no se contabilizó, dice <b>«sin contabilizar»</b>: no es un hueco, es ' +
-          'lo que falta hacer en Tango.',
+          'comprobante; donde Tango no lo tiene, de la <b>cuenta del asiento contable</b>. ' +
+          'Si el comprobante todavía no se contabilizó, dice <b>«sin contabilizar»</b>: no es ' +
+          'un hueco, es lo que falta hacer en Tango.',
     cols: [
+      /* LA IMPUTACION VA PRIMERA — pedido por DISSAN el 16/11, textual:
+         "Columna de Imputaciones que iría en la A". Y la columna DE DÓNDE
+         sale del subdiario, tambien pedido por DISSAN: "de donde que no salga
+         en el subdiario". La funcion la sigue devolviendo -no se borra nada-,
+         simplemente no se muestra. */
+      { k:'imputacion',   r:'IMPUTACION',        t:'txt'   },
       { k:'fecha',        r:'FECHA',             t:'fecha' },
       { k:'proveedor',    r:'PROVEEDOR',         t:'txt'   },
       { k:'cuit',         r:'CUIT',              t:'cod'   },
       { k:'tipo',         r:'TIPO',              t:'cod'   },
       { k:'numero',       r:'NUMERO',            t:'cod'   },
-      /* LA IMPUTACION VA ACA, pegada al comprobante y antes de la plata, que
-         es donde la pone el contador en su planilla. Y lleva la DESCRIPCION,
-         no la sigla -dicho por el usuario, textual, el 14/11-.          16/11 */
-      { k:'imputacion',   r:'IMPUTACION',        t:'txt'   },
-      { k:'imputacion_de_donde', r:'DE DÓNDE',   t:'txt'   },
       { k:'exento',       r:'EXENTO',            t:'num'   },
       { k:'neto_21',      r:'NETO 21%',          t:'num'   },
       { k:'neto_27',      r:'NETO 27%',          t:'num'   },
@@ -111,13 +130,28 @@ var SD_DEF = {
       { k:'imp_creditos', r:'IMP CREDITOS',      t:'num'   },
       { k:'sircreb',      r:'SIRCREB',           t:'num'   },
       { k:'otros_imp',    r:'OTROSIMP',          t:'num'   },
-      { k:'imp_total',    r:'IMP_TOTAL',         t:'num'   },
+      /* `total:true` NO CAMBIA NADA DE LO QUE SE VE: es la DECLARACION de
+         cual columna es el total del renglon, para que el control pueda
+         exigir que las partes lo den. La escribio DISSAN primero, a mano, en
+         una columna agregada en Excel:
+           =SUM(Tabla1[[#This Row],[EXENTO]:[OTROSIMP]]) - [IMP_TOTAL]
+         Esa formula suya fue la que encontro el exento perdido, no yo. La
+         puerta `el archivo bajado` ahora la corre sola.              16/11 */
+      { k:'imp_total',    r:'IMP_TOTAL',         t:'num', total:true },
       { k:'control_iva',  r:'CONTROL IVA',       t:'ctrl'  },
       { k:'control_total',r:'CONTROL TOTAL FAC', t:'ctrl',   rojo:true,
         card:'renglones donde el comprobante no cierra contra el <b>total propio de Tango</b>' },
+      /* CONTROL NETO CAMBIO DE DEFINICION CON LA v5. Antes comparaba solo el
+         neto derivado contra importe_ne, asi que despues del arreglo del
+         exento habria seguido gritando $895.400 para siempre, y una puerta
+         que grita siempre se apaga. Ahora es LA BASE QUE SE MUESTRA (netos +
+         exento) contra LA BASE DE TANGO (importe_ne + importe_ex). Para todo
+         comprobante con IVA se reduce EXACTAMENTE a la formula vieja: medido,
+         0 renglones cambiados fuera del exento.                       16/11 */
       { k:'control_neto', r:'CONTROL NETO',      t:'deriva', rojo:false,
-        card:'renglones con deriva del neto <b>derivado del IVA</b> contra el neto de Tango · ' +
-             'es el redondeo del IVA en los comprobantes en dólares, multiplicado por la cotización' }
+        card:'renglones donde la <b>base que se muestra</b> (netos + exento) no da la base ' +
+             'propia de Tango · es el redondeo del IVA en los comprobantes en dólares, ' +
+             'multiplicado por la cotización' }
     ],
     /* EL DETALLE POR TIPO DE GASTO — pedido por DISSAN el 14/11/2026.
        Es la pestania "detalle de comp. por tipo de gastos" del archivo que
@@ -150,19 +184,34 @@ var SD_DEF = {
         { k:'sin_imp',      r:'SIN_IMP',    t:'num'   },
         { k:'iva',          r:'IVA',        t:'num'   },
         { k:'otros_imp',    r:'OTROS_IMP',  t:'num'   },
-        { k:'tot_gral',     r:'TOT_GRAL',   t:'num'   }
+        { k:'tot_gral',     r:'TOT_GRAL',   t:'num', total:true }
       ]
     }
   },
   SubdiarioVentas: {
     titulo: 'Subdiario de IVA — Ventas',
-    fn: 'api_subdiario_ventas_v4',
+    /* LA v5: EL IMPORTE ES EL TOTAL PROPIO DE TANGO.               16/11/2026
+       Hasta la v4 el importe se COMPONIA sumando exento + netos + IVA +
+       percepciones. Medido sobre septiembre 2026 contra la planilla que
+       DISSAN le manda al contador:
+         compuesto por nosotros   756.126.507,99
+         gva12.importe (Tango)    756.126.563,66
+         el contador              756.126.563,66   <- el de Tango, $0,00
+       Y el neto ahora se deriva del IVA YA REDONDEADO, que es la cifra que
+       se ve en la columna y de la que deriva el contador.
+       Resultado medido: 250 = 250 renglones y la huella md5 de CADA renglon
+       (comprobante, exento, neto 21%, IVA 21%, importe) IDENTICA a la suya:
+       b533413a6a35b4f9f4aaaf5d05efac8b de los dos lados.
+       v2, v3 y v4 quedan vivas y sin tocar. */
+    fn: 'api_subdiario_ventas_v5',
     nota: 'Va por <b>fecha de emisión</b>. Los recibos (REC) no entran: son cobranzas. ' +
           'El IVA sale del impuesto que guarda Tango por comprobante, no de multiplicar ' +
-          'los renglones. <b>Mayor/Menor</b> y la jurisdicción corregida no vienen de Tango: ' +
-          'se cargan por cliente y se declaran. En los comprobantes <b>B</b> el precio al ' +
-          'consumidor final se fija redondo y Tango despeja el neto hacia atrás, así que las ' +
-          'partes no vuelven a dar ese total redondo: esa diferencia es <b>CONTROL IMPORTE</b>.',
+          'los renglones. La columna <b>IMPORTE</b> es el <b>total propio de Tango</b>, el ' +
+          'mismo que usa el contador. <b>Mayor/Menor</b> y la jurisdicción corregida no ' +
+          'vienen de Tango: se cargan por cliente y se declaran. En los comprobantes <b>B</b> ' +
+          'el precio al consumidor final se fija redondo y Tango despeja el neto hacia atrás, ' +
+          'así que las partes no vuelven a dar ese total redondo: esa diferencia es ' +
+          '<b>CONTROL IMPORTE</b>, y el contador la marca igual en su planilla.',
     cols: [
       { k:'fecha',          r:'FECHA',           t:'fecha' },
       { k:'jurisdiccion',   r:'Jurisdicción',    t:'txt'   },
@@ -178,7 +227,7 @@ var SD_DEF = {
       { k:'iva_105',        r:'IVA 10,5%',       t:'num'   },
       { k:'perc_iibb_sl',   r:'PERC IIBB SL',    t:'num'   },
       { k:'perc_iibb_mza',  r:'PERC IIBB MZA',   t:'num'   },
-      { k:'importe',        r:'IMPORTE',         t:'num'   },
+      { k:'importe',        r:'IMPORTE',         t:'num', total:true },
       { k:'control_iva',    r:'CONTROL IVA',     t:'ctrl'  },
       { k:'control_importe',r:'CONTROL IMPORTE', t:'deriva', rojo:false,
         card:'renglones donde el total no cierra contra el <b>total propio de Tango</b> · ' +
@@ -318,6 +367,13 @@ function sdBloque(def, filas, ms, mes){
     h.push('<th'
          + ((def.cols[k].t === 'ctrl' || def.cols[k].t === 'deriva') ? ' data-no-baja' : '')
          + (CLAVE[def.cols[k].k] ? ' data-clave' : '')
+         /* `data-plata` y `data-total`: la pantalla DECLARA que columnas son
+            plata y cual es el total del renglon, para que el control pueda
+            sumar las partes sin una lista de nombres escrita al lado -que es
+            la cagada del 14/10 y del 14/11-. Si manana se agrega una columna
+            de plata, entra sola a la suma.                          16/11 */
+         + (def.cols[k].t === 'num' ? ' data-plata' : '')
+         + (def.cols[k].total ? ' data-total' : '')
          + '>' + esc(def.cols[k].r) + '</th>');
   h.push('</tr></thead><tbody>');
   for (var r = 0; r < filas.length; r++){
