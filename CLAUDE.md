@@ -983,8 +983,20 @@ lo dice todo el mercado y ninguno lo prueba.** El detalle esta en
 minimo y el maximo **son el valor entero**. Adentro estaban: la **clave privada
 RSA de DISSAN ante AFIP** (6.588 caracteres), el **certificado X.509**, y un
 **JWT real** de `sesiones.access_token`. Tapadas 16 columnas con un UPDATE, con
-el motivo escrito en `fundamento`. **Hay que rotar la contrasenia de la sesion
-expuesta.**
+el motivo escrito en `fundamento`.
+
+**Y EL 16/11 SE MIDIO SI HABIA QUE ROTAR ESA CONTRASENIA: NO.** Durante tres
+dias esto decia *"hay que rotar la contrasenia de la sesion expuesta"* sin que
+nadie lo midiera — la misma falta del 11/11 con los 281 renglones sin costo,
+puestos en pendientes sin medir. Medido ahora, sin imprimir un solo token:
+el `access_token` expuesto es de `super@dissan.com.ar` y **vencio el
+22/10/2026, veinticuatro dias ANTES de que yo lo encontrara**; las tres
+columnas de token (`access_token`, `refresh_token`, `token`) estan **las tres
+tapadas** en `ema.diccionario`, sin una sola tirada de 40 caracteres ni nada con
+forma de JWT; y en `auth` ese usuario tiene **0 refresh tokens vivos y 0
+sesiones abiertas**, asi que no hay nada que revocar ni redimir. **La
+contrasenia nunca viajo: lo que viajo fue un token ya muerto.** El pendiente se
+retira medido, no por olvido.
 
 **UN SECRETO NO VIAJA COMO UNO ESPERA: LA CLAVE DE AFIP ESTA EN HEXADECIMAL.**
 Mi regex buscaba `-----BEGIN [A-Z ]*PRIVATE KEY` y el valor real empieza
