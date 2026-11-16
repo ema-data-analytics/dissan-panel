@@ -233,7 +233,17 @@ function servidor() {
                 'if (hayBulto) h.push(\'<div class="lp-sec">Los artículos que vienen por '
                   + 'bulto</div>\'); /* ARNES */',
                 'la seccion «vienen por bulto» esfumandose cuando esta vacia, que es lo que '
-                  + 'dejo la pantalla muda con ICU el 16/11']
+                  + 'dejo la pantalla muda con ICU el 16/11'],
+    /* el reclamo del 16/11 a la tarde: «a esa pantalla la podia bajar en Excel
+       y PDF, donde esta». Lo que miraba era la tabla de «lo que queda afuera»,
+       que con ICU leyendo bien los 42 de 42 quedo vacia. O sea que ver como se
+       leyo cada codigo DEPENDIA DE QUE ALGO ESTUVIERA ROTO. */
+    sin_tabla_de_lectura: [
+                'h.push(\'<div class="lp-sec">Renglón por renglón, como salió del '
+                  + 'archivo</div>\');',
+                '/* ARNES: la tabla de la lectura, sacada */',
+                'la tabla «renglón por renglón, como salió del archivo» sacada, o sea sin '
+                  + 'forma de mirar como cargo cada codigo cuando no queda ninguno afuera']
   };
   /* este se planta en filas.js, no en listas.js: es el pie del paginado
      prometiendo un Excel que esa grilla no tiene.               16/11/2026 */
@@ -323,8 +333,27 @@ function servidor() {
     let pintado = null, vacio = null;
     async function pintarCon(fn){
       const ar = await rpc(fn, { p_lista_id: 6, p_filas: [] });
-      LP_LEIDO = { ok: true, filas: [],
-                   lectura: { filas_leidas: ar.data.resumen.leidas,
+      /* LA LECTURA TIENE QUE TRAER RENGLONES, O NO SE PUEDE MIRAR LO QUE SE
+         LEYO.                                                    16/11/2026
+         Esto mandaba `filas: []` y la seccion «renglón por renglón, como salió
+         del archivo» decia «Ninguno» CON RAZON: el control exigia una tabla
+         que el no le habia dado con que llenar, y me hizo buscar media hora un
+         defecto en la pantalla que estaba en el control.
+         Los renglones se arman con los que el armado DEVOLVIO: los que entran
+         (a.filas, donde el Sinonimo es el codigo del laboratorio) mas los que
+         quedan afuera (a.avisos). Esa union es, exactamente, todo lo que se
+         leyo — y ademas deja probar la columna «¿Entra al archivo?», que
+         distingue unos de otros. */
+      var ENT = (ar.data.filas || []).map(function (f) {
+        return { cod_proveedor: f[3], descripcion: f[1],
+                 precio_lista: Number(f[8]), moneda: f[6], unidades_caja: null };
+      });
+      var FUE = (ar.data.avisos || []).map(function (x) {
+        return { cod_proveedor: x.cod_proveedor, descripcion: x.descripcion,
+                 precio_lista: x.precio_lista, moneda: null, unidades_caja: null };
+      });
+      LP_LEIDO = { ok: true, filas: ENT.concat(FUE),
+                   lectura: { filas_leidas: ENT.length + FUE.length,
                               con_precio: ar.data.resumen.leidas,
                               con_unidades_caja: ar.data.resumen.por_caja_que_entran,
                               paginas: 1, ms: 1 },
@@ -353,8 +382,20 @@ function servidor() {
         var sig = env ? env.nextElementSibling : null;
         return (sig && /fl-barra/.test(sig.className || '')) ? sig : null;
       }
-      for (let w = 0; w < 40; w++){
-        if (barraDe(tablaDeSec(seccion(/archivo para Tango/i)))) break;
+      /* SE ESPERA A LAS DOS COSAS, NO A UNA.                     16/11/2026
+         filas.js (el paginado) y bajar.js (los botones de Excel y PDF) corren
+         los dos con MutationObserver y NO hay orden garantizado entre ellos.
+         Esperar solo al paginado y medir ahi mismo es el tropiezo del 14/11 y
+         del 16/11, las dos veces el mismo: el control relevaba antes de que
+         terminara de pintar y cantaba que faltaba algo que si estaba. */
+      for (let w = 0; w < 60; w++){
+        var listoPag = !!barraDe(tablaDeSec(seccion(/archivo para Tango/i)));
+        var gLec = tablaDeSec(seccion(/como salió del archivo/i));
+        var envLec = gLec && gLec.closest('.lp-wrap');
+        var listoBaj = !gLec ||
+          !!(envLec && envLec.previousElementSibling &&
+             /bajar-barra/.test(envLec.previousElementSibling.className || ''));
+        if (listoPag && listoBaj) break;
         await new Promise(function (ok){ setTimeout(ok, 50); });
       }
       const sec = Array.prototype.slice.call(document.querySelectorAll('.lp-sec'))
@@ -418,8 +459,35 @@ function servidor() {
           if (!s) return 'sin_aviso';
           return s.hasAttribute('hidden') ? 'apagado' : 'PROMETE';
         })(),
+        /* LA TABLA DE «RENGLON POR RENGLON, COMO SALIO DEL ARCHIVO».16/11/2026
+           Tiene que estar SIEMPRE que se haya leido algo —entre o no entre el
+           renglon— y tiene que traer sus botones de Excel y PDF. El usuario
+           miraba esto para ver como se habia leido cada codigo, y la unica
+           forma que tenia era la tabla de «lo que queda afuera»: o sea que
+           dependia de que algo estuviera roto. Se mide que esta, cuantos
+           renglones trae y si tiene la barra de bajar. */
+        lectura_tabla: (function(){
+          var s = seccion(/como salió del archivo/i);
+          if (!s) return { hay: false };
+          var g = tablaDeSec(s);
+          var env = g ? (g.closest('.lp-wrap') || g) : null;
+          var ant = env ? env.previousElementSibling : null;
+          return { hay: true,
+                   hay_tabla: !!g,
+                   /* QUE VIO, no solo si paso o no: un control que dice «no
+                      esta» sin decir que encontro manda a buscar a ciegas.
+                      Me paso con esta misma comprobacion hoy. */
+                   visto: { envoltorio: env ? (env.className || env.tagName) : null,
+                            anterior: ant ? (ant.className || ant.tagName) : null },
+                   renglones: g ? g.querySelectorAll('tbody tr').length : 0,
+                   encabezados: g ? Array.prototype.map.call(g.querySelectorAll('thead th'),
+                                   function(t){ return (t.textContent||'').trim(); }) : [],
+                   tiene_botones: !!(ant && /bajar-barra/.test(ant.className || '')),
+                   pie: s.nextElementSibling ? (s.nextElementSibling.textContent||'').trim() : '' };
+        })(),
         esperado: { renglones: (LP_ARMADO.por_caja || []).length,
                     filas: (LP_ARMADO.filas || []).length,
+                    leidas: (LP_LEIDO && LP_LEIDO.filas ? LP_LEIDO.filas.length : 0),
                     corregidos: LP_ARMADO.resumen.corregidos_por_bulto,
                     sin_control: LP_ARMADO.resumen.por_bulto_sin_control,
                     afuera: (LP_ARMADO.avisos || []).length }
@@ -636,6 +704,38 @@ function servidor() {
     }
   }
 
+  /* LA TABLA DE «COMO SALIO DEL ARCHIVO», EN LOS DOS CASOS.      16/11/2026
+     Es la que el usuario usaba para ver como se habia leido cada codigo. Hasta
+     hoy la unica forma de verlo era la tabla de «lo que queda afuera», o sea
+     que DEPENDIA DE QUE ALGO ESTUVIERA ROTO: con ICU leyendo bien los 42 de 42,
+     no quedaba ninguno afuera, la tabla desaparecia y los botones con ella.
+     Se exige en el caso lleno Y en el de ICU, porque el defecto de hoy fue
+     justamente que algo estuviera solo cuando hay datos. */
+  [['el caso lleno', P], ['la lista vacia', V]].forEach(function (par) {
+    var donde = par[0], X = par[1];
+    if (!X || X.error) return;                       /* ya se canto arriba */
+    var T = X.lectura_tabla;
+    if (!T || !T.hay) {
+      falla(donde, 'la_tabla_de_la_lectura_no_esta',
+            'falta la sección «Renglón por renglón, como salió del archivo». Sin eso no '
+          + 'hay forma de ver cómo se leyó cada código si no queda ninguno afuera.');
+      return;
+    }
+    var esperadas = (X.esperado && X.esperado.leidas) || 0;
+    if (esperadas && T.renglones !== esperadas) {
+      falla(donde, 'la_tabla_de_la_lectura_no_trae_todo',
+            'se leyeron ' + esperadas + ' renglones y la tabla muestra ' + T.renglones);
+    }
+    if (!T.tiene_botones) {
+      falla(donde, 'la_tabla_de_la_lectura_no_se_puede_bajar',
+            'la tabla está pero no tiene su barra de Excel y PDF. Mirar sin poder bajarlo '
+          + 'es la mitad de lo que el usuario necesita. Lo que vi: envoltorio «'
+          + String(T.visto && T.visto.envoltorio) + '», hermano anterior «'
+          + String(T.visto && T.visto.anterior) + '», tabla ' + (T.hay_tabla ? 'sí' : 'NO')
+          + ', ' + T.renglones + ' renglones.');
+    }
+  });
+
   /* el pie de la grilla del archivo para Tango           16/11/2026 */
   if (P.archivo_promete_excel === 'PROMETE') {
     falla('el pie del archivo', 'el_pie_promete_un_excel_que_no_esta',
@@ -749,7 +849,8 @@ function servidor() {
       sin_aviso_lista: ['no_avisa_que_el_archivo_no_se_puede_subir'],
       sin_aviso_vigencia: ['no_avisa_que_la_vigencia_vencio'],
       secciones_se_esfuman: ['la_seccion_por_bulto_se_esfumo',
-                             'la_seccion_de_afuera_se_esfumo']
+                             'la_seccion_de_afuera_se_esfumo'],
+      sin_tabla_de_lectura: ['la_tabla_de_la_lectura_no_esta']
     }[PLANTAR];
     const agarro = fallas.filter(function (f) { return ESPERA.indexOf(f.clase) >= 0; });
     console.log('\nARNES «' + PLANTAR + '» — se sirvio un '
@@ -779,7 +880,20 @@ function servidor() {
               + 'leidos con el lpLeerPdf DE VERDAD de js/listas.js en un navegador: los '
               + esperados.length + ' codigos identicos a los que escribio el generador, y las '
               + esperados.length + ' descripciones con su primera palabra. Y '
-              + quePintoElBulto + '. Y ' + queDijoElArchivo + '.');
+              + quePintoElBulto + '. Y ' + queDijoElArchivo + '.'
+              + (function(){
+                  /* LA TABLA DE LA LECTURA, DECLARADA EN LOS DOS CASOS.  16/11
+                     Un control que pasa sin decir que miro es media medicion. */
+                  var t1 = P && P.lectura_tabla, t2 = V && V.lectura_tabla;
+                  if (!t1 && !t2) return ' Y la tabla «renglón por renglón, como salió del '
+                    + 'archivo» NO SE PUDO MIRAR en ninguno de los dos casos: eso no es un pase.';
+                  return ' Y la tabla «renglón por renglón, como salió del archivo», que es la '
+                    + 'unica forma de ver como se leyo cada codigo cuando no queda ninguno '
+                    + 'afuera: en el caso lleno ' + (t1 && t1.hay ? t1.renglones + ' renglones y '
+                    + (t1.tiene_botones ? 'con' : 'SIN') + ' sus botones de Excel y PDF' : 'NO ESTA')
+                    + ', y en el de ICU ' + (t2 && t2.hay ? t2.renglones + ' renglones y '
+                    + (t2.tiene_botones ? 'con' : 'SIN') + ' sus botones' : 'NO ESTA') + '.';
+                })());
     console.log('  NO midio: los PDF de verdad de los 8 proveedores. No estan en el '
               + 'repositorio y no van a estar. Tampoco el clic de soltar el archivo: eso '
               + 'necesita la pantalla del usuario.');

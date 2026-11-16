@@ -758,6 +758,71 @@ function lpPintar() {
   h.push(lpT(esc(lista.vigencia), 'vigencia desde'));
   h.push('</div>');
 
+  /* RENGLON POR RENGLON, COMO SALIO DEL ARCHIVO.                 16/11/2026
+     =====================================================================
+     El usuario miraba ESTO para darse cuenta de como se habia leido cada
+     codigo, y podia bajarlo en Excel y en PDF. Hoy abrio ICU y no estaba, y
+     me reclamo que se lo habia sacado.
+
+     NO SE LO SAQUE, Y LA RAZON ES PEOR QUE SI SE LO HUBIERA SACADO: lo que el
+     miraba era la tabla de «lo que queda afuera». Hasta el 14/11 el codigo de
+     ICU se leia mal del PDF —salia `14001-31Set`, con la primera palabra de la
+     descripcion pegada—, esos renglones no enganchaban con Tango y caian
+     TODOS ahi. Esa tabla tenia renglones, y por eso tenia sus botones. Arregle
+     la lectura y ahora ICU entra 42 de 42: la tabla quedo vacia y los botones
+     se fueron con ella.
+
+     O sea que la unica forma que tenia de mirar como cargaba cada codigo
+     DEPENDIA DE QUE ALGO ESTUVIERA ROTO. Eso no es una pantalla: es una
+     casualidad. Mirar lo que se leyo tiene que poder hacerse SIEMPRE, entre o
+     no entre el renglon, y poder bajarse.
+
+     Esta tabla NO lleva data-bajar="1" —a diferencia de la del archivo para
+     Tango, que lo tiene desde el primer dia porque su Excel generico lleva
+     titulo y filtros arriba y Tango no lo leeria—. Aca eso no importa: esto
+     es para MIRAR, no para importar. Asi que bajar.js le pone sus botones de
+     Excel y PDF, y filas.js su paginado, sin que haya que tocarlos. */
+  {
+    var leidas = l.filas || [];
+    /* el por que de cada uno que no entra, indexado por su codigo: asi cada
+       renglon leido dice por si mismo si entro o no, sin mandar al que mira a
+       cruzar dos tablas. */
+    var porQue = {};
+    (a.avisos || []).forEach(function (x) {
+      if (x && x.cod_proveedor !== null && x.cod_proveedor !== undefined)
+        porQue[String(x.cod_proveedor)] = x.porque || 'no entra';
+    });
+    h.push('<div class="lp-sec">Renglón por renglón, como salió del archivo</div>');
+    h.push('<div class="lp-sec-pie">'
+      + (leidas.length
+          ? 'Los ' + num(leidas.length) + ' renglones tal como los leyó la pantalla, '
+          + '<b>antes</b> de cruzarlos con Tango. Es donde se ve si un código salió '
+          + 'entero o con pedazos de la descripción pegados. Se baja en Excel y en PDF '
+          + 'con los botones de acá arriba.'
+          : '<b>Ninguno.</b> El archivo no devolvió un solo renglón legible.')
+      + '</div>');
+    if (leidas.length) {
+      h.push('<div class="lp-wrap"><table class="lp-tb"><thead><tr>'
+        + '<th>Código del laboratorio</th><th>Descripción de la lista</th>'
+        + '<th>Precio de lista</th><th>Unidades por caja</th>'
+        + '<th>¿Entra al archivo?</th></tr></thead><tbody>');
+      leidas.forEach(function (f) {
+        var cod = (f.cod_proveedor === null || f.cod_proveedor === undefined)
+                  ? '' : String(f.cod_proveedor);
+        var motivo = porQue[cod];
+        var pre = f.precio_lista, caja = f.unidades_caja;
+        h.push('<tr><td>' + esc(cod) + '</td>'
+          + '<td>' + esc(f.descripcion || '') + '</td>'
+          + '<td class="num" data-v="' + esc(pre === null || pre === undefined ? '' : pre) + '">'
+          + (pre === null || pre === undefined ? '' : exacto(pre)) + '</td>'
+          + '<td class="num" data-v="' + esc(caja === null || caja === undefined ? '' : caja) + '">'
+          + (caja === null || caja === undefined ? '' : num(caja)) + '</td>'
+          + '<td>' + (motivo ? 'NO — ' + esc(motivo) : 'sí') + '</td></tr>');
+      });
+      h.push('</tbody></table></div>');
+    }
+  }
+
   /* avisos: primero los de la lectura, despues el por que de cada apartado */
   var avisos = [].concat(l.avisos || []);
   if (res.regla_pendiente) {

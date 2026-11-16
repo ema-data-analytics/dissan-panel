@@ -1670,3 +1670,47 @@ SE LEE COMO «FALTA ALGO».** Si no hay datos, el rótulo va igual y abajo dice
 **«Ninguno»** con el motivo. Que no haya nada apartado en cuarentena es una
 **buena noticia** y hay que escribirla; si la sección se esfuma, el que mira no
 sabe si no hay o si no se midió.
+
+## 16/11/2026 (tarde, 2) — MIRAR DEPENDÍA DE QUE ALGO ESTUVIERA ROTO
+
+**EL USUARIO RECLAMÓ QUE LE SAQUÉ LOS BOTONES DE EXCEL Y PDF DE LISTAS. NO SE
+LOS SAQUÉ, Y LA RAZÓN ES PEOR.** Lo que él miraba para ver **cómo se había
+leído cada código** era la tabla de *«Lo que queda afuera, y por qué»*. Hasta el
+14/11 el código de ICU salía mal del PDF —`14001-31Set`, con la primera palabra
+de la descripción pegada—, esos renglones no enganchaban con Tango y caían
+**todos** ahí. Esa tabla tenía renglones, y por eso tenía sus botones.
+Arreglé la lectura: hoy ICU entra **42 de 42**, no queda ninguno afuera, la
+tabla quedó vacía y los botones se fueron con ella.
+
+**O sea que la única forma que tenía de mirar su propio dato DEPENDÍA DE QUE
+ALGO ESTUVIERA ROTO.** Eso no es una pantalla: es una casualidad. Y medido en el
+repositorio, para no acusarme de algo que no hice: la grilla *«El archivo para
+Tango»* lleva `data-bajar="1"` **desde el primer commit** —a propósito, su Excel
+genérico lleva título y filtros arriba y Tango no lo leería—, así que esa nunca
+tuvo botones genéricos.
+
+**LA REGLA: mirar lo que entró tiene que poder hacerse SIEMPRE, no sólo cuando
+algo falla.** Ahora la sección *«Renglón por renglón, como salió del archivo»*
+muestra los renglones **tal como los leyó la pantalla, antes de cruzarlos con
+Tango** —código, descripción, precio, unidades por caja y **¿entra al
+archivo?**—, con su paginado y sus botones de Excel y PDF. Entre o no entre.
+
+**Y EL CONTROL QUE LE PUSE ENCONTRÓ UN DEFECTO MÍO EN EL CONTROL, NO EN LA
+PANTALLA.** `control/listas.js` le pasaba a la pantalla `LP_LEIDO.filas = []`,
+así que la tabla decía «Ninguno» **con razón** y el control la daba por faltante.
+Me hizo buscar media hora un defecto que no existía. Ahora los renglones de la
+lectura se arman con lo que el armado devolvió —los que entran (`a.filas`, donde
+el Sinónimo es el código del laboratorio) más los que quedan afuera
+(`a.avisos`)—, que es exactamente todo lo que se leyó, y de paso permite probar
+la columna «¿Entra al archivo?».
+**Un control que exige algo que él mismo no alimentó no está midiendo la
+pantalla: se está midiendo a sí mismo.**
+
+**Y UN CONTROL QUE DICE «NO ESTÁ» SIN DECIR QUÉ ENCONTRÓ MANDA A BUSCAR A
+CIEGAS.** La falla ahora imprime el envoltorio, el hermano anterior, si halló la
+tabla y cuántos renglones vio. Con eso el defecto apareció en un intento.
+
+**Arnés `sin_tabla_de_lectura`:** se sirve un `js/listas.js` con esa sección
+sacada y se exige que la puerta grite. Medido: **la agarra en los dos casos**, el
+lleno y el de ICU. Y la corrida limpia **declara** lo que midió: 41 renglones con
+botones en el caso lleno, 42 con botones en el de ICU.
