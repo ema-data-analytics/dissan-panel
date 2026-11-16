@@ -1714,3 +1714,61 @@ tabla y cuántos renglones vio. Con eso el defecto apareció en un intento.
 sacada y se exige que la puerta grite. Medido: **la agarra en los dos casos**, el
 lleno y el de ICU. Y la corrida limpia **declara** lo que midió: 41 renglones con
 botones en el caso lleno, 42 con botones en el de ICU.
+
+## 16/11/2026 (tarde, 3) — EL MAPA CONTABA EL TEXTO VACÍO COMO LLENO
+
+**ES EL DEFECTO MÁS DE FONDO DEL PROYECTO, PORQUE TODO LO DEMÁS LEE ESE MAPA.**
+`ema.diccionario` contaba `''` como un valor cargado. Tango viene de un sistema
+que no usa nulos, así que eso está por toda la base. Medido sobre las 10.642
+columnas: **8.792 decían «100% lleno», 1.446 de ellas no lo estaban, y 941
+estaban COMPLETAMENTE VACÍAS.** Y **1.556 columnas tenían `llenos` mayor que
+`filas`** — imposible, o sea que ni siquiera se habían medido en el mismo
+momento.
+
+| | decía | es |
+|---|---|---|
+| `cpa04.cod_gasto` | 100% | **40,51%** |
+| `gva12.descripcion_factura` | 100% | **0%** en 23.234 filas |
+| `gva12.origen` | 100% | **0%** |
+| `cpa04.leyenda_1/2/3` | 100% | **0%** |
+
+**QUÉ ROMPÍA, MEDIDO.** Trece funciones leen ese número y las trece son del
+circuito de la Ayuda. La peor es `api_ia_mapa_buscar`, que **ordena con él cuál
+columna mostrarle a la IA**: una columna vacía podía quedar primera y la IA
+armar la consulta con ella.
+
+**QUÉ NO ROMPÍA, Y TAMBIÉN SE MIDIÓ, porque decir «está todo mal» es tan falso
+como decir «está todo bien»:** ninguna cifra publicada sale de ahí — facturación,
+margen, IVA, los dos subdiarios y la cartera leen las tablas de Tango directo, y
+las **88 identidades siguen cerrando** ($215,29 sobre $16.614 M, el IVA al
+centavo mes a mes). Y los **10.642 significados están bien**: ninguno afirma
+«siempre lleno» sobre un campo que no lo está, porque el analizador miró los
+ejemplos en vez del porcentaje. **Lo que no se puede medir hacia atrás** es
+cuántas veces la Ayuda contestó peor porque el mapa la mandó a una columna vacía.
+
+**UNA SOLA LECTURA POR TABLA, NO UNA POR COLUMNA.** `ema.remedir_llenado` arma
+un solo `select` con un `count` por cada columna: **627 tablas y 10.642 columnas
+en menos de 30 segundos**. Columna por columna serían 10.642 lecturas de la
+tabla entera. `con_dato = count(nullif(btrim(col::text),''))`.
+
+**Resultado:** imposibles 1.556 → **0** · dicen 100% 8.792 → **7.346** ·
+declaradas vacías 1.262 → **2.313**. Y la **segunda pasada completa corrigió 0**,
+que es la prueba de que el mapa ya coincide con la base. El mapa viejo entero
+quedó en `ema.diccionario_antes_del_16_11`.
+
+**Y LA REMEDICIÓN CORRE ANTES DE LAS IDENTIDADES, DENTRO DEL MISMO `begin`.**
+Por lo mismo que el subdiario el 15/11: `mapa_llenado_coincide` compara el
+diccionario contra `ema.llenado_remedido`, así que si corriera después
+compararía contra una foto vieja y daría un **verde falso**, que es peor que un
+rojo.
+
+**MAPEÉ LO QUE EXISTE, NO LO QUE SIRVE.** «¿Este campo está lleno?» y «¿este
+campo tiene datos?» no son la misma pregunta, y yo las traté como una sola. Lo
+mismo con el índice que faltaba en `asiento_cp`: el mapa dice **qué hay**, nunca
+**cuánto tarda**. Sabía desde el 10/11 que sólo 79 de 692 tablas tienen clave
+primaria y **nunca hice nada con eso** hasta que una consulta tardó 15 segundos.
+
+**Y EL MAPA SABÍA ALGO QUE YO FUI A MEDIR A MANO.** De `cpa01.cod_gasto` ya
+tenía escrito *«un solo valor en toda la tabla: filtrar o agrupar por este campo
+no cambia nada»*. Gasté una medición en averiguar lo que el mapa ya decía. Es la
+regla del 09/10, otra vez: **primero preguntarle al mapa.**
