@@ -231,3 +231,86 @@ end $$;
 -- El texto exacto de sql_a quedo asentado en la base; se lee con
 --   select pregunta, sql_a from ema.identidad where clave='listas_precio_contra_cpa44';
 -- ============================================================================
+
+-- ============================================================================
+-- LA GUARDA DEL FIXTURE, Y LAS DOS VECES QUE NO FUNCIONO
+-- ============================================================================
+-- `ema.prueba_lista_fila` tiene los 249 renglones reales del PDF de COLOPLAST,
+-- que es LA UNICA lista donde el defecto existe: las tres que viven en
+-- cotiza.lista_item no tienen un solo articulo cuyo precio Tango espere por
+-- bulto. Esos renglones NO van al repositorio — es la lista de precios de un
+-- proveedor y el repo se sirve PUBLICO por GitHub Pages.
+--
+-- Si la tabla desaparece, `jsonb_agg` devuelve nulo, la funcion recibe '[]' y
+-- la identidad daria CERO: un verde falso, que es peor que un rojo. Asi que la
+-- identidad lleva una guarda que corta con su motivo escrito.
+--
+-- PRIMER INTENTO: `('FALTA EL FIXTURE...')::numeric` adentro de un CASE.
+--   No sirve: Postgres PLIEGA el cast de un literal al planear y revienta
+--   aunque la rama no se tome. Medido: dio el error en la fila que no tenia
+--   que evaluarlo.
+--
+-- SEGUNDO INTENTO: ema.frenar(texto), pero declarada IMMUTABLE.
+--   Tampoco: una funcion inmutable con argumento constante tambien se pliega
+--   al planear. Medido con las dos caras: cortaba SIEMPRE, incluso con el
+--   fixture entero. Va VOLATILE.
+--
+-- TERCER INTENTO: la guarda en el SELECT de un CTE.
+--   Tampoco: **Postgres no evalua una columna de un CTE que nadie lee**, asi
+--   que ema.frenar() no corria nunca. Medido: con la guarda forzada a saltar,
+--   la consulta devolvio 0 tranquilamente. Ahora el valor de la guarda SE SUMA
+--   al resultado, que es la unica forma de obligarla a evaluarse.
+--
+-- Las dos caras, medidas al final:
+--   con el fixture entero (249 >= 240) -> 0, verde
+--   con la guarda forzada (< 9999)     -> corta: "FALTA EL FIXTURE
+--                                         ema.prueba_lista_fila: sin los 249
+--                                         renglones reales de COLOPLAST..."
+--
+-- Y las dos caras del control de fondo, despues de todo esto:
+--   el mismo sql_a contra api_listas_armar (la v1) -> 15
+--   el mismo sql_a contra api_listas_armar_v2      ->  0
+--
+-- Y el fixture se vuelve a cargar leyendo el PDF de COLOPLAST en la pantalla y
+-- guardando (cod_proveedor, precio_lista, unidades_caja) de los 249 renglones.
+-- ============================================================================
+
+-- ============================================================================
+-- EL PORTERO SE PARTIO DEL ARMADO (y por que el primer intento estaba mal)
+-- ============================================================================
+-- public.api_listas_armar_v2  = EL PORTERO y nada mas (modulo 'Listas' del
+--                               usuario, o service_role) + una llamada.
+-- cotiza.armar_v2             = EL ARMADO entero. Sin GRANT para anon ni para
+--                               authenticated: no es una puerta de entrada.
+--
+-- POR QUE. El primer intento fue que la identidad se disfrazara con
+-- `set_config('request.jwt.claims','{"role":"service_role"}', true)`. Esta mal:
+-- **ese set_config es local a la TRANSACCION, no a la consulta**, y el refresco
+-- nocturno corre las 86 identidades en UNA sola. La claim quedaba puesta para
+-- las 85 que siguen. Medido: hoy ninguna otra identidad llama a una `api_` con
+-- portero, asi que no cambiaba ningun resultado TODAVIA — y "todavia" es como
+-- empezo la lista fija de calidades del 14/10.
+--
+-- `SET "request.jwt.claims" TO ...` declarado en la funcion —que si se guarda y
+-- se restaura alrededor de la llamada— **no se puede**: Postgres contesta
+-- `42501 permission denied to set parameter "request.jwt.claims"`. Medido.
+--
+-- Partirlo deja UNA sola copia de la logica y ninguna claim tocada. Medido
+-- despues del cambio: `current_setting('request.jwt.claims', true)` queda sin
+-- poner, y el panel sigue dando lo mismo con la sesion del usuario — 249
+-- leidos, 241 entran, 15 corregidos, 2 sin control, PESOS = PESOS.
+--
+-- Y EL ARNES DE LA IDENTIDAD PASO A VIVIR EN LA BASE:
+-- `cotiza.armar_arnes_como_antes_del_15_11` es el MISMO cuerpo con el precio
+-- volviendo a salir por unidad. La cara rota ya no se puede probar llamando a
+-- la v1, porque la v1 tiene su propio portero y el control ya no se disfraza.
+-- No la llama el panel ni el refresco; existe para poder demostrar que la
+-- identidad todavia ve el defecto.
+--
+-- LAS CINCO CARAS, MEDIDAS DE UNA:
+--   1 cotiza.armar_v2 (arreglada) ................  0   (tiene que ser 0)
+--   2 el arnes del 15/11 (rota) ..................  15  (tiene que ser 15)
+--   3 la guarda del fixture forzada ..............  corta con su motivo
+--   4 la claim que queda puesta ..................  ninguna
+--   5 el semaforo de la identidad ................  verde
+-- ============================================================================

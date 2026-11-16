@@ -1326,3 +1326,58 @@ el renglon de abajo.**
 **LAS MONEDAS, MEDIDAS: 10 coinciden, 0 chocan, 4 no tienen lista en Tango.**
 Las tres en dolares son MEDIX y LECTUS (sin lista en Tango, no se pueden
 controlar) y BECTON DICKINSON (`DOLAR` = `DOLAR`). COLOPLAST `PESOS` = `PESOS`.
+
+**Y LA LECTURA DE COLOPLAST SE CONTROLO CONTRA pdfplumber, MECANICAMENTE: 249
+de 249.** Los mismos codigos (0 de mas y 0 de menos en las dos direcciones), los
+**249 precios unitarios sin IVA identicos** y las **249 unidades por caja
+identicas**. Las dos primeras paginas son tapa e indice y el lector las saltea
+solo. Los 8 que quedan afuera son codigos de COLOPLAST **de verdad** que no
+estan en el maestro de Tango (`0421 · 0423 · 5230 · 5025 · 5030 · 5035 · 01450 ·
+01451`), no basura del indice.
+
+**EL PDF DE COLOPLAST PUBLICA CUATRO PRECIOS POR RENGLON** —*Unitario sin IVA ·
+Caja sin IVA · Unitario con IVA · Caja con IVA*— y el panel toma la
+**ocurrencia 1**, que es la correcta. Con `ocurrencia: 4` mandaria el precio de
+la caja CON IVA: 36 veces el que corresponde. Y como el PDF ya trae el precio de
+la caja, se midio contra el: la maxima diferencia entre `unitario x unidades` y
+el precio de caja que publica COLOPLAST es **$0,50** sobre cajas de hasta
+$1,2 M. **Las unidades por caja no se deducen: las publica el PDF en su propia
+columna.**
+
+**UNA GUARDA QUE NO SE EVALUA SE VE IGUAL QUE UNA QUE PASA, Y ME PASO TRES
+VECES SEGUIDAS EN LA MISMA LINEA.** Para que la identidad no pueda dar un verde
+falso si se pierde el fixture de COLOPLAST, le puse una guarda que corta con su
+motivo. No funciono tres veces, y las tres las agarre probando LAS DOS CARAS:
+1. **`('TEXTO')::numeric` adentro de un `CASE` se pliega al planear** y revienta
+   aunque la rama no se tome. Medido: dio el error en la fila que no tenia que
+   evaluarlo.
+2. **Una funcion `IMMUTABLE` con argumento constante tambien se pliega**, asi
+   que `ema.frenar()` cortaba SIEMPRE. Va **`VOLATILE`**.
+3. **Postgres NO evalua una columna de un CTE que nadie lee**, asi que la guarda
+   nunca corria: con el umbral forzado a saltar, la consulta devolvio 0
+   tranquilamente. **El valor de la guarda tiene que SUMARSE al resultado.**
+Ninguna de las tres se nota mirando el codigo, y las tres dan verde.
+
+**Y EL FIXTURE NO VA AL REPOSITORIO: es la lista de precios de un proveedor y
+el repo se sirve PUBLICO por GitHub Pages.** Vive en `ema.prueba_lista_fila` y
+se vuelve a cargar leyendo el PDF en la pantalla.
+
+**`set_config(..., true)` ES LOCAL A LA TRANSACCION, NO A LA CONSULTA.** Para
+pasar el portero, la identidad nueva se disfrazaba de `service_role` con
+`set_config('request.jwt.claims', ..., true)`. El refresco nocturno corre las 86
+identidades en **una sola transaccion**, asi que esa claim quedaba puesta para
+las 85 que siguen. Medido: hoy ninguna otra llama a una `api_` con portero, o
+sea que no cambiaba nada **todavia** — y "todavia" es como empezo la lista fija
+de calidades del 14/10. Y `SET "request.jwt.claims" TO ...` **declarado en la
+funcion** —que si se guarda y se restaura— **no se puede**: `42501 permission
+denied to set parameter`. **La solucion es partir el portero del trabajo:**
+`public.api_listas_armar_v2` es el portero y nada mas, `cotiza.armar_v2` es el
+armado, sin GRANT para nadie. Una sola copia de la logica y ninguna claim
+tocada.
+
+**Y EL ARNES DE UNA IDENTIDAD PUEDE VIVIR EN LA BASE.**
+`cotiza.armar_arnes_como_antes_del_15_11` es el mismo cuerpo con el precio
+volviendo a salir por unidad, o sea el defecto guardado. Sin eso, la cara rota
+no se podia probar mas: la v1 tiene su propio portero y el control ya no se
+disfraza. Las cinco caras medidas de una sola vez: **arreglada 0 · rota 15 ·
+guarda del fixture corta con su motivo · ninguna claim queda puesta · verde**.

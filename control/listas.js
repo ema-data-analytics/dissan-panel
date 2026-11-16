@@ -214,7 +214,10 @@ function servidor() {
     sin_bulto: ['if (a.por_caja && a.por_caja.length) {',
                 'if (false && a.por_caja && a.por_caja.length) { /* ARNES */',
                 'el bloque «vienen por bulto» apagado, o sea el precio del archivo sin '
-                  + 'que nadie lo muestre, que es el defecto del 15/11']
+                  + 'que nadie lo muestre, que es el defecto del 15/11'],
+    precio_texto: ['if (LP_TIPOS[i] === \'num\') return { t: \'num\', v: Number(v) };',
+                '/* ARNES */',
+                'el PRECIO del .xlsx viajando como TEXTO: Tango lo lee como cero o no lo lee']
   };
   if (ARNESES[PLANTAR]) {
     const arn = ARNESES[PLANTAR];
@@ -303,7 +306,33 @@ function servidor() {
       };
     } catch (e) { pintado = { error: String(e && e.message || e).slice(0, 200) }; }
 
-    return { leido: leido, huecos: huecos, pintado: pintado };
+    /* EL ARCHIVO QUE SE SUBE A TANGO, ARMADO DE VERDAD.      15/11/2026
+       El usuario pregunto "que salga bien para poder subirlas". Esa pregunta
+       no la contestaba nadie: la puerta 12 abre los 16 Excel del panel con
+       openpyxl, pero el de Listas no, porque para que exista hay que soltar el
+       PDF del proveedor y un control no puede soltar un archivo. Aca se aprieta
+       el boton de verdad —el mismo lpBajarTango— con bajarArchivo interceptado,
+       y los bytes se devuelven para abrirlos con openpyxl afuera. */
+    let archivo = null;
+    try {
+      const guardar = window.bajarArchivo;
+      let cap = null;
+      window.bajarArchivo = function (bytes, mime, nombre) { cap = { bytes, mime, nombre }; };
+      await lpBajarTango();
+      for (let i = 0; i < 100 && !cap; i++) await new Promise(function (r){ setTimeout(r, 50); });
+      window.bajarArchivo = guardar;
+      if (!cap) throw new Error('el boton no entrego ningun archivo');
+      const u = new Uint8Array(cap.bytes);
+      let s = '';
+      for (let i = 0; i < u.length; i++) s += String.fromCharCode(u[i]);
+      archivo = { nombre: cap.nombre, mime: cap.mime, bytes: u.length, b64: btoa(s),
+                  aviso: (document.getElementById('lpBajado') || {}).textContent || '',
+                  cuit: (LP_ARMADO.lista || {}).cuit || '',
+                  encabezado: LP_ARMADO.encabezado || [],
+                  filas: LP_ARMADO.filas || [] };
+    } catch (e) { archivo = { error: String(e && e.message || e).slice(0, 200) }; }
+
+    return { leido: leido, huecos: huecos, pintado: pintado, archivo: archivo };
   }, [b64, cfg]);
 
   await b.close();
@@ -441,6 +470,41 @@ function servidor() {
           + 'de la seccion no lo declara: "' + String(P.pie || '').slice(0, 120) + '"');
     }
   }
+  /* ---- 7. el archivo que se sube a Tango, abierto con openpyxl ---- */
+  const A = r.archivo || {};
+  let queDijoElArchivo = 'el .xlsx para Tango NO SE ARMO, asi que ESE CONTROL NO SE EJERCITO';
+  if (A.error) {
+    falla('el archivo para Tango', 'no_se_pudo_armar', A.error);
+  } else if (!A.b64) {
+    falla('el archivo para Tango', 'el_boton_no_entrego_nada',
+          'se apreto el boton de bajar y no salio ningun archivo');
+  } else {
+    const entrada = JSON.stringify({ b64: A.b64, nombre: A.nombre, cuit: A.cuit,
+                                     encabezado: A.encabezado, filas: A.filas });
+    const py = require('child_process').spawnSync(
+      'python3', [path.join(__dirname, 'listas-archivo.py')],
+      { input: entrada, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+    let res = null;
+    try { res = JSON.parse((py.stdout || '').trim()); } catch (e) {}
+    if (!res) {
+      falla('el archivo para Tango', 'no_se_pudo_revisar',
+            'el revisor no contesto: ' + String((py.stderr || py.stdout || '')).slice(0, 200));
+    } else {
+      (res.fallas || []).forEach(function (f) {
+        falla('el archivo para Tango', f.clase, f.que);
+      });
+      const m = res.midio || {};
+      queDijoElArchivo = 'el .xlsx para Tango armado apretando el boton de verdad y ABIERTO con '
+        + 'openpyxl: ' + m.bytes + ' bytes, ' + m.hojas + ' hoja, el CUIT «' + m.a1 + '» en A1, '
+        + m.titulos + ' titulos en la fila 2, ' + m.renglones + ' de ' + A.filas.length
+        + ' renglones desde la fila 3, y los ' + A.filas.length + ' precios de la columna I '
+        + 'numericos e identicos al armado';
+      if (!A.nombre || !/\.xlsx$/.test(A.nombre)) {
+        falla('el archivo para Tango', 'el_nombre_no_termina_en_xlsx', String(A.nombre));
+      }
+    }
+  }
+
   const quePintoElBulto = P.hay_bloque
     ? 'el bloque «vienen por bulto» PINTADO de verdad con lpPintar: ' + P.renglones
       + ' de ' + P.esperado.renglones + ' renglones, ' + P.esperado.corregidos
@@ -459,7 +523,8 @@ function servidor() {
        equivocado. */
     const ESPERA = {
       sin_borde: ['el_codigo_salio_mal', 'la_descripcion_perdio_su_primera_palabra'],
-      sin_bulto: ['la_pantalla_no_pinto_el_bloque']
+      sin_bulto: ['la_pantalla_no_pinto_el_bloque'],
+      precio_texto: ['el_precio_viaja_como_texto']
     }[PLANTAR];
     const agarro = fallas.filter(function (f) { return ESPERA.indexOf(f.clase) >= 0; });
     console.log('\nARNES «' + PLANTAR + '» — se sirvio un js/listas.js con '
@@ -487,7 +552,7 @@ function servidor() {
               + 'leidos con el lpLeerPdf DE VERDAD de js/listas.js en un navegador: los '
               + esperados.length + ' codigos identicos a los que escribio el generador, y las '
               + esperados.length + ' descripciones con su primera palabra. Y '
-              + quePintoElBulto + '.');
+              + quePintoElBulto + '. Y ' + queDijoElArchivo + '.');
     console.log('  NO midio: los PDF de verdad de los 8 proveedores. No estan en el '
               + 'repositorio y no van a estar. Tampoco el clic de soltar el archivo: eso '
               + 'necesita la pantalla del usuario.');
