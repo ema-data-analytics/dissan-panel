@@ -105,6 +105,11 @@ const PUERTAS = [
   ['los pasos en vivo',                  'node',    'control/vivo.js'],
   ['el dictado',                         'node',    'control/voz.js'],
   ['la lectura de listas',               'node',    'control/listas.js'],
+  /* PUERTA 18, 16/11/2026. Carga cada pantalla con datos y SIN datos, y exige
+     que ninguna seccion desaparezca en silencio. Va en el reloj igual que en
+     la puerta: el pre-push mide cuando yo pusheo, y entre push y push no mide
+     nadie — el 10/11 el Tablero estuvo nueve horas caido por eso. */
+  ['la pantalla vacia',                  'node',    'control/vacio.js'],
 ];
 
 /* la linea "midio:" de cada control, que es lo que se guarda como prueba
