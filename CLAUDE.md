@@ -1469,8 +1469,33 @@ los dos revoke y tambien `authenticated`, porque la puerta de entrada es
 `public.api_listas_armar_v2` y no esta. Tercera vez que esto muerde: 10/11,
 12/11, 14/11 — y ahora en un esquema que no es `public`.
 
-**Y LA PUERTA 13 SE PAGO SOLA OTRA VEZ.** El rojo de `en vivo: listas.html`
-—*"1 llamada(s) con ERROR"*— es el error que yo cause con el `DEFAULT` ambiguo,
-anotado desde el navegador del usuario. **No se borra**: es el registro de algo
-que de verdad paso, y taparlo seria esconder mi propia rotura. Se va solo
-cuando pasa su ventana.
+**Y LA PUERTA 13 SE PAGO SOLA OTRA VEZ.** El rojo de `en vivo: listas.html` son
+**dos renglones, los dos mios**, anotados desde el navegador del usuario:
+
+- **15/11 21:25** · `function cotiza.armar_v2(bigint, jsonb) is not unique` —
+  la rotura de verdad, la del `DEFAULT` ambiguo.
+- **15/11 22:10** · `Could not find the function public.api_listas_armar_v2(
+  p_desde, p_hasta, p_lista_id)` — **una prueba mia**, no una rotura: al
+  recargar la pagina se perdio la variable con los renglones, `p_filas` viajo
+  como `undefined` y PostgREST resolvio por los nombres que quedaron. Ningun
+  usuario hizo esa llamada.
+
+**No se borran**: son el registro de llamadas que de verdad pasaron, y taparlas
+seria esconder mi propia rotura. La ventana es de **72 horas**, asi que el rojo
+se va solo alrededor del **18/11 22:10**. Si una sesion futura ve ese rojo, es
+esto y no algo nuevo.
+
+**Y LA REGLA DEL BULTO SE MIRA A SI MISMA, ASI QUE TIENE UN LIMITE ESCRITO.**
+Decide comparando contra el precio que Tango YA tiene, y Tango va a tener el que
+este archivo le cargue. Medido que la realimentacion es ESTABLE en los dos
+casos buenos: si se escribio el precio del bulto, la vuelta siguiente la razon
+vuelve a dar `unidades_caja` y decide bulto otra vez; si se escribio el
+unitario, da 1 y decide unitario. **El caso que se clavaria es un articulo que
+la v1 hubiera cargado MAL antes de hoy**: ahi `cpa44` tendria el unitario, la
+regla diria "unitario" y la identidad no lo veria, porque mide esa misma
+comparacion. Medido el 15/11: **no existe ninguno** —los 15 tienen en `cpa44`
+el precio del bulto, o sea que el archivo malo nunca se subio—. Por si
+apareciera, `por_caja` muestra **todos** los articulos que Tango compra por
+bulto con su veredicto, no solo los corregidos: la fuente independiente que
+queda es `cpa46.precio_net` (lo que DISSAN pago de verdad) y el precio del
+bulto que el PDF de COLOPLAST publica en su propia columna.
