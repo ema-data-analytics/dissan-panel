@@ -217,7 +217,15 @@ function servidor() {
                   + 'que nadie lo muestre, que es el defecto del 15/11'],
     precio_texto: ['if (LP_TIPOS[i] === \'num\') return { t: \'num\', v: Number(v) };',
                 '/* ARNES */',
-                'el PRECIO del .xlsx viajando como TEXTO: Tango lo lee como cero o no lo lee']
+                'el PRECIO del .xlsx viajando como TEXTO: Tango lo lee como cero o no lo lee'],
+    sin_aviso_lista: ['if (res.sin_codigo_de_lista) {',
+                'if (false && res.sin_codigo_de_lista) { /* ARNES */',
+                'el aviso de que el archivo NO SE PUEDE SUBIR apagado, o sea un archivo sin '
+                  + 'Cod. Lista saliendo sin que nadie lo diga'],
+    sin_aviso_vigencia: ['if (res.vigencia_ya_vencida) {',
+                'if (false && res.vigencia_ya_vencida) { /* ARNES */',
+                'el aviso de la vigencia vencida apagado, o sea un archivo que entra a Tango '
+                  + 'y no rige sin que nadie lo diga']
   };
   if (ARNESES[PLANTAR]) {
     const arn = ARNESES[PLANTAR];
@@ -293,6 +301,14 @@ function servidor() {
       pintado = {
         hay_bloque: !!sec,
         pie: sec ? (sec.nextElementSibling ? sec.nextElementSibling.textContent : '') : '',
+        avisos: [].map.call(document.querySelectorAll('.lp-aviso li'),
+                            function (l) { return (l.textContent || '').trim(); }),
+        fechas: ['lpDesde', 'lpHasta'].map(function (id) {
+          const el = document.getElementById(id);
+          const lb = document.querySelector('label[for="' + id + '"]');
+          return { id: id, existe: !!el, tipo: el ? el.getAttribute('type') : null,
+                   rotulo: lb ? (lb.textContent || '').trim() : '' };
+        }),
         encabezados: tb ? Array.prototype.map.call(tb.querySelectorAll('thead th'),
                         function (t) { return (t.textContent || '').trim(); }) : [],
         celdas: tb ? Array.prototype.map.call(tb.querySelectorAll('tbody td'),
@@ -470,6 +486,43 @@ function servidor() {
           + 'de la seccion no lo declara: "' + String(P.pie || '').slice(0, 120) + '"');
     }
   }
+
+  /* el aviso de que el archivo NO SE PUEDE SUBIR.           15/11/2026
+     `sin_codigo_de_lista` lo medía la base y la pantalla no lo leía en ningún
+     lado. El juguete lo manda en true a proposito para que esto se ejercite. */
+  const avisos = (P.avisos || []).join(' || ');
+  if (!/NO SE PUEDE SUBIR/.test(avisos)) {
+    falla('el aviso del codigo de lista', 'no_avisa_que_el_archivo_no_se_puede_subir',
+          'el armado dice sin_codigo_de_lista y la pantalla no lo nombra. Los avisos que '
+        + 'pinto: ' + (avisos ? avisos.slice(0, 200) : '(ninguno)'));
+  }
+  /* LA VIGENCIA VENCIDA. Medido el 15/11: las 14 listas salian con la ventana
+     cerrada, y el archivo entra a Tango sin regir. El juguete la manda vencida
+     a proposito para que esto se ejercite.                     15/11/2026 */
+  if (!/YA VENCI/i.test(avisos)) {
+    falla('el aviso de la vigencia', 'no_avisa_que_la_vigencia_vencio',
+          'el armado dice vigencia_ya_vencida y la pantalla no lo nombra. Los avisos que '
+        + 'pinto: ' + (avisos ? avisos.slice(0, 200) : '(ninguno)'));
+  }
+  /* y los dos campos de fecha tienen que ESTAR y tener rotulo: sin ellos la
+     fecha vuelve a depender de una configuracion que nadie mueve. */
+  (P.fechas || []).forEach(function (f) {
+    if (!f.existe) {
+      falla('los campos de vigencia', 'falta_el_campo_de_fecha',
+            'no esta el campo ' + f.id + ', asi que la vigencia la vuelve a poner la '
+          + 'configuracion y nadie la puede corregir');
+    } else if (f.tipo !== 'date') {
+      falla('los campos de vigencia', 'el_campo_de_fecha_no_es_una_fecha',
+            f.id + ' es type="' + f.tipo + '"');
+    } else if (!f.rotulo) {
+      falla('los campos de vigencia', 'el_campo_de_fecha_no_tiene_rotulo', f.id);
+    }
+  });
+  if (/&lt;|<b>|&amp;/.test(avisos)) {
+    falla('el aviso del codigo de lista', 'el_aviso_pinto_html_escrito',
+          'los avisos se pintan con esc(), asi que una etiqueta HTML sale escrita tal cual: '
+        + avisos.slice(0, 160));
+  }
   /* ---- 7. el archivo que se sube a Tango, abierto con openpyxl ---- */
   const A = r.archivo || {};
   let queDijoElArchivo = 'el .xlsx para Tango NO SE ARMO, asi que ESE CONTROL NO SE EJERCITO';
@@ -511,7 +564,9 @@ function servidor() {
       + ' con el precio corregido al del bulto y ' + P.esperado.sin_control
       + ' declarado(s) sin control, las tres columnas del control presentes, '
       + P.filas_del_archivo + ' de ' + P.esperado.filas + ' renglones en la grilla del '
-      + 'archivo y 0 celdas con undefined'
+      + 'archivo y 0 celdas con undefined, mas los dos avisos que importan antes de subir '
+      + '—que el archivo NO SE PUEDE SUBIR sin lista en Tango, y que la vigencia YA VENCIO— '
+      + 'y los dos campos de fecha con su rotulo'
     : 'el bloque «vienen por bulto» NO SE PINTO, asi que ESE CONTROL NO SE EJERCITO';
 
   try { fs.rmSync(TMP, { recursive: true, force: true }); } catch (e) {}
@@ -524,7 +579,9 @@ function servidor() {
     const ESPERA = {
       sin_borde: ['el_codigo_salio_mal', 'la_descripcion_perdio_su_primera_palabra'],
       sin_bulto: ['la_pantalla_no_pinto_el_bloque'],
-      precio_texto: ['el_precio_viaja_como_texto']
+      precio_texto: ['el_precio_viaja_como_texto'],
+      sin_aviso_lista: ['no_avisa_que_el_archivo_no_se_puede_subir'],
+      sin_aviso_vigencia: ['no_avisa_que_la_vigencia_vencio']
     }[PLANTAR];
     const agarro = fallas.filter(function (f) { return ESPERA.indexOf(f.clase) >= 0; });
     console.log('\nARNES «' + PLANTAR + '» — se sirvio un js/listas.js con '

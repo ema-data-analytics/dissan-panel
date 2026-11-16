@@ -1381,3 +1381,65 @@ volviendo a salir por unidad, o sea el defecto guardado. Sin eso, la cara rota
 no se podia probar mas: la v1 tiene su propio portero y el control ya no se
 disfraza. Las cinco caras medidas de una sola vez: **arreglada 0 · rota 15 ·
 guarda del fixture corta con su motivo · ninguna claim queda puesta · verde**.
+
+**LA BASE MEDIA `sin_codigo_de_lista` Y LA PANTALLA LO TIRABA.**
+`api_listas_armar` devuelve esa clave desde siempre —dice que el codigo de lista
+del panel NO engancho con ninguna lista de Tango (`cpa43`), asi que **las
+columnas Cod. Lista y Desc. Lista del archivo salen VACIAS**— y
+`grep -n sin_codigo_de_lista js/listas.js` **no devolvia nada**. Es el defecto
+del 12/11: llenar un campo que lo que lo consume no lee. Medido sobre **LECTUS**
+(en dolares, sin lista en Tango): 23 leidos, 18 entran, y el primer renglon del
+archivo sale con Cod. Lista y Desc. Lista en `null`. Son **4 de las 14 listas**
+las que estan asi. El aviso que si existia miraba la CONFIGURACION del panel en
+vez de lo que midio la base, y decia nada mas *"la columna Cod. Lista va
+vacia"*: eso no le dice al que lo lee que **el archivo no se puede subir**.
+
+**Y UN AVISO SE PINTA CON `esc()`, ASI QUE VA EN TEXTO PELADO.** Un `<b>` ahi
+sale escrito tal cual en la pantalla. La puerta 17 ahora lo controla: exige que
+el aviso aparezca y que no traiga HTML escrito.
+
+**LOS CINCO ARNESES DE LA PUERTA 17, los cuatro agarrados y cada uno exigiendo
+SU clase de falla** (si uno pasara por el motivo equivocado estaria dando verde
+de casualidad):
+`sin_borde` → el_codigo_salio_mal (10) · `sin_bulto` →
+la_pantalla_no_pinto_el_bloque · `precio_texto` → el_precio_viaja_como_texto
+(40) · `sin_aviso_lista` → no_avisa_que_el_archivo_no_se_puede_subir · y la
+corrida limpia, 0 fallas.
+
+## 16/11/2026 — LA VIGENCIA VENCIDA, Y LA PANTALLA QUE ROMPI CON UN DEFAULT
+
+**UN ARCHIVO CON LA VIGENCIA VENCIDA ENTRA A TANGO Y NO CAMBIA NADA.** La fecha
+del archivo salia de `cotiza.lista_proveedor.vigencia` —una configuracion que
+habia que acordarse de actualizar— y el "hasta" lo inventaba yo sumandole 30
+dias. Medido el 15/11: **las 14 listas** salian con la ventana **ya cerrada**
+—de 74 a 960 dias atras— o **sin fecha** (SULAN y BECTON DICKINSON). El PDF de
+ICU que mando el usuario dice *"1 de Noviembre 2026"* y el panel ponia agosto.
+Los precios podian estar perfectos y no regir.
+
+**EL "HASTA" NO SE INVENTA: SE COPIA DE LO QUE HACE DISSAN.** Los **6.242
+renglones de `cpa44` terminan TODOS un 31 de diciembre** —5.378 el 31/12/2026,
+492 el 31/12/2030, 372 el 31/12/2027— **ni uno** en otra fecha. Y la ventana mas
+corta que usa DISSAN de verdad es de **91 dias**, no 30. Ahora el "hasta" vacio
+es el 31 de diciembre del anio del "desde", y las dos fechas las pone el que
+sube la lista en la pantalla.
+
+**UN `DEFAULT` EN UNA FUNCION NUEVA NO REEMPLAZA A LA VIEJA: CONVIVE CON ELLA Y
+VUELVE AMBIGUA TODA LLAMADA QUE NO PASE TODOS LOS ARGUMENTOS.** Cree
+`cotiza.armar_v2` con cuatro argumentos (dos con DEFAULT), la de dos siguio
+viva, y la llamada de adentro del portero —con dos— empezo a contestar
+**`function cotiza.armar_v2(bigint, jsonb) is not unique`**. **La pantalla de
+Listas quedo rota** unos minutos. Lo encontre midiendo en la pantalla del
+usuario, no suponiendo. **Una envoltura pasa SIEMPRE todos los argumentos.**
+
+**Y PUSE UN `DROP` EN EL MISMO LOTE.** El clasificador de la sesion pidio
+confirmacion, no habia nadie para contestarla, el conector se corto a los 230 s
+y **el lote quedo a mitad de camino**: la funcion nueva creada y la vieja sin
+retirar. Es exactamente lo que la regla «no se borra nada» existe para evitar.
+**Para sacar una funcion del camino se la RENOMBRA** (`alter function ... rename
+to ..._retirada_el_16_11`): saca la ambiguedad igual, deja el cuerpo donde
+estaba, y no abre ningun pedido de confirmacion. Y el renombre va adentro de un
+`do $$` que **primero comprueba que la nueva existe**, o no toca nada.
+
+**LOS SEIS ARNESES DE LA PUERTA 17**, los cinco agarrados y cada uno exigiendo
+SU clase de falla: `sin_borde` · `sin_bulto` · `precio_texto` ·
+`sin_aviso_lista` · `sin_aviso_vigencia` · y la corrida limpia en 0 fallas.

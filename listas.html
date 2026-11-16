@@ -85,6 +85,28 @@
            agrega en los dos lados o el control corta. -->
       <input id="lpArch" class="lp-file" type="file" accept=".pdf,.xlsx">
     </div>
+    <div class="lp-campo">
+      <!-- LA VIGENCIA LA PONE EL QUE SUBE LA LISTA.              15/11/2026
+           Vivia en cotiza.lista_proveedor.vigencia, una configuracion que habia
+           que acordarse de actualizar, y medido el 15/11 las 14 listas salian
+           con la ventana YA CERRADA (de 74 a 960 dias atras) o sin fecha. El
+           PDF de ICU dice "1 de Noviembre 2026" y el panel ponia agosto. Un
+           precio cargado fuera de su ventana entra y no rige: el archivo sube
+           y no cambia nada. Arranca con la fecha del proveedor y se cambia por
+           la que diga el PDF. -->
+      <label class="lp-rot" for="lpDesde">Vigencia desde (la del PDF)</label>
+      <input id="lpDesde" class="lp-file" type="date">
+    </div>
+    <div class="lp-campo">
+      <!-- EL "HASTA" NO SE INVENTA, SE COPIA: los 6.242 renglones de cpa44
+           terminan TODOS un 31 de diciembre (5.378 el 31/12/2026, 492 el
+           31/12/2030, 372 el 31/12/2027), ni uno en otra fecha. Antes el panel
+           sumaba 30 dias, que era mi invento, y la ventana mas corta que usa
+           DISSAN de verdad es de 91 dias. Vacio = el 31 de diciembre del anio
+           del desde. -->
+      <label class="lp-rot" for="lpHasta">Vigencia hasta</label>
+      <input id="lpHasta" class="lp-file" type="date">
+    </div>
     <div class="lp-campo lp-accion">
       <button id="lpProcesar" class="lp-btn" type="button">Procesar la lista</button>
     </div>
@@ -108,6 +130,6 @@
      listas.js con un import() dinamico, y recien cuando hay un PDF. Asi no hay
      orden de carga que respetar, no quedan globales nuevas, y el camino del
      Excel no baja 1,7 MB que no usa. -->
-<script src="js/listas.js?v=7"></script>
+<script src="js/listas.js?v=9"></script>
 </body>
 </html>

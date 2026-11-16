@@ -590,6 +590,15 @@ function lpPintarRegla() {
   var caja = $('lpRegla');
   var p = LP_PROV.filter(function (x) { return String(x.id) === $('lpProv').value; })[0];
   if (!p) { caja.hidden = true; caja.innerHTML = ''; return; }
+  /* la fecha del campo arranca con la del proveedor, para que el que sube la
+     lista vea CUAL es y la cambie por la del PDF en vez de tener que
+     acordarse de que existe. Vacia si el proveedor no tiene ninguna, que es
+     el caso de SULAN y BECTON DICKINSON.                      15/11/2026 */
+  var fd = $('lpDesde');
+  if (fd) fd.value = p.vigencia ? String(p.vigencia).slice(0, 10) : '';
+  var fh = $('lpHasta');
+  if (fh) fh.value = '';
+
   var partes = [];
   partes.push('<b>' + esc(p.proveedor) + '</b>');
   partes.push('CUIT ' + (p.cuit ? esc(p.cuit) : '<b>sin CUIT en cpa01</b>'));
@@ -692,7 +701,14 @@ function lpProcesar() {
        precio que Tango ya tiene cargado para esa lista— 15 de los 241
        renglones de COLOPLAST viajaban 10, 20, 30, 45 o 54 veces mas chicos.
        La v1 queda viva y sin tocar; todo arreglo va a la v2. */
-    return rpc('api_listas_armar_v2', { p_lista_id: provId, p_filas: leido.filas })
+    /* LAS DOS FECHAS VAN SIEMPRE, aunque esten vacias.          15/11/2026
+       Con cuatro argumentos la llamada no puede volverse ambigua: el 16/11
+       dejar una version con DEFAULT al lado de la vieja rompio la pantalla con
+       "function cotiza.armar_v2(bigint, jsonb) is not unique". Vacio = null, y
+       la funcion cae en la vigencia del proveedor y en el 31 de diciembre. */
+    return rpc('api_listas_armar_v2', { p_lista_id: provId, p_filas: leido.filas,
+                 p_desde: $('lpDesde').value || null,
+                 p_hasta: $('lpHasta').value || null })
       .then(function (r) {
         LP_ARMADO = r.data;
         LP_ARMADO._ms = r.ms;
@@ -752,6 +768,32 @@ function lpPintar() {
     avisos.push('El costo que calculó la lectura y el que calculó la base no coinciden '
       + '(máxima diferencia ' + exacto(res.dif_costo_contra_la_lectura) + '). '
       + 'Vale el de la base. Hay que revisar el factor antes de importar.');
+  }
+  /* LA BASE LO MEDIA Y LA PANTALLA LO TIRABA.                   15/11/2026
+     `sin_codigo_de_lista` sale de api_listas_armar: dice que el codigo de lista
+     del panel NO engancho con ninguna lista de Tango (cpa43), asi que las
+     columnas Cod. Lista y Desc. Lista del archivo salen VACIAS. La pantalla no
+     leia esa clave en ningun lado — es el defecto del 12/11, cuando el mapa
+     llenaba `significado` y lo que lo consumia no lo leia. Y el aviso de la
+     lectura, que mira la configuracion del panel en vez de lo que midio la
+     base, decia solamente "la columna Cod. Lista va vacia": eso no le dice al
+     que lo lee que el archivo NO SE PUEDE SUBIR asi. Medido sobre LECTUS
+     (id 5, en dolares, sin lista en Tango): 23 leidos, 18 entran, y el primer
+     renglon del archivo sale con Cod. Lista y Desc. Lista en null. */
+  /* los avisos se pintan con esc(), asi que van en TEXTO PELADO: un <b> aca
+     sale escrito tal cual en la pantalla. */
+  if (res.vigencia_ya_vencida) {
+    avisos.push('LA VIGENCIA DE ESTE ARCHIVO YA VENCIÓ hace ' + num(res.dias_vencida)
+      + ' días (' + lista.vigencia + ' a ' + lista.vigencia_hasta + '). Tango carga el precio '
+      + 'fuera de su ventana y no rige: el archivo entra y no cambia nada. Poné en «Vigencia '
+      + 'desde» la fecha que dice el PDF del proveedor y volvé a procesar.');
+  }
+  if (res.sin_codigo_de_lista) {
+    avisos.push('ESTE ARCHIVO NO SE PUEDE SUBIR TODAVÍA: ' + (lista.proveedor || 'el proveedor')
+      + ' no tiene lista de precios de compra en Tango, así que las columnas Cód. Lista y '
+      + 'Desc. Lista salen vacías y Tango no sabe en qué lista cargar los precios. Primero '
+      + 'hay que crear la lista en Tango; después se enlaza con este proveedor y el archivo '
+      + 'sale completo. El enlace no se edita desde esta pantalla: pedílo y queda hecho.');
   }
   if (Number(res.por_bulto_sin_control) > 0) {
     avisos.push(num(res.por_bulto_sin_control) + ' artículo(s) vienen por bulto y Tango todavía '

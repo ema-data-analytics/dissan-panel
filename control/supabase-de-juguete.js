@@ -325,7 +325,18 @@
                  por_caja_que_entran: pc.length,
                  corregidos_por_bulto: pc.filter(function(x){ return x.va_por_bulto; }).length,
                  por_bulto_sin_control: pc.filter(function(x){ return x.precio_prev === null; }).length,
-                 dif_costo_contra_la_lectura: 0, sin_codigo_de_lista: false,
+                 dif_costo_contra_la_lectura: 0,
+                 /* en true a proposito: es la unica forma de que alguna puerta
+                    pinte el aviso de "este archivo no se puede subir todavia".
+                    Medido sobre LECTUS, que esta en dolares y no tiene lista en
+                    Tango: 23 leidos, 18 entran, Cod. Lista en null. 15/11/2026 */
+                 sin_codigo_de_lista: true,
+                 /* vencida a proposito, por lo mismo: medido el 15/11, las 14
+                    listas configuradas salian con la ventana ya cerrada —de 74
+                    a 960 dias atras— porque la fecha vivia en una
+                    configuracion que nadie movia. Un precio cargado fuera de
+                    su ventana entra y no rige. */
+                 vigencia_ya_vencida: true, dias_vencida: 108,
                  regla_pendiente: false },
       por_que_queda_afuera: { 'sin alta en Tango': 1 }
     };
