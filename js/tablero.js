@@ -344,15 +344,40 @@ function dbDibujar(d, estado, cuerpo){
          'Dentro de lo medible la cobertura es ' + dbDec(r.cobertura_pct) + '%. ' +
          '<b>Nada de esto dice que el resto esté bien: dice que no se puede saber.</b></div>');
 
+  /* CADA SECCION APARECE SIEMPRE QUE HAYA ALGO QUE MOSTRAR.      16/11/2026
+     Hoy el usuario abrio Listas con ICU, dos secciones no estaban —vacias con
+     razon, y la pantalla callaba— y perdio la maniana buscando que le habia
+     roto yo. Una seccion que desaparece se lee como «falta algo».
+     Las cinco secciones de aca abajo tenian el mismo defecto y lo encontro
+     control/vacio.js, que carga la pantalla con datos y sin datos.
+
+     LA DISTINCION QUE HAY QUE HACER, Y QUE NO ES OBVIA: cuando NO HAY NADA de
+     nada, esta pantalla ya saca todo y escribe «Ningun renglon entra en esos
+     filtros». Eso esta BIEN y no se toca: pintar cinco secciones vacias ahi
+     seria ruido. El defecto es que se vaya UNA mientras las otras se quedan,
+     porque ahi el que mira no puede distinguir «esta vacia» de «se rompio».
+     Por eso `hayAlgo`: con datos, todas aparecen; sin nada, manda el cartel. */
+  var hayAlgo = !!((d.mejores || []).length || (d.peores || []).length ||
+                   (d.por_cliente || []).length || (d.calidad || []).length ||
+                   (d.por_mes || []).length);
+
   /* margen mes a mes */
   var pm = (d.por_mes || []).filter(function(m){ return Number(m.n || 0) > 0; });
-  if (pm.length > 1){
+  if (hayAlgo){
     h.push('<div class="db-sec">Margen mes a mes' +
            '<small>Porcentaje sobre lo facturado de cada mes, medido contra el costo real.' +
            '</small></div>');
-    h.push(dbGrafBarras(pm, 'mes', 'margen', function(f){
-      return f.mes + ' — margen ' + dbDec(f.margen) + '% en ' + dbNum(f.n) + ' renglones';
-    }, function(f){ return dbDec(f.margen) + '%'; }, 'v', 58));
+    if (pm.length > 1){
+      h.push(dbGrafBarras(pm, 'mes', 'margen', function(f){
+        return f.mes + ' — margen ' + dbDec(f.margen) + '% en ' + dbNum(f.n) + ' renglones';
+      }, function(f){ return dbDec(f.margen) + '%'; }, 'v', 58));
+    } else {
+      h.push('<div class="db-pie"><b>No hay serie que dibujar.</b> ' +
+             (pm.length === 1
+               ? 'Los filtros dejan un solo mes con renglones (' + dbEsc(pm[0].mes) + '), ' +
+                 'así que no hay contra qué compararlo.'
+               : 'Ningún mes quedó con renglones dentro de estos filtros.') + '</div>');
+    }
   }
 
   /* los diez que mas ganaron y los diez que mas perdieron */
@@ -368,9 +393,14 @@ function dbDibujar(d, estado, cuerpo){
 
   h.push('<div class="db-dos">');
 
-  if (me.length){
+  if (hayAlgo){
     h.push('<div><div class="db-sec">Los diez que más ganaron' +
            '<small>Con qué se gana de verdad, y con quién.</small></div>');
+    if (!me.length)
+      h.push('<div class="db-pie"><b>Ninguno.</b> Con estos filtros ningún renglón ' +
+             'terminó con ganancia medible.</div></div>');
+  }
+  if (me.length){
     h.push('<div class="db-tb-caja"><table class="db-tb"><thead><tr>' +
            '<th>Artículo</th><th>Descripción</th><th>Cliente</th><th>Fecha</th>' +
            '<th class="db-num">Cant.</th><th class="db-num">Precio venta<br>(x unidad)</th>' +
@@ -392,9 +422,15 @@ function dbDibujar(d, estado, cuerpo){
     h.push('</tbody></table></div></div>');
   }
 
-  if (pe.length){
+  if (hayAlgo){
     h.push('<div><div class="db-sec">Los diez que más perdieron' +
            '<small>Renglones vendidos por debajo del costo real.</small></div>');
+    if (!pe.length)
+      h.push('<div class="db-pie"><b>Ninguno.</b> Con estos filtros ningún renglón se ' +
+             'vendió por debajo del costo real. Es una buena noticia, no un dato que ' +
+             'falte.</div></div>');
+  }
+  if (pe.length){
     h.push('<div class="db-tb-caja"><table class="db-tb"><thead><tr>' +
            '<th>Artículo</th><th>Descripción</th><th>Cliente</th><th>Fecha</th>' +
            '<th class="db-num">Cant.</th><th class="db-num">Precio venta<br>(x unidad)</th>' +
@@ -418,10 +454,16 @@ function dbDibujar(d, estado, cuerpo){
 
   /* quien compra por debajo del costo */
   var pc = d.por_cliente || [];
-  if (pc.length){
+  if (hayAlgo){
     h.push('<div class="db-sec">Quién compra por debajo del costo' +
-           '<small>Los ' + pc.length + ' primeros. El porcentaje es sobre el total de la ' +
+           '<small>' + (pc.length ? 'Los ' + pc.length + ' primeros. ' : '') +
+           'El porcentaje es sobre el total de la ' +
            'pérdida medida en este período.</small></div>');
+    if (!pc.length)
+      h.push('<div class="db-pie"><b>Ninguno.</b> Ningún cliente compró por debajo del ' +
+             'costo dentro de estos filtros.</div>');
+  }
+  if (pc.length){
     h.push(dbGrafBarras(pc.slice(0,10), 'cliente', 'perdida', function(f){
       return f.cliente + ' — ' + dbPesos(f.perdida) + ' en ' + dbNum(f.ventas) + ' ventas';
     }, function(f){ return dbMillones(f.perdida); }, 'r', 155, 24));
@@ -443,13 +485,18 @@ function dbDibujar(d, estado, cuerpo){
 
   /* de donde sale el costo */
   var cal = d.calidad || [];
-  if (cal.length){
+  if (hayAlgo){
     h.push('<div class="db-sec">De dónde sale el costo' +
            '<small>Sólo se suman las filas que empiezan con A. Las B no entran: o usan un '  +
            'costo de más de 180 días —en pesos nominales eso infla el margen— o lo '  +
            'tomaron del precio de la última compra porque el PEPS se quedó sin capas, '+
            'y ese no es el costo de lo que salió. Las C no tienen ninguna compra '     +
            'con la que medirse.</small></div>');
+    if (!cal.length)
+      h.push('<div class="db-pie"><b>Ninguno.</b> Con estos filtros no quedó ningún ' +
+             'renglón costeado, así que no hay calidades que separar.</div>');
+  }
+  if (cal.length){
     h.push('<div class="db-tb-caja"><table class="db-tb"><thead><tr>' +
            '<th>Calidad del costo</th><th class="db-num">Renglones</th>' +
            '<th class="db-num">Venta</th><th class="db-num">% de la venta</th>' +

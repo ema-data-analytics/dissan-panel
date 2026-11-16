@@ -536,13 +536,28 @@ function mvDibujar(d, estado, cuerpo){
 
   /* 5. calidad del costo: lo confiable separado de lo que no lo es */
   var cal = d.calidad || [];
+  /* EL ROTULO VA SIEMPRE, CON DATOS O SIN ELLOS.                 16/11/2026
+     Hoy el usuario abrio Listas con ICU y las dos secciones de abajo no
+     estaban. No estaban rotas: estaban VACIAS con razon, y la pantalla
+     callaba. Una seccion que desaparece se lee como «falta algo», y una
+     pantalla que calla no se distingue de una rota: perdio la maniana
+     buscando que le habia roto yo.
+     Lo MISMO estaba vivo en ESTA pantalla, en estas tres secciones, desde
+     siempre, y no lo vio nadie. Lo encontro control/vacio.js al primer
+     intento: carga cada pantalla con datos y sin datos y compara los
+     rotulos que quedaron pintados. */
+  h.push('<div class="mv-sec">De dónde sale el costo' +
+         '<small>Sólo se suman las filas que empiezan con A. Las B no entran: o usan un '  +
+         'costo de más de 180 días —en pesos nominales eso infla el margen— o lo '  +
+         'tomaron del precio de la última compra porque el PEPS se quedó sin capas, '+
+         'y ese no es el costo de lo que salió. Las C no tienen ninguna compra '     +
+         'con la que medirse.</small></div>');
+  if (!cal.length){
+    h.push('<div class="mv-pie"><b>Ninguno.</b> Con estos filtros no quedó ningún renglón ' +
+           'costeado, así que no hay calidades que separar. Si esperabas ver renglones acá, ' +
+           'el filtro está dejando todo afuera.</div>');
+  }
   if (cal.length){
-    h.push('<div class="mv-sec">De dónde sale el costo' +
-           '<small>Sólo se suman las filas que empiezan con A. Las B no entran: o usan un '  +
-           'costo de más de 180 días —en pesos nominales eso infla el margen— o lo '  +
-           'tomaron del precio de la última compra porque el PEPS se quedó sin capas, '+
-           'y ese no es el costo de lo que salió. Las C no tienen ninguna compra '     +
-           'con la que medirse.</small></div>');
     h.push('<div class="mv-tb-caja" style="max-height:none"><table class="mv-tb"><thead><tr>' +
            '<th>Calidad del costo</th><th class="mv-num">Renglones</th>' +
            '<th class="mv-num">Venta</th><th class="mv-num">% de la venta</th>' +
@@ -562,10 +577,18 @@ function mvDibujar(d, estado, cuerpo){
 
   /* 6. grafico chico: margen mes a mes, SOBRE LO FILTRADO */
   var pm = (d.por_mes || []).filter(function(m){ return Number(m.n || 0) > 0; });
+  h.push('<div class="mv-sec">Margen mes a mes' +
+         '<small>Sobre lo que entra en estos filtros, no sobre todo. ' +
+         'Porcentaje del facturado de cada mes.</small></div>');
+  if (pm.length <= 1){
+    /* un solo mes no es una serie: se dice, no se esconde el rotulo. */
+    h.push('<div class="mv-pie"><b>No hay serie que dibujar.</b> ' +
+           (pm.length === 1
+             ? 'Los filtros dejan un solo mes con renglones (' + mvEsc(pm[0].mes) + '), ' +
+               'así que no hay contra qué compararlo. Ampliá el período para ver la curva.'
+             : 'Ningún mes quedó con renglones dentro de estos filtros.') + '</div>');
+  }
   if (pm.length > 1){
-    h.push('<div class="mv-sec">Margen mes a mes' +
-           '<small>Sobre lo que entra en estos filtros, no sobre todo. ' +
-           'Porcentaje del facturado de cada mes.</small></div>');
     h.push(mvGrafBarras(pm, 'mes', 'margen', function(f){
       return f.mes + ' — margen ' + mvDec(f.margen) + '% en ' + mvNum(f.n) + ' renglones';
     }, function(f){ return mvDec(f.margen) + '%'; }, 'v', 58));
@@ -576,12 +599,18 @@ function mvDibujar(d, estado, cuerpo){
 
   /* 8. cuarentena: para ir a corregir */
   var cu = d.cuarentena || [];
+  h.push('<div class="mv-sec">Para corregir a mano' +
+         '<small>Costo cuatro veces el precio de venta o más, o menor al 5% del precio. ' +
+         'Nadie vende sistemáticamente a un cuarto de lo que pagó: es error de carga, de ' +
+         'unidad de envase, o el código se usa para facturar otra cosa. NO están sumados ' +
+         'arriba.</small></div>');
+  if (!cu.length){
+    /* que no haya nada apartado es una BUENA noticia y hay que decirla: si la
+       seccion desaparece, el que mira no sabe si no hay o si no se midio. */
+    h.push('<div class="mv-pie"><b>Ninguno.</b> Con estos filtros ningún renglón quedó ' +
+           'apartado por costo absurdo. Todo lo medido entró en los números de arriba.</div>');
+  }
   if (cu.length){
-    h.push('<div class="mv-sec">Para corregir a mano' +
-           '<small>Costo cuatro veces el precio de venta o más, o menor al 5% del precio. ' +
-           'Nadie vende sistemáticamente a un cuarto de lo que pagó: es error de carga, de ' +
-           'unidad de envase, o el código se usa para facturar otra cosa. NO están sumados ' +
-           'arriba.</small></div>');
     h.push('<div class="mv-tb-caja"><table class="mv-tb"><thead><tr>' +
            '<th>Artículo</th><th>Detalle</th><th>Cliente</th><th>Fecha</th>' +
            '<th class="mv-num">Vendió a<br>(x unidad)</th>' +

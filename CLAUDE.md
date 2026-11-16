@@ -169,8 +169,16 @@ usuario, no de mí:
      pero sí la cadena entera de datos: la Edge Function y la función de
      la base, llamadas de verdad, con el resultado a la vista.
 
-Hoy, por defecto, **no tengo ninguna de las dos**: el contenedor no llega a
-`github.io` ni a `supabase.co`, y el Chrome no figura conectado.
+**ESTO ESTABA DESACTUALIZADO Y ME LO CREÍ DOS SEMANAS (corregido el 16/11).**
+Decía que el contenedor no llega a `github.io` ni a `supabase.co`. **Medido el
+16/11: llega a las dos.** La base contestó **HTTP 401 en 0,55 s** y el panel
+publicado **HTTP 200 en 0,57 s**, y con la clave publishable se pueden hacer
+llamadas de verdad. Construí toda la imitación de la base para rodear un
+bloqueo **que hoy no existe**, y seguí citando este renglón sin volver a
+medirlo: *la misma falta de siempre, afirmar desde la memoria*. **Antes de
+decir que no llego a algo, se mide — también cuando lo dice este archivo.**
+Lo que puede faltar es el Chrome del usuario (lo elige él) y el puente a su
+computadora; eso sí se mide en cada corrida con `control/acceso.js`.
 
 **Entonces el primer renglón de la respuesta es uno de estos dos:**
 
@@ -1565,3 +1573,100 @@ reemplazos no encuentra su ancla**.
 control sobre las 17 pantallas con su arnes `promete_excel` — pero **ese no
 puede ver la grilla de Listas**, porque para que exista hay que soltar un
 archivo: por eso el control vive tambien en la puerta 17.
+
+## 16/11/2026 (tarde) — LA BASE ENTERA ESTABA ABIERTA, Y LO ENCONTRÓ DEJAR DE MIRARME A MÍ MISMO
+
+**PROBÉ LA FUNCIÓN Y DIJE QUE PROBÉ LA PANTALLA.** A la mañana el usuario abrió
+Listas con ICU y las dos secciones de abajo no estaban. Mi prueba de la noche
+anterior había sido llamar a `api_listas_armar_v2` por consola con COLOPLAST y
+mirar los bloques que yo había tocado. **Nunca abrí la pantalla con ICU ni la
+miré entera.** La regla que queda: **no se escribe la palabra «probado» si en el
+mismo renglón no se puede decir qué pantalla abrí, qué apreté y qué leí.** Si no
+están las tres, es «no probado», aunque haya veinte mediciones por abajo.
+
+**USO LA MISMA PALABRA PARA TRES COSAS DISTINTAS, Y LA AMBIGÜEDAD SIEMPRE ME
+FAVORECIÓ A MÍ:** consulté la base · cargué la pantalla contra la imitación ·
+abrí la pantalla publicada de verdad. Las tres me salían «probado». De las tres,
+**sólo la última es probar.**
+
+**LA BASE ENTERA ESTABA ABIERTA A CUALQUIERA QUE ABRIERA EL PANEL.** Medido
+llamando desde afuera con la clave *publishable* —que vive en el código del
+panel, que es público— y **sin sesión**: `gva12` (facturas de venta), `gva14`
+(clientes con domicilio y CUIT), `sta11` y `cpa04` contestaron **HTTP 200 con
+datos**; `api_ventas_fact_total` devolvió **$21.458.327.721,44**;
+`api_cartera_control_v2` **$1.494.940.375,68**; `api_ventas_fact_por_cliente`
+**21.907 bytes con los nombres**; `api_tesoreria_cuentas_v2` 26.085 bytes de
+cuentas contables; `api_margen_tablero_v3` el Tablero entero. En el catálogo:
+**667 de 678 tablas leíbles por `anon`, 653 sin RLS**, y el ACL de `gva12` decía
+`anon=arwdDxtm`, o sea **también INSERT, UPDATE, DELETE y TRUNCATE**. Y **170
+funciones** de `public` abiertas.
+
+**CERRARLO ES SEGURO PORQUE `authenticated` TIENE LO SUYO, NO LO HEREDA.** El
+ACL de cada tabla trae los dos por separado, así que sacarle todo a `anon` no le
+toca una coma al logueado. Medido antes: de las 41 funciones que llama el panel,
+**ninguna se llama antes del login**. Resultado: anon **667 → 0** tablas y
+**170 → 0** funciones; `authenticated` **672 y 241, intacto**; las nueve
+llamadas de afuera pasaron a **401** y el panel del usuario siguió andando (las
+cuatro secciones de Listas, el menú, el perfil y los 14 proveedores). El estado
+anterior completo quedó en **`ema.permiso_antes_del_16_11`** (678 tablas y 281
+funciones con su ACL exacto), así que se puede volver atrás.
+
+**UN ARREGLO DE A UNO DONDE LA FÁBRICA REPONE DE A TODOS NO ES UN ARREGLO: ES
+UNA RECAÍDA PROGRAMADA.** Esto estaba anotado el 10/11, el 12/11 y el 14/11 para
+la función que acababa de crear, y las tres veces miré el ladrillo y nunca la
+pared. Por eso ahora van también los **`ALTER DEFAULT PRIVILEGES`** (para
+`public` y para el rol `postgres`): sin eso, la próxima tabla que yo cree nace
+abierta otra vez y todo esto se deshace sin aviso.
+
+**MIS CONTROLES ENTRABAN SIN SESIÓN, Y ESO NO ERA UNA COMODIDAD: ERA EL MISMO
+AGUJERO.** Al cerrarlo se rompieron seis (`estado`, `cifra`, `alcance`,
+`rotulo`, `firmas`, `anotar`, y la llamada a la base de `edge`). Ahora entran
+por **`control/sesion.js`** con el usuario **CLAUDEBASE** (`rol pruebas`, sólo
+lectura, autorizado por el usuario por nombre), con contraseña generada al azar
+que vive **fuera del repositorio** (`/home/claude/.claudebase.pw`) y que **nunca
+pasó por el chat**: se creó llamando a `/auth/v1/signup` desde un script que la
+leyó del archivo. **Un control que entra con más permiso que el usuario no está
+probando lo que ve el usuario.**
+**Lo que NO se tocó a propósito:** las pruebas de humo de `control/edge.js`
+siguen golpeando con la clave publishable sola, porque lo único que miden es qué
+pasa cuando entra un anónimo. Medido después del cierre: **las 15 rechazan.**
+**Y `node` no usa el proxy solo:** hay que relanzarlo con `NODE_USE_ENV_PROXY=1`,
+como ya hacía `control/acceso.js`. Sin eso, `fetch` da `fetch failed` y parece
+que la base no llega.
+
+**PUERTA 18 — `la pantalla vacía` (`control/vacio.js`).** Carga cada pantalla
+**dos veces**: con las respuestas llenas y con `window.__CONTROL_VACIO`, que
+sirve las MISMAS respuestas con todas sus listas **anidadas** vacías. Después
+compara los rótulos que quedaron pintados dentro de `#contenido`. **Al primer
+intento encontró el defecto de ICU vivo en otras tres pantallas**: Márgenes
+(4 secciones → 1), Tablero (5 → 0) y Ventas Facturadas (7 → 5).
+- **Se comparan las CLASES, no los textos**: el texto de un rótulo lleva datos
+  adentro y cambia legítimamente entre las dos corridas.
+- **Sólo se vacían las listas ANIDADAS.** La respuesta de módulos ES un arreglo
+  de primer nivel y vaciarla apaga el menú: no es el caso buscado y haría gritar
+  a las 17 pantallas a la vez.
+
+**EL TABLERO NO ERA UN DEFECTO, Y MI PRIMERA VERSIÓN LO ACUSÓ IGUAL.** Cuando no
+hay nada saca sus cinco secciones y escribe «Ningún renglón entra en esos
+filtros». Eso está bien. **El defecto es que se vaya UNA mientras las otras se
+quedan**, porque ahí el que mira no puede distinguir «está vacía» de «se rompió».
+La regla que lo separa es mecánica y no lleva lista de nombres: **¿apareció, sin
+datos, alguna clase con texto legible que no estaba con datos?** Si la pantalla
+puso algo en su lugar, declaró. Publicarlo como alarma habría sido acusar de
+agujero a algo que no lo es **por quinta vez en cuatro días, y en cada corrida**.
+
+**Y EL ARNÉS ENCONTRÓ QUE MI PROPIA PUERTA ESTABA CIEGA.** El primer defecto que
+le planté vivía en una sección cuyos renglones salen de una respuesta que es un
+**arreglo entero**, y esos no se vacían: la sección faltaba en las DOS corridas,
+no había diferencia que ver, y la puerta callaba con razón. **Un arnés que
+planta el defecto donde la puerta no puede mirar no prueba que la puerta
+funcione: prueba que el arnés está mal puesto.** Replantado en la sección
+correcta, la puerta lo agarró. Y la puerta **declara en cada corrida** las 12
+pantallas que no ejercitó (no pintan nada hasta apretar Calcular) y el punto
+ciego de los arreglos de primer nivel.
+
+**LA REGLA, PARA LAS PANTALLAS Y PARA LOS CONTROLES: UNA SECCIÓN QUE DESAPARECE
+SE LEE COMO «FALTA ALGO».** Si no hay datos, el rótulo va igual y abajo dice
+**«Ninguno»** con el motivo. Que no haya nada apartado en cuarentena es una
+**buena noticia** y hay que escribirla; si la sección se esfuma, el que mira no
+sabe si no hay o si no se midió.

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+const SESION = require('./sesion');
 /* =====================================================================
    EL ESTADO LLEGA SOLO AL ARRANCAR                         02/11/2026
    =====================================================================
@@ -53,7 +54,7 @@ async function main(){
   try {
     const r = await fetch(BASE + '/rest/v1/rpc/api_estado_del_sistema', {
       method: 'POST',
-      headers: { apikey: KEY, 'Content-Type': 'application/json' },
+      headers: await SESION.cabeceras(),
       body: '{}'
     });
     if (!r.ok) throw new Error('HTTP ' + r.status + ': ' + (await r.text()).slice(0, 160));

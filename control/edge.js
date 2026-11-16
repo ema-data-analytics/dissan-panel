@@ -94,10 +94,18 @@ function falla(slug, clase, que){ fallas.push({ slug, clase, que }); }
 
 function sha(f){ return cry.createHash('sha256').update(fs.readFileSync(f)).digest('hex'); }
 
+/* ESTA llamada va CON SESION; las pruebas de humo de mas abajo NO.   16/11/2026
+   Son dos cosas distintas y hay que no mezclarlas: esto le pregunta a la base
+   cual es el veredicto de cada funcion -dato del sistema, cerrado al anonimo
+   desde hoy-, mientras que las pruebas de humo golpean la Edge Function CON LA
+   CLAVE PUBLISHABLE SOLA, a proposito, porque lo que miden es justamente que
+   pasa cuando entra un anonimo. Si a esas les pusiera la sesion dejarian de
+   medir lo unico que miden. */
+const SESION = require('./sesion');
 async function veredictos(){
   const r = await fetch(BASE + '/rest/v1/rpc/api_control_edge_v2', {
     method: 'POST',
-    headers: { apikey: KEY, 'Content-Type': 'application/json' },
+    headers: await SESION.cabeceras(),
     body: '{}'
   });
   if (!r.ok) throw new Error('la base contesto HTTP ' + r.status + ': ' + (await r.text()).slice(0,200));

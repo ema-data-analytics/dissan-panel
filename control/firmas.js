@@ -43,6 +43,7 @@ if (!process.env.NODE_USE_ENV_PROXY && process.env.HTTPS_PROXY) {
 require('./enchufar').enchufar();
 
 const http = require('http');
+const SESION = require('./sesion');
 const fs   = require('fs');
 const path = require('path');
 const { chromium } = require('playwright');
@@ -131,7 +132,7 @@ async function main(){
       try {
         r = await fetch(BASE + '/rest/v1/rpc/' + fn, {
           method:'POST',
-          headers:{ apikey: KEY, 'Content-Type':'application/json' },
+          headers: await SESION.cabeceras(),
           body: JSON.stringify(cuerpo) });
         txt = await r.text();
       } catch (e){
@@ -161,7 +162,7 @@ async function main(){
      let detecto = false;
      try {
        const r = await fetch(BASE + '/rest/v1/rpc/api_ventas_fact_informe_json', {
-         method:'POST', headers:{ apikey: KEY, 'Content-Type':'application/json' },
+         method:'POST', headers: await SESION.cabeceras(),
          body: JSON.stringify(rota) });
        const t = await r.text();
        detecto = (r.status === 404 && /PGRST202|Could not find the function/.test(t));

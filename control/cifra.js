@@ -1,3 +1,4 @@
+const SESION = require('./sesion');
 /* =====================================================================
    TODA CIFRA PUBLICADA SE VUELVE A CORRER                   01/11/2026
    =====================================================================
@@ -51,7 +52,7 @@ const KEY  = 'sb_publishable_7CfYchCqBdDnXJ63IblnTw_cjFCjvUl';
 async function rpc(fn, body){
   const r = await fetch(BASE + '/rest/v1/rpc/' + fn, {
     method: 'POST',
-    headers: { apikey: KEY, 'Content-Type': 'application/json' },
+    headers: await SESION.cabeceras(),
     body: JSON.stringify(body || {})
   });
   if (!r.ok) throw new Error(fn + ' contesto HTTP ' + r.status + ': '

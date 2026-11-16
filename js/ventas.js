@@ -545,10 +545,24 @@ function vtDibujar(res, det, msTotal, msPartes){
 
   /* ---- mes a mes ---- */
   var pm = res.por_mes || [];
+  /* EL ROTULO VA SIEMPRE, CON DATOS O SIN ELLOS.                 16/11/2026
+     Hoy el usuario abrio Listas con ICU y dos secciones no estaban: vacias
+     con razon, y la pantalla callaba. Perdio la maniana buscando que le habia
+     roto yo. Una seccion que desaparece se lee como «falta algo».
+     Lo encontro control/vacio.js, que carga la pantalla con datos y sin
+     datos y compara los rotulos que quedaron pintados. */
+  h.push('<div class="db-sec">Mes a mes<small>' +
+         (pm.length ? pm.length + ' meses con facturación. ' +
+                      'Pasá el puntero por una columna para ver el mes.'
+                    : 'Sobre lo que entra en estos filtros.') + '</small></div>');
   if (pm.length > 1){
-    h.push('<div class="db-sec">Mes a mes<small>' + pm.length +
-           ' meses con facturación. Pasá el puntero por una columna para ver el mes.</small></div>');
     h.push(vtGrafColumnas(pm));
+  } else {
+    h.push('<div class="db-pie"><b>No hay serie que dibujar.</b> ' +
+           (pm.length === 1
+             ? 'Los filtros dejan un solo mes con facturación, así que no hay contra qué ' +
+               'compararlo. Ampliá el período para ver la curva.'
+             : 'Ningún mes quedó con facturación dentro de estos filtros.') + '</div>');
   }
 
   /* ---- mes a mes con costo, margen y MarkUp ----
@@ -702,13 +716,20 @@ function vtDibujar(res, det, msTotal, msPartes){
 
   /* ---- provincia fiscal, el otro corte ---- */
   var pf = res.por_provincia_fiscal || [];
+  h.push('<div class="db-sec">Por provincia fiscal del cliente<small>Otro corte, y es ' +
+         '<b>otra cosa</b>: el domicilio que tiene el cliente cargado en Tango. SWISS MEDICAL ' +
+         'figura en Capital Federal y SANCOR en Santa Fe, con código MZ. No contradice al ' +
+         'cuadro de arriba: mide algo distinto. Difiere del prefijo en ' +
+         vtNum(av.clientes_prefijo_contra_fiscal_mal) + ' clientes por ' +
+         vtExacto(av.plata_prefijo_contra_fiscal_mal) + '.</small></div>');
+  if (pf.length <= 1){
+    h.push('<div class="db-pie"><b>' + (pf.length ? 'Una sola provincia fiscal.' : 'Ninguna.') +
+           '</b> ' + (pf.length
+             ? 'Todos los clientes filtrados tienen el mismo domicilio fiscal, así que no ' +
+               'hay corte que mostrar.'
+             : 'Ningún cliente quedó dentro de estos filtros.') + '</div>');
+  }
   if (pf.length > 1){
-    h.push('<div class="db-sec">Por provincia fiscal del cliente<small>Otro corte, y es ' +
-           '<b>otra cosa</b>: el domicilio que tiene el cliente cargado en Tango. SWISS MEDICAL ' +
-           'figura en Capital Federal y SANCOR en Santa Fe, con código MZ. No contradice al ' +
-           'cuadro de arriba: mide algo distinto. Difiere del prefijo en ' +
-           vtNum(av.clientes_prefijo_contra_fiscal_mal) + ' clientes por ' +
-           vtExacto(av.plata_prefijo_contra_fiscal_mal) + '.</small></div>');
     h.push('<div class="db-tb-caja"><table class="db-tb"><thead><tr>' +
            '<th>Provincia fiscal</th><th class="db-num">Facturado</th>' +
            '<th class="db-num">Participación</th><th class="db-num">Clientes</th>' +

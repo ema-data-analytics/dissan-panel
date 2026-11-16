@@ -38,6 +38,7 @@ if (!process.env.NODE_USE_ENV_PROXY && process.env.HTTPS_PROXY) {
 }
 
 const { execSync } = require('child_process');
+const SESION = require('./sesion');
 const path = require('path');
 
 const BASE = 'https://hwgfmpvszdohnzqtwscw.supabase.co';
@@ -68,7 +69,7 @@ function git(cmd){
   try {
     const r = await fetch(BASE + '/rest/v1/rpc/api_control_anotar', {
       method: 'POST',
-      headers: { apikey: KEY, 'Content-Type': 'application/json' },
+      headers: await SESION.cabeceras(),
       body: JSON.stringify({
         p_control:   control,
         p_ok:        ok,

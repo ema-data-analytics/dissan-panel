@@ -380,6 +380,54 @@
     };
   })();
 
+  /* LAS CLAVES, MEDIDAS Y NO ESCRITAS A MANO.                    16/11/2026
+     Para que un control pueda decir "probe estas N respuestas" sin que yo
+     tipee la lista -la falta del 14/10 con las calidades, la del 14/11 con
+     las tres listas de clases-. */
+  window.__RPC_CLAVES = Object.keys(RPC);
+
+  /* ================= EL CASO VACIO =================            16/11/2026
+     HOY el usuario abrio Listas con ICU y las dos secciones de abajo NO
+     ESTABAN. El armado traia `por_caja` y `avisos` vacios y la pantalla, en
+     vez de decir "Ninguno", no pintaba nada: una seccion que desaparece se
+     lee como "falta algo", y una pantalla que calla no se distingue de una
+     rota.
+
+     NINGUN CONTROL PUDO VERLO NUNCA, y esa es la parte grave: este archivo
+     contestaba SIEMPRE el caso lleno, porque las respuestas las escribi yo
+     y escribi la que me imaginaba. Es textual el golpe del 10/11 con el
+     Tablero -nueve horas caido con doce controles alrededor- y el del 14/11
+     con la fila de totales. Un control que nunca vio el caso que importa no
+     esta midiendo: esta acompaniando.
+
+     Con `window.__CONTROL_VACIO` puesto ANTES de que cargue la pantalla, se
+     sirven las MISMAS respuestas con todas sus listas ANIDADAS vacias.
+
+     POR QUE SOLO LAS ANIDADAS, y esto se penso y no salio solo: la respuesta
+     de modulos ES un arreglo de primer nivel, y vaciarla apaga el menu
+     entero. Eso no es el caso que se busca -no puede pasar: sin modulos no
+     se entra a la pantalla- y haria gritar a las 17 pantallas a la vez. Una
+     puerta que grita siempre se apaga.
+     Asi no queda NINGUNA lista de nombres escrita por mi: lo que se vacia
+     sale de la FORMA de la respuesta, no de mi criterio. */
+  if (window.__CONTROL_VACIO){
+    var vaciarAnidadas = function(v){
+      if (Array.isArray(v)) return v.map(function(x){ return vaciarAnidadas(x); });
+      if (v && typeof v === 'object'){
+        var o = {};
+        for (var k in v) if (Object.prototype.hasOwnProperty.call(v, k)){
+          o[k] = Array.isArray(v[k]) ? [] : vaciarAnidadas(v[k]);
+        }
+        return o;
+      }
+      return v;
+    };
+    for (var cl in RPC) if (Object.prototype.hasOwnProperty.call(RPC, cl)){
+      RPC[cl] = vaciarAnidadas(RPC[cl]);
+    }
+    window.__RPC_VACIADAS = Object.keys(RPC).length;
+  }
+
   window.supabase = {
     createClient: function(){
       return {

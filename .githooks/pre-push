@@ -139,6 +139,18 @@ correr "el dictado"         control/voz.js        node control/voz.js
 # con la geometria MEDIDA de la lista de ICU -el archivo del proveedor NO va
 # al repositorio- y le pasa el lpLeerPdf de verdad.
 correr "la lectura de listas" control/listas.js   node control/listas.js
+# PUERTA 18, 16/11/2026. LA PANTALLA VACIA. Hoy el usuario abrio Listas con ICU
+# y las dos secciones de abajo NO ESTABAN: vacias con razon, y la pantalla
+# callaba. Perdio la maniana buscando que le habia roto yo. Una seccion que
+# desaparece se lee como "falta algo" y una pantalla que calla no se distingue
+# de una rota. NINGUNA de las 17 puertas podia verlo, porque el supabase de
+# juguete contestaba SIEMPRE el caso lleno: las respuestas las escribi yo y
+# escribi la que me imaginaba. Es el golpe del 10/11 con el Tablero -nueve
+# horas caido con doce puertas alrededor- y el del 14/11 con la fila de
+# totales. Esta puerta carga cada pantalla DOS VECES, con datos y sin datos, y
+# exige que ninguna seccion desaparezca en silencio. Al primer intento encontro
+# el mismo defecto vivo en Margenes, Tablero y Ventas Facturadas.
+correr "la pantalla vacia"  control/vacio.js      node control/vacio.js
 
 echo ""
 if [ -z "$FALLARON" ]; then

@@ -41,6 +41,7 @@ if (!process.env.NODE_USE_ENV_PROXY && process.env.HTTPS_PROXY) {
 require('./enchufar').enchufar();   /* la puerta se enchufa sola */
 
 const fs    = require('fs');
+const SESION = require('./sesion');
 const path  = require('path');
 const http  = require('http');
 const { chromium } = require('playwright');
@@ -337,7 +338,7 @@ async function main(){
   try {
     const r = await fetch(BASE + '/rest/v1/rpc/api_control_rotulos', {
       method: 'POST',
-      headers: { apikey: KEY, 'Content-Type': 'application/json' },
+      headers: await SESION.cabeceras(),
       body: JSON.stringify({ p_claims: claims })
     });
     if (!r.ok) throw new Error('HTTP ' + r.status + ': ' + (await r.text()).slice(0,200));
