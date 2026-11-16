@@ -39,8 +39,32 @@ function copiar(destino){
   }
   fs.copyFileSync(path.join(RAIZ, 'js', 'core.js'),
                   path.join(destino, 'js', 'core.js'));
-  for (const f of ['alcance.js', 'enchufar.js'])
-    fs.copyFileSync(path.join(__dirname, f), path.join(destino, 'control', f));
+  /* LOS ARCHIVOS DEL CONTROL NO SE NOMBRAN A MANO: SE LEEN DE SU CODIGO.
+                                                                  16/11/2026
+     Hasta hoy esto decia `['alcance.js', 'enchufar.js']`, una lista escrita a
+     mano. Hoy `alcance.js` paso a necesitar `sesion.js` —porque los controles
+     dejaron de entrar a la base sin sesion, que era parte del agujero que se
+     cerro— y esta copia se quedo sin ese archivo: los tres senuelos cortaron,
+     si, pero por MODULE_NOT_FOUND en vez de por el defecto plantado. O sea
+     que el arnes cantaba «corto» sin haber probado nada.
+     ESTO ES LA MISMA FALTA DEL 14/10 (la lista fija de calidades, que borro
+     la mitad de lo facturado) Y DEL 14/11 (tres listas de clases que
+     mordieron el mismo dia). Cuando una lista escrita a mano muerde, no se le
+     agrega un nombre: se la reemplaza por la convencion. Aca la convencion es
+     el propio `require('./x')` del codigo, seguido hasta el fondo. */
+  const yaEsta = new Set();
+  (function seguirRequires(archivo){
+    if (yaEsta.has(archivo)) return;
+    yaEsta.add(archivo);
+    const origen = path.join(__dirname, archivo);
+    if (!fs.existsSync(origen)) return;
+    fs.copyFileSync(origen, path.join(destino, 'control', archivo));
+    const texto = fs.readFileSync(origen, 'utf8');
+    const re = /require\(\s*'\.\/([A-Za-z0-9_.-]+)'\s*\)/g;
+    let m;
+    while ((m = re.exec(texto)) !== null)
+      seguirRequires(m[1].endsWith('.js') ? m[1] : m[1] + '.js');
+  })('alcance.js');
   return destino;
 }
 
