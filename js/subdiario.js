@@ -151,7 +151,13 @@ var SD_DEF = {
       { k:'control_neto', r:'CONTROL NETO',      t:'deriva', rojo:false,
         card:'renglones donde la <b>base que se muestra</b> (netos + exento) no da la base ' +
              'propia de Tango · es el redondeo del IVA en los comprobantes en dólares, ' +
-             'multiplicado por la cotización' }
+             'multiplicado por la cotización',
+        porque:'NO es plata que falte. El neto no sale de Tango: se DERIVA del IVA ' +
+               '(IVA dividido la alicuota), que es como lo arma el contador. Esa division ' +
+               'nunca vuelve a dar exactamente el neto que Tango tiene guardado, asi que ' +
+               'quedan centavos. Crece en los comprobantes en moneda extranjera (el ' +
+               'redondeo del IVA multiplicado por la cotizacion) y en los que tienen una ' +
+               'parte del neto NO gravada, como las facturas de servicios con IVA al 27%.' }
     ],
     /* EL DETALLE POR TIPO DE GASTO — pedido por DISSAN el 14/11/2026.
        Es la pestania "detalle de comp. por tipo de gastos" del archivo que
@@ -232,9 +238,16 @@ var SD_DEF = {
       { k:'control_importe',r:'CONTROL IMPORTE', t:'deriva', rojo:false,
         card:'renglones donde el total no cierra contra el <b>total propio de Tango</b> · ' +
              'son los comprobantes <b>B</b> con total redondo, y son los mismos que marca ' +
-             'la columna del contador' },
+             'la columna del contador',
+        porque:'NO es plata que falte. En el comprobante B el precio al consumidor final se ' +
+               'fija REDONDO y Tango despeja el neto y el IVA hacia atras, asi que las partes ' +
+               'no vuelven a dar ese redondo. El contador marca exactamente los mismos ' +
+               'renglones en su planilla.' },
       { k:'control_neto',   r:'CONTROL NETO',    t:'deriva', rojo:false,
-        card:'renglones con deriva del neto <b>derivado del IVA</b> contra el gravado de Tango' }
+        card:'renglones con deriva del neto <b>derivado del IVA</b> contra el gravado de Tango',
+        porque:'NO es plata que falte. El neto se DERIVA del IVA (IVA dividido la alicuota), ' +
+               'que es como lo arma el contador, y esa division deja centavos contra el ' +
+               'gravado que Tango tiene guardado.' }
     ]
   }
 };
@@ -374,6 +387,15 @@ function sdBloque(def, filas, ms, mes){
             de plata, entra sola a la suma.                          16/11 */
          + (def.cols[k].t === 'num' ? ' data-plata' : '')
          + (def.cols[k].total ? ' data-total' : '')
+         /* `data-deriva`: la pantalla DECLARA que ese control no mide un
+            defecto sino una deriva conocida, y POR QUE. Sin esto, el Excel
+            metia los tres controles bajo el rotulo «Renglones que NO
+            cierran», y para 224 de 231 renglones eso era FALSO: cierran, con
+            dos centavos de redondeo. Mezclar una alarma real con una deriva
+            explicada es como se apaga una alarma.               17/11/2026 */
+         + ((def.cols[k].t === 'ctrl' || def.cols[k].t === 'deriva') && def.cols[k].rojo === false
+              ? ' data-deriva="' + esc(def.cols[k].porque || 'deriva conocida, no es plata que falte') + '"'
+              : '')
          + '>' + esc(def.cols[k].r) + '</th>');
   h.push('</tr></thead><tbody>');
   for (var r = 0; r < filas.length; r++){

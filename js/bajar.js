@@ -122,7 +122,14 @@ function bajarLeerTabla(tabla){
        una hoja de control sin fecha ni numero de comprobante no sirve para
        ir a buscar el renglon en la otra hoja. */
     if (ths[i].hasAttribute('data-clave')) { iClave.push(i); encClave.push(tx); }
-    if (ths[i].hasAttribute('data-no-baja')) { saltar[i] = true; iCtrl.push(i); encCtrl.push(tx); continue; }
+    if (ths[i].hasAttribute('data-no-baja')) {
+      saltar[i] = true; iCtrl.push(i);
+      /* El motivo viaja pegado al rotulo: si la pantalla declaro que ese
+         control es una DERIVA conocida y no un defecto, el Excel lo tiene
+         que decir en vez de meterlo bajo «Renglones que NO cierran». */
+      encCtrl.push({ r: tx, deriva: ths[i].getAttribute('data-deriva') || null });
+      continue;
+    }
     enc.push(tx);
   }
   var filas = [], ctrl = [], claves = [], trs = tabla.querySelectorAll('tbody tr');
@@ -451,12 +458,70 @@ function bajarAExcel(tabla, boton){
           }
         }
       }
-      var resumen = d.encCtrl.map(function(e, k){
-        return e + ': ' + cuenta[k] + (cuenta[k] === 1 ? ' rengl\u00f3n' : ' renglones') +
-               ', ' + bajarPlataTxt(sumas[k]) + ' en valor absoluto';
+      /* CUANTOS DE CADA CONTROL SON CENTAVOS. Lo pregunto porque el resumen
+         \u00ab231 renglones, $495,20\u00bb asusta y no dice nada: medido sobre octubre
+         2026, 224 de esos 231 son de CINCO CENTAVOS o menos y la mediana es
+         DOS CENTAVOS. Sin ese dato, una deriva de redondeo se lee como plata
+         que falta.                                              17/11/2026 */
+      var centavos = d.encCtrl.map(function(){ return 0; });
+      var peorCol  = d.encCtrl.map(function(){ return 0; });
+      for (var r3 = 0; r3 < d.ctrl.length; r3++){
+        for (var c3 = 0; c3 < d.encCtrl.length; c3++){
+          var ce3 = d.ctrl[r3][c3];
+          if (!ce3 || ce3.t !== 'num') continue;
+          var a3 = Math.abs(ce3.v);
+          if (a3 < 0.005) continue;
+          if (a3 > peorCol[c3]) peorCol[c3] = a3;
+          if (a3 <= 1) centavos[c3]++;
+        }
+      }
+
+      /* EL RESUMEN SEPARA LO QUE ES UN DEFECTO DE LO QUE ES UNA DERIVA.
+         Hasta hoy los metia a los tres bajo el mismo rotulo: \u00abRenglones que
+         NO cierran\u00bb. Para 224 de 231 eso era FALSO \u2014cierran, con dos centavos
+         de redondeo\u2014 y mezclar una alarma real con una deriva explicada es
+         como se apaga una alarma. Quien dice cual es cual es LA PANTALLA, con
+         `data-deriva`: aca no hay ninguna lista de nombres. */
+      var resumen = [];
+      d.encCtrl.forEach(function(e, k){
+        var nom = e.r || e;
+        if (!e.deriva){
+          /* UN CONTROL DE DEFECTO QUE GRITA POR CENTAVOS SE APAGA IGUAL QUE
+             UNO DE DERIVA. La primera version de esta hoja decia \u00abESTO SI ES
+             UN DEFECTO\u00bb sobre CINCO CENTAVOS repartidos en 5 renglones de
+             octubre 2024: acabo de hacer, del otro lado, lo mismo que estaba
+             arreglando. Lo encontre abriendo la hoja, no mirando el codigo.
+             El corte es el MISMO que usa la puerta `el archivo bajado` \u2014un
+             peso\u2014 asi que no hay un numero nuevo inventado aca.   17/11/2026 */
+          if (cuenta[k] === 0){
+            resumen.push('\u2713 ' + nom + ': CIERRA EN LOS ' + d.filas.length +
+              ' RENGLONES. Si alguna vez no diera cero, seria plata que falta.');
+          } else if (peorCol[k] <= 1){
+            resumen.push('\u2713 ' + nom + ': cierra en los ' + d.filas.length +
+              ' renglones salvo ' + cuenta[k] + ' de CENTAVOS (el peor, ' +
+              bajarPlataTxt(peorCol[k]) + '; ' + bajarPlataTxt(sumas[k]) +
+              ' entre todos). Es el redondeo de Tango, no plata que falte.');
+          } else {
+            resumen.push('\u2716 ' + nom + ': ' + cuenta[k] +
+              (cuenta[k] === 1 ? ' rengl\u00f3n' : ' renglones') + ', ' +
+              bajarPlataTxt(sumas[k]) + ' en valor absoluto, el peor ' +
+              bajarPlataTxt(peorCol[k]) + '. ESTO SI ES UN DEFECTO: las partes ' +
+              'del renglon no dan su total. Mirar los que pasan de un peso.');
+          }
+          return;
+        }
+        if (cuenta[k] === 0){
+          resumen.push('\u2713 ' + nom + ': sin deriva en esta corrida.');
+          return;
+        }
+        resumen.push('\u2022 ' + nom + ' (DERIVA DECLARADA, no es un defecto): ' +
+          cuenta[k] + (cuenta[k] === 1 ? ' rengl\u00f3n' : ' renglones') + ', ' +
+          bajarPlataTxt(sumas[k]) + ' en valor absoluto, de los cuales ' + centavos[k] +
+          ' son de UN PESO O MENOS y el peor es ' + bajarPlataTxt(peorCol[k]) + '. ' +
+          e.deriva);
       });
 
-      var encC = d.encClave.concat(d.encCtrl);
+      var encC = d.encClave.concat(d.encCtrl.map(function(e){ return e.r || e; }));
       var filC = idx.map(function(i3){
         return d.claves[i3].concat(d.ctrl[i3]).map(function(cel){
           return (cel && cel.t !== 'vacio') ? cel : { v:null, t:'vacio' };
@@ -471,7 +536,9 @@ function bajarAExcel(tabla, boton){
       libro.push({
         nombre: 'Controles',
         titulo: ['DISSAN \u00b7 ' + modulo + ' \u00b7 CONTROLES', titulo,
-                 'Renglones que NO cierran, del peor al mejor. Los que cierran no se listan.']
+                 'Cada control dice abajo si lo suyo es un DEFECTO o una DERIVA declarada. ' +
+                 'Se listan los renglones con alguna diferencia, del peor al mejor; los que ' +
+                 'no tienen ninguna no se listan.']
                 .concat(resumen)
                 .concat([d.filas.length + ' renglones controlados \u00b7 ' + idx.length +
                          ' con diferencia \u00b7 bajado el ' + bajarHoy()]),

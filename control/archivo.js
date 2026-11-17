@@ -140,6 +140,25 @@ async function main(){
        toca: se parchea el texto en memoria antes de inyectarlo. Y si el
        parche no encuentra su ancla, revienta: un arnes que no planta nada da
        verde sin haber probado (14/11). */
+    /* EL ARNES DE «LA HOJA DE CONTROLES».                      17/11/2026
+       Le devuelve a js/bajar.js el rotulo que tenia ANTES —el que llamaba
+       «Renglones que NO cierran» a 231 renglones de los que 224 cerraban— y
+       exige que la puerta grite. Si el parche no encuentra su ancla,
+       revienta: un arnes que no planta nada da verde sin haber probado. */
+    if (PLANTAR === 'rotulo_que_miente'){
+      await pg.route('**/js/bajar.js*', async ruta => {
+        let j = fs.readFileSync(path.join(RAIZ, 'js', 'bajar.js'), 'utf8');
+        const antes = j;
+        j = j.replace(
+          "'Cada control dice abajo si lo suyo es un DEFECTO o una DERIVA declarada. ' +\n                 'Se listan los renglones con alguna diferencia, del peor al mejor; los que ' +\n                 'no tienen ninguna no se listan.'",
+          "'Renglones que NO cierran, del peor al mejor. Los que cierran no se listan.'");
+        if (j === antes)
+          throw new Error('EL ARNES NO PUDO PLANTAR EL DEFECTO: no encontro el titulo '
+                        + 'de la hoja de Controles en js/bajar.js.');
+        await ruta.fulfill({ status:200, contentType:'application/javascript', body:j });
+      });
+    }
+
     if (fs.existsSync(JUGUETE)){
       if (PLANTAR === 'partes_no_dan_el_total'){
         let j = fs.readFileSync(JUGUETE, 'utf8');
@@ -309,6 +328,17 @@ async function main(){
              que encontrarlo despues. */
           const plata = ths.filter((x, j) => baja[j]).map(x => x.hasAttribute('data-plata'));
           const esTot = ths.filter((x, j) => baja[j]).map(x => x.hasAttribute('data-total'));
+          /* LOS CONTROLES Y SU DECLARACION, para poder exigir que la hoja de
+             Controles del Excel diga lo que cada uno mide.        17/11/2026
+             Hasta hoy NINGUNA de las 18 puertas abria esa hoja: `grep
+             Controles control/archivo.py` solo la encontraba en un
+             comentario. Es el defecto del 16/11 dado vuelta — ahi el
+             veredicto estaba adentro del archivo y nadie lo abria; aca el
+             veredicto esta y nadie controlaba que dijera la verdad. */
+          const controles = ths.filter((x, j) => !baja[j]).map(x => ({
+            r: (x.textContent || '').trim(),
+            deriva: x.hasAttribute('data-deriva')
+          }));
           const soloLasQueBajan = tds => tds.filter((td, j) => baja[j] !== false);
           const leerCelda = td => ({
             texto: (td.textContent || '').trim(),
@@ -334,7 +364,7 @@ async function main(){
           const totales = [...t.querySelectorAll('tfoot tr')]
                             .map(tr => soloLasQueBajan([...tr.children]).map(leerCelda));
           return { encabezados: enc, filas: filas, totales: totales,
-                   plata: plata, esTotal: esTot };
+                   plata: plata, esTotal: esTot, controles: controles };
         });
       } catch (e){ vista = null; }
 
@@ -475,6 +505,22 @@ async function main(){
      que ABRE el archivo (archivo.py), no el que lo baja. Ponerlo junto al de
      `mismo_nombre` lo habria hecho salir antes de que el python corriera, y
      habria dado «no lo agarro» sin haber mirado. */
+  if (PLANTAR === 'rotulo_que_miente'){
+    const agarro = /EL_TITULO_AFIRMA_QUE_LOS_LISTADOS_NO_CIERRAN|UNA_DERIVA_SALE_COMO_SI_FUERA_UN_DEFECTO/i.test(salidaPy);
+    console.log('\nARNES «rotulo_que_miente» — se le devolvio a la hoja de Controles el '
+              + 'titulo viejo, el que llamaba «Renglones que NO cierran» a renglones que '
+              + 'cierran con dos centavos. Es lo que DISSAN leyo el 17/11.');
+    if (agarro){
+      console.log('  OK  la puerta lo agarro.');
+      console.log(salidaPy.trim());
+      process.exit(0);
+    }
+    console.log('  LA PUERTA NO LO AGARRO: el rotulo miente y no canto.');
+    console.log('  Una puerta que no ve el defecto plantado no es una puerta.');
+    console.log(salidaPy.trim());
+    process.exit(1);
+  }
+
   if (PLANTAR === 'partes_no_dan_el_total'){
     const agarro = /LAS_PARTES_DEL_RENGLON_NO_DAN_SU_TOTAL/i.test(salidaPy);
     console.log('\nARNES «partes_no_dan_el_total» — al comprobante sin una sola alicuota '

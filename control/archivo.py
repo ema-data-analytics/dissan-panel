@@ -248,6 +248,9 @@ def revisar(ruta):
     revisar_que_las_partes_den_el_total(nombre, ws, vista, fila_enc, encs,
                                         ultima_con_datos)
 
+    # y que la hoja de Controles diga lo que cada control mide.
+    revisar_la_hoja_de_controles(nombre, wb, vista)
+
     # EL ARCHIVO NO PUEDE TRAER MENOS DE LO QUE SE VE. Puede traer MAS:
     # bajar.js recorre todas las paginas, y eso ya lo mide el control de
     # pantallas. Lo que no puede es traer menos.
@@ -409,6 +412,90 @@ def revisar(ruta):
                 falla(nombre, 'el_texto_del_archivo_no_es_el_de_la_pantalla',
                       '%s: pantalla "%s", archivo "%s".'
                       % (donde, texto[:60], v.strip()[:60]))
+
+
+def revisar_la_hoja_de_controles(nombre, wb, vista):
+    """QUE LA HOJA DE CONTROLES DIGA LO QUE CADA CONTROL MIDE.    17/11/2026
+
+    POR QUE EXISTE. Hasta hoy NINGUNA de las 18 puertas abria esa hoja:
+    `grep Controles control/archivo.py` solo la encontraba en un comentario.
+    Y el 17/11 DISSAN abrio el Excel de IVA Compras, vio numeros negativos en
+    esa hoja y pregunto si no tenian que dar todo cero. Tenian razon en
+    preguntar: la hoja se titulaba «Renglones que NO cierran, del peor al
+    mejor» y listaba 231 renglones, de los cuales 224 eran de CINCO CENTAVOS
+    o menos —la mediana era DOS CENTAVOS—. Esos 224 CIERRAN. El rotulo era
+    falso y lo escribi yo.
+
+    Es la tercera vez en una semana de la misma clase —los numeros bien, la
+    lectura mal (16/11 las secciones que se esfumaban, 16/11 los botones de
+    Listas, 17/11 este rotulo)— y lo que lo explica es que mis puertas miran
+    celdas, sumas y firmas, y NINGUNA mira si el rotulo dice la verdad.
+
+    QUE EXIGE, sin una sola lista de nombres —quien dice cual control es un
+    DEFECTO y cual una DERIVA es LA PANTALLA, con `data-deriva`—:
+      1. que si hay columnas de control, exista la hoja;
+      2. que CADA control tenga su renglon de resumen, nombrado;
+      3. que un control declarado DERIVA no salga afirmando que no cierra;
+      4. que un control de DEFECTO diga si cerro o no;
+      5. que el titulo de la hoja no afirme de todos los listados que no
+         cierran.
+    """
+    ctrl = (vista or {}).get('controles') or []
+    if not ctrl:
+        return
+    medido['pantallas_con_control'] = medido.get('pantallas_con_control', 0) + 1
+
+    if 'Controles' not in wb.sheetnames:
+        falla(nombre, 'no_bajo_la_hoja_de_controles',
+              'la pantalla tiene %d columna(s) de control (%s) y el archivo no trae '
+              'la hoja «Controles». Es la hoja que DISSAN abre para saber si el '
+              'archivo esta bien.' % (len(ctrl), ', '.join(c['r'] for c in ctrl)))
+        return
+    hc = wb['Controles']
+    medido['hojas_de_control'] = medido.get('hojas_de_control', 0) + 1
+
+    cabecera = []
+    for r in range(1, min(hc.max_row, 14) + 1):
+        for c in hc[r]:
+            if isinstance(c.value, str) and c.value.strip():
+                cabecera.append(c.value.strip())
+    texto = ' · '.join(cabecera)
+    suena_a_que_no_cierra = ('NO cierran' in texto) or ('no cierran' in texto)
+
+    for c in ctrl:
+        nom = c['r']
+        linea = next((t for t in cabecera if t.startswith(nom) or
+                      t[2:].startswith(nom) if len(t) > 2), None)
+        if linea is None:
+            falla(nombre, 'la_hoja_de_controles_no_nombra_un_control',
+                  'la pantalla declara el control «%s» y la hoja «Controles» no lo '
+                  'nombra en su resumen. Un control que no se resume no se lee.' % nom)
+            continue
+        medido['controles_resumidos'] = medido.get('controles_resumidos', 0) + 1
+        if c['deriva']:
+            # una deriva declarada NO puede salir diciendo que no cierra
+            if 'DERIVA' not in linea.upper():
+                falla(nombre, 'una_deriva_sale_como_si_fuera_un_defecto',
+                      '«%s» esta declarado en la pantalla como una DERIVA conocida '
+                      '(data-deriva) y su renglon en la hoja no lo dice: "%s". Asi se '
+                      'lee como plata que falta, que es lo que paso el 17/11.'
+                      % (nom, linea[:150]))
+            if len(linea) < 120:
+                falla(nombre, 'una_deriva_sale_sin_su_motivo',
+                      '«%s» sale como deriva pero sin explicar por que: "%s". Una '
+                      'deriva sin motivo escrito al lado se lee como un defecto.'
+                      % (nom, linea[:150]))
+        else:
+            if ('CIERRA' not in linea.upper()) and ('DEFECTO' not in linea.upper()):
+                falla(nombre, 'un_control_de_defecto_no_dice_si_cerro',
+                      '«%s» mide un defecto y su renglon no dice ni que cierra ni que '
+                      'no: "%s".' % (nom, linea[:150]))
+
+    if suena_a_que_no_cierra:
+        falla(nombre, 'el_titulo_afirma_que_los_listados_no_cierran',
+              'la hoja «Controles» dice «no cierran» sobre el conjunto de lo que '
+              'lista. El 17/11 eso era falso para 224 de 231 renglones: cerraban, con '
+              'dos centavos de redondeo. Cada control tiene que declarar lo suyo.')
 
 
 def revisar_que_las_partes_den_el_total(nombre, ws, vista, fila_enc, encs,
@@ -635,6 +722,18 @@ def main():
         pie += ('\n  que las partes den el total: NINGUNA grilla declaro columna de '
                 'total en esta corrida, asi que ESE CONTROL NO SE EJERCITO. '
                 'No es un pase: es un control que no llego a mirar.')
+
+    # LA HOJA DE CONTROLES — se declara igual, con lo que midio.
+    con_ctrl = medido.get('pantallas_con_control', 0)
+    if con_ctrl:
+        pie += ('\n  la hoja de Controles: %d grilla(s) con columnas de control · %d '
+                'hoja(s) «Controles» abiertas · %d resumen(es) de control leidos, '
+                'exigiendo que cada uno diga si lo suyo es un DEFECTO o una DERIVA.'
+                % (con_ctrl, medido.get('hojas_de_control', 0),
+                   medido.get('controles_resumidos', 0)))
+    else:
+        pie += ('\n  la hoja de Controles: NINGUNA grilla declaro columnas de control '
+                'en esta corrida, asi que ESE CONTROL NO SE EJERCITO. No es un pase.')
 
     if not fallas:
         print('  ADENTRO DE LOS ARCHIVOS: 0 fallas.')
