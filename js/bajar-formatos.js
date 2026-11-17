@@ -382,9 +382,14 @@ function bajarUnaHoja(hoja){
                  : hoja.formatos[it] === 'num4' ? IDX.num4
                  : hoja.formatos[it] === 'num'  ? IDX.num
                  : IDX.texto;
+        /* SUBTOTAL SOBRE EL RANGO, NO SOBRE LA TABLA.          17/11/2026
+           Antes era SUBTOTAL(109, Tabla1[NETO 21%]) — una referencia
+           ESTRUCTURADA, que sin tabla hace que Excel pida reparar el
+           archivo. El rango hace exactamente lo mismo: 109 sigue
+           ignorando las filas ocultas por un filtro. */
         cst += '<c r="' + reft + '" s="' + fmtt + '">' +
-               '<f>SUBTOTAL(109,' + bajarNombreTabla(hoja) + '[' +
-                 bajarRefEstruct(hoja.encabezados[it]) + '])</f>' +
+               '<f>SUBTOTAL(109,' + bajarCol(it) + (filaEnc + 1) +
+                 ':' + bajarCol(it) + (nf - 1) + ')</f>' +
                '<v>' + ct.v + '</v></c>';
       } else {
         cst += '<c r="' + reft + '" s="' + IDX.enc + '" t="inlineStr">' +
@@ -414,37 +419,43 @@ function bajarUnaHoja(hoja){
     '<sheetFormatPr defaultRowHeight="15"/>' +
     ((hoja.anchos || []).length ? cols : '') +
     '<sheetData>' + filas.join('') + '</sheetData>' +
-    /* UNA TABLA Y UN AUTOFILTRO A LA VEZ ROMPEN EL ARCHIVO: Excel pide
-       reparar el libro. La tabla ya trae su propio filtro adentro. */
+    /* NINGUNA HOJA BAJA COMO TABLA DE EXCEL.                  17/11/2026
+       =================================================================
+       LO PIDIO DISSAN, CON EL ERROR EN LA MANO. Al querer copiar datos
+       del Excel de IVA Compras, Excel contesta "Esta accion no
+       funcionara en selecciones multiples": es lo que tira cuando la
+       seleccion cruza el borde de una TABLA. Textual del usuario:
+       «no tomes como tablas, mandale datos nada mas asi no sale nada de
+       esos problemas».
+
+       Y LA TABLA LA HABIA PUESTO YO COPIANDO AL CONTADOR: su
+       "2026.09 COMPRAS contador asi lo envio.xlsx" ES una tabla
+       (Tabla1, TableStyleMedium2, totalsRowCount=1). La copie para que
+       las dos planillas se pudieran poner lado a lado. El que USA el
+       archivo pide lo contrario, y gana el que lo usa.
+
+       QUE SE ROMPE CON ESTO, Y COMO QUEDA RESUELTO:
+       1. La fila de totales usaba SUBTOTAL(109, Tabla1[COLUMNA]). Sin
+          tabla, Excel pide reparar el libro. Ahora va sobre el RANGO.
+          Sigue habiendo fila de totales y sigue sumando igual.
+       2. La columna de control que DISSAN agrego a mano usa referencias
+          estructuradas —=SUM(Tabla1[[#This Row],[EXENTO]:[OTROSIMP]])
+          - Tabla1[[#This Row],[IMP_TOTAL]]—. Esa deja de funcionar. La
+          equivalente con celdas normales hace lo mismo: en el subdiario
+          de compras, con el encabezado en la fila 6, es
+            =SUMA(G7:T7)-U7     y se arrastra hacia abajo.
+
+       TAMPOCO VA AUTOFILTRO EN LAS HOJAS CON TOTALES: un filtro con una
+       fila de totales pegada abajo la arrastra al ordenar. Las hojas sin
+       totales siguen con su autofiltro, como hasta hoy: ahi no hay nada
+       que se mueva y nadie reporto problema. */
     (hayTot ? '' : '<autoFilter ref="A' + filaEnc + ':' + ultima + (nf - 1) + '"/>') +
-    (hayTot ? '<tableParts count="1"><tablePart r:id="rId1"/></tableParts>' : '') +
     '</worksheet>';
 
-  var tabla = null;
-  if (hayTot){
-    var ref = 'A' + filaEnc + ':' + ultima + filaTot;
-    tabla =
-      '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
-      '<table xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" ' +
-      'id="' + (hoja.idTabla || 1) + '" name="' + bajarNombreTabla(hoja) + '" ' +
-      'displayName="' + bajarNombreTabla(hoja) + '" ref="' + ref + '" ' +
-      'headerRowCount="1" totalsRowCount="1">' +
-      '<autoFilter ref="A' + filaEnc + ':' + ultima + (filaTot - 1) + '"/>' +
-      '<tableColumns count="' + hoja.encabezados.length + '">' +
-      hoja.encabezados.map(function(e, i){
-        var ct = (hoja.totales || [])[i];
-        var extra = '';
-        if (ct && ct.t === 'num')      extra = ' totalsRowFunction="sum"';
-        else if (ct && ct.v)           extra = ' totalsRowLabel="' + bajarXmlEsc(ct.v) + '"';
-        return '<tableColumn id="' + (i+1) + '" name="' + bajarXmlEsc(e) + '"' + extra + '/>';
-      }).join('') +
-      '</tableColumns>' +
-      '<tableStyleInfo name="TableStyleMedium2" showFirstColumn="0" ' +
-      'showLastColumn="0" showRowStripes="1" showColumnStripes="0"/>' +
-      '</table>';
-  }
-
-  return { sheet: sheet, tabla: tabla };
+  /* Se devuelve SIEMPRE null: ninguna hoja lleva xl/tables/tableN.xml.
+     `bajarNombreTabla` y `bajarRefEstruct` quedan vivas y sin uso —no se
+     borra nada— por si algun dia hay que volver a armar una tabla. */
+  return { sheet: sheet, tabla: null };
 }
 
 /* El nombre de la tabla NO puede tener espacios ni empezar con un numero:

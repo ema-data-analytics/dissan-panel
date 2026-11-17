@@ -519,42 +519,35 @@ def revisar_fila_de_totales(nombre, ws, vista, fila_enc, encs, ultima_con_datos)
         return
     medido['con_totales'] = medido.get('con_totales', 0) + 1
 
+    # NINGUNA HOJA PUEDE VOLVER A SALIR COMO TABLA DE EXCEL.   17/11/2026
+    # Esta condicion estaba AL REVES hasta hoy: exigia la tabla, porque el
+    # archivo del contador es una tabla y yo lo copie. DISSAN la encontro
+    # usandola: al querer copiar datos del Excel de IVA Compras, Excel tira
+    # «Esta accion no funcionara en selecciones multiples», que es lo que
+    # contesta cuando la seleccion cruza el borde de una tabla. Textual del
+    # usuario: «no tomes como tablas, mandale datos nada mas».
+    # Ahora el control impide la RECAIDA: si alguna hoja vuelve a bajar como
+    # tabla, el push se corta.
     tablas = list(ws.tables.values()) if getattr(ws, 'tables', None) else []
-    if not tablas:
-        falla(nombre, 'el_excel_no_trae_tabla',
-              'la pantalla muestra una fila de TOTALES y el archivo no tiene una '
-              'sola tabla de Excel: salio como rango pelado. El contador las manda '
-              'como tabla (TableStyleMedium2, totalsRowCount=1) y asi las espera.')
+    if tablas:
+        falla(nombre, 'el_excel_volvio_a_salir_como_tabla',
+              'el archivo trae la tabla de Excel "%s" (%s). Con una tabla adentro, '
+              'copiar un rango que cruza su borde hace que Excel conteste «Esta '
+              'accion no funcionara en selecciones multiples», y la gente de DISSAN '
+              'no puede copiar los datos. Las hojas bajan como rango pelado.'
+              % (tablas[0].name, tablas[0].ref))
         return
+    medido['sin_tabla'] = medido.get('sin_tabla', 0) + 1
 
-    t = tablas[0]
-    medido['tablas'] = medido.get('tablas', 0) + 1
-    if (t.totalsRowCount or 0) != 1:
-        falla(nombre, 'la_tabla_no_declara_fila_de_totales',
-              'la tabla "%s" (%s) tiene totalsRowCount=%s. Sin eso Excel no la '
-              'reconoce como fila de totales: no suma al filtrar y se ordena '
-              'junto con los datos.' % (t.name, t.ref, t.totalsRowCount))
+    # Sin tabla, la fila de totales es la ULTIMA con datos, y tiene que venir
+    # pegada a los datos: si quedara separada, seria un renglon suelto.
+    fila_tot = ultima_con_datos
+    if fila_tot <= fila_enc:
+        falla(nombre, 'el_archivo_no_trae_la_fila_de_totales',
+              'la pantalla muestra una fila de TOTALES y el archivo termina en la '
+              'fila %d, que es la de los encabezados (%d): el total no entro.'
+              % (fila_tot, fila_enc))
         return
-
-    # la tabla tiene que ARRANCAR en los encabezados y TERMINAR en los totales
-    m = re.match(r'^[A-Z]+(\d+):[A-Z]+(\d+)$', str(t.ref or ''))
-    if not m:
-        falla(nombre, 'la_tabla_tiene_un_rango_raro',
-              'no pude leer el rango de la tabla: "%s".' % t.ref)
-        return
-    desde, hasta = int(m.group(1)), int(m.group(2))
-    if desde != fila_enc:
-        falla(nombre, 'la_tabla_no_arranca_en_los_encabezados',
-              'la tabla va de la fila %d y los encabezados estan en la %d.'
-              % (desde, fila_enc))
-    if hasta != ultima_con_datos:
-        falla(nombre, 'la_tabla_no_termina_en_los_totales',
-              'la tabla termina en la fila %d y la ultima fila con datos del '
-              'archivo es la %d. Si la tabla no la abarca, el total queda afuera '
-              'y es un renglon suelto: Excel no lo suma ni lo respeta al ordenar.'
-              % (hasta, ultima_con_datos))
-        return
-    fila_tot = hasta
 
     # ---- y los NUMEROS: los de la pantalla, uno por uno ---------------
     pant = totales_pant[0]
@@ -622,9 +615,9 @@ def main():
     con_tot = medido.get('con_totales', 0)
     if con_tot:
         pie += ('\n  la fila de totales: %d pantalla(s) la mostraron · %d archivo(s) '
-                'bajaron tabla de Excel con fila de totales · %d celda(s) de total '
-                'comparadas contra la pantalla.'
-                % (con_tot, medido.get('tablas', 0),
+                'bajaron SIN tabla de Excel, como rango pelado · %d celda(s) de '
+                'total comparadas contra la pantalla.'
+                % (con_tot, medido.get('sin_tabla', 0),
                    medido.get('totales_comparados', 0)))
     else:
         pie += ('\n  la fila de totales: NINGUNA pantalla mostro totales en esta '
