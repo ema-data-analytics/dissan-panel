@@ -114,8 +114,39 @@
        juguete las sirve con los mismos datos, porque si no el control veria
        la pantalla vacia y la daria por buena. */
     api_ventas_fact_informe_json: INFORME,
-    api_ventas_fact_por_mes_v2_json: PORMES
+    api_ventas_fact_por_mes_v2_json: PORMES,
+
+    /* LA VENTA NETA.                                            19/11/2026
+       Los valores son los MEDIDOS en la base ese dia para 2026: facturas
+       2.927 por 7.439.851.057,69, notas de credito 64 por -83.383.873,90,
+       notas de debito 3 por 496.233,90, neto 7.356.963.417,69. Las dos rutas
+       independientes dieron 0,99 de diferencia.
+       Hasta ese dia la pantalla publicaba SOLO las facturas: 82,9 millones de
+       mas contra Tango. */
+    api_ventas_netas_v1: [{
+      comprobantes: 2994, facturas: 2927, facturas_neto: 7439851057.69,
+      notas_credito: 64, notas_credito_neto: -83383873.90,
+      notas_debito: 3, notas_debito_neto: 496233.90,
+      otros: 0, otros_neto: 0,
+      neto: 7356963417.69, clientes: 113,
+      desde: '2026-01-01', hasta: '2026-12-31',
+      lectura: 'Venta neta sin IVA: facturas mas notas de debito MENOS notas de credito.'
+    }]
   };
+
+  /* EL CASO SIN NINGUNA NOTA DE CREDITO, que es el que asusta.  19/11/2026
+     Al agregar una respuesta al juguete va tambien su caso vacio: si no, el
+     control nunca ve como queda la pantalla cuando una seccion no tiene nada,
+     y la vacia es la que se lee como "falta algo" (16/11/2026). */
+  RPC['api_ventas_netas_v1_vacia'] = [{
+    comprobantes: 120, facturas: 120, facturas_neto: 51000000,
+    notas_credito: 0, notas_credito_neto: 0,
+    notas_debito: 0, notas_debito_neto: 0,
+    otros: 0, otros_neto: 0,
+    neto: 51000000, clientes: 9,
+    desde: '2026-01-01', hasta: '2026-12-31',
+    lectura: 'Venta neta sin IVA: facturas mas notas de debito MENOS notas de credito.'
+  }];
 
   window.__LLAMADAS = [];
 
@@ -508,6 +539,26 @@
     for (var cl in RPC) if (Object.prototype.hasOwnProperty.call(RPC, cl)){
       RPC[cl] = vaciarAnidadas(RPC[cl]);
     }
+
+    /* Y EL CASO VACIO ESCRITO A MANO LE GANA AL AUTOMATICO.      19/11/2026
+       Vaciar las listas ANIDADAS no alcanza para una respuesta que es UNA
+       fila de numeros: api_ventas_netas_v1 devuelve
+       {facturas, notas_credito, neto, ...} sin ninguna lista adentro, asi que
+       "sin datos" quedaba IDENTICO a "con datos" y el control de la pantalla
+       vacia la daba por buena sin haber visto nada. Es el golpe del 16/11 con
+       Listas, en otra forma.
+       La regla es una convencion, no una lista mia: si existe `X_vacia`, esa
+       manda. Asi los casos vacios que ya estaban escritos -los subdiarios,
+       listas- por fin se ejercitan. */
+    var vaciasEscritas = 0;
+    for (var cv in RPC) if (Object.prototype.hasOwnProperty.call(RPC, cv)){
+      if (/_vacia$/.test(cv)) continue;
+      if (Object.prototype.hasOwnProperty.call(RPC, cv + '_vacia')){
+        RPC[cv] = RPC[cv + '_vacia'];
+        vaciasEscritas++;
+      }
+    }
+    window.__RPC_VACIAS_ESCRITAS = vaciasEscritas;
     window.__RPC_VACIADAS = Object.keys(RPC).length;
   }
 

@@ -1861,3 +1861,91 @@ diferencia, mirar si está en los renglones o en cómo se suman.**
 **EL JUGUETE COMPONÍA EL IMPORTE SUMANDO LAS PARTES, ASÍ QUE SIEMPRE CERRABA.**
 El único caso en que no cierra —el comprobante B— no existía en el control.
 *Un caso de prueba que siempre cierra no prueba el control que mira si cierra.*
+
+## 19/11/2026 — EL ESPEJO ESTABA CONGELADO HACE 49 DÍAS Y NINGUNA PUERTA MIRABA
+
+**LA ÚLTIMA CARGA COMPLETA FUE EL 01/10/2026.** Medido en `carga_log`: modo
+`recarga` (las 598 tablas) **3 corridas, la última hace 49 días**; modo `tabla`
+30.237. Desde el 02/10 la tarea de la noche corre `carga-clave.ps1`, que lee
+`tablas-clave.txt` —**37 tablas**— y llama al migrador **una vez por tabla**.
+**561 de 598 no se actualizaban.** Lo encontró el usuario preguntando, no un
+control: **ninguna de las 18 puertas mira si el espejo está al día.**
+
+**Y LO QUE SE VERIFICA ES LA BITÁCORA, NO EL SCRIPT.** `CARGA-NOCTURNA.bat` dice
+en su encabezado *"Esto es lo que corre la tarea programada todas las noches"* y
+hace `--recargar --mixta` sobre todo. **Hace 49 días que no lo corre nadie.** Un
+comentario que describe lo que el archivo hace no dice quién lo ejecuta.
+
+**DECLARAR CLAVES FORÁNEAS PROHÍBE EL `TRUNCATE`.** El cargador reemplaza con
+`BEGIN; TRUNCATE; INSERT; COMMIT`, y Postgres **no deja truncar una tabla
+referenciada**: son **232 de 627**. Las tres salidas, medidas, **cortan las
+tres**: `TRUNCATE` del padre · `TRUNCATE` con `session_replication_role =
+replica` (**yo la daba por buena sin medirla**) · `DELETE` sin diferir.
+La salida es **diferir al COMMIT**: las 843 pasaron a `DEFERRABLE INITIALLY
+IMMEDIATE` (sólo catálogo; el panel sigue comprobando al instante), el cargador
+hace `SET CONSTRAINTS ALL DEFERRED` y **le pregunta al catálogo** si la tabla es
+padre — `DELETE` si lo es, `TRUNCATE` si no, **ninguna lista escrita a mano**.
+**Y diferir NO deja entrar basura, medido:** una hija huérfana insertada con la
+comprobación diferida se corta igual al forzar `SET CONSTRAINTS ALL IMMEDIATE`.
+
+**CON LAS FORÁNEAS DECLARADAS, EL ORDEN DE CARGA DEJA DE SER UN DETALLE.** Si
+una hija entra antes que su padre, una fila nueva de Tango la corta y la culpa
+no es del dato sino del orden. **Medido: 301 de 586 pares cargaban la hija
+primero** (`cpa46 → sta11`, `gva13 → gva14`). `ordenarPorDependencia()` lo saca
+de `pg_constraint` y **lo declara en el log**: *"orden de carga: primero los
+padres (552 tablas cambiaron de lugar)"*. Si el orden nuevo no tuviera
+exactamente las mismas tablas, usa el de siempre.
+
+**EL CARGADOR EXIGÍA UN ID NUMÉRICO QUE AVANCE, Y DIEZ TABLAS DE TANGO NO LO
+TIENEN.** Medido: FORMA_PAGO, MODULO, ORIGEN_ASIENTO, ORIGEN_BIEN,
+SELECCIONADO_POR, TIPO_CUENTA, TIPO_CUENTA_ARTICULO, TIPO_CUENTA_IV y
+TIPO_MOVIMIENTO_STOCK **no tienen una sola columna numérica sin nulos** (clave
+de texto), y `LOTE_CN_GENERADO_COMPROBANTE` tiene un ID que **se repite**: leía
+5.000 de 6.579. Ahora hay dos formas de leer y **la elección se mide**: de una
+sola vez cuando el ID no sirve de cursor o la tabla entra entera
+(`LECTURA_ENTERA = 20000`), por lotes para las grandes. Las dos pasan por el
+mismo control: si la temporal no coincide con lo que dice Tango, **no se
+reemplaza nada**. Y la huella usa `TRY_CAST`, que devuelve nulo en vez de
+reventar.
+
+**UN CERO QUE ES CORRECTO PUEDE HACER QUE LA CORRIDA DIGA FALLA TODAS LAS
+NOCHES.** `STA90` quedaba `SALTEADA` —Tango 0 filas, espejo 2— por el freno de
+mano, y eso ponía la carga entera en FALLA. Medido antes de tocar: **0
+funciones, 0 vistas, 0 materializadas y 0 hijas** la nombran. Las 2 filas
+quedaron en `ema.sta90_antes_del_19_11` y la tabla se alineó con Tango (2 → 0).
+*Una puerta que grita siempre se apaga.*
+
+**LOS QUE FALLARON Y NO ERAN DEFECTOS, QUE ES LO QUE SE GANÓ AYER.** `CPA04` se
+negó a reemplazarse porque Tango dijo 18.823 y la lectura trajo 18.824 —**entró
+una factura mientras leía**, a las 16:30— y `CPA46` la frenó la foránea contra
+`CPA04`. **El espejo se niega a guardar datos inconsistentes** en vez de
+guardarlos y que se vean mal tres semanas después.
+
+**CÓMO SE TOCA UN ARCHIVO EN SERVER01 SIN ROMPERLO.** Antes de parchear, el
+archivo vivo se compara con la copia local por **SHA-256 calculado por el
+servidor** (`HASHBYTES('SHA2_256', BulkColumn)` sobre `OPENROWSET(BULK ...)`).
+Cada parche lleva **anclas que tienen que aparecer exactamente una vez** o no
+toca nada, deja una copia al lado, y el texto viaja **en base64 en una sola
+línea** para que ni las comillas ni los acentos se rompan. Después: `node
+--check` en el servidor **y** `certutil -hashfile SHA256` contra el sha local.
+**Y el parche se arma al revés primero:** se deshacen los cambios sobre el
+archivo nuevo y el sha resultante tiene que dar el del servidor.
+
+**NO TODO ARCHIVO DEL SERVIDOR SE PUEDE ESCRIBIR, Y SE MIDE CON `icacls`.**
+`migrador.js` y `tablas.json` tienen `SERVER01\AdminMm:(I)(F)`;
+`carga-clave.ps1` y `tablas-clave.txt` sólo `BUILTIN\Usuarios:(I)(RX)` — para
+cambiarlos hay que elevar, y una elevación **no se puede automatizar** (UAC
+bloquea la entrada de un proceso de menor integridad). Por eso el arreglo de la
+carga nocturna vive en `migrador.js`, que **detecta que le pidieron la primera
+tabla de `tablas-clave.txt` y corre la pasada completa, escribiéndolo en el
+log**. Es un rodeo y está declarado: **cuando se pueda elevar, corregir el
+`.ps1` y sacarlo.**
+
+**`schtasks` SIN ELEVAR NO VE LAS TAREAS DE OTROS USUARIOS.** Buscando
+`C:\DISSAN` en todas las tareas no apareció ninguna, y sin embargo algo corre a
+las 05:00 todos los días. **Que no se vea no quiere decir que no exista.** La
+tarea nueva (`DISSAN - carga completa 598`, 03:10) se creó sin elevar y quedó en
+**"Sólo interactivo"**: corre mientras la sesión del servidor esté abierta.
+
+**Resultado medido:** 598 tablas, **597 bien, 0 con error**, 2.843.107 filas,
+13,3 minutos, y los 58 controles del motor pasan.

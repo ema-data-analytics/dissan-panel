@@ -306,13 +306,33 @@ function vtCargar(){
                   rpc('api_ventas_fact_por_mes_v2_json',
                       { p_desde:f.p_desde, p_hasta:f.p_hasta, p_clientes:f.p_clientes,
                         p_provincias:f.p_provincias, p_proveedores:f.p_proveedores }) ];
+  var iOpc = -1;
   if (!VT.opciones){
+    iOpc = pedidos.length;
     pedidos.push(rpc('api_ventas_fact_opciones', { p_desde:null, p_hasta:null }));
   }
 
+  /* LA VENTA NETA, QUE ES LA QUE SE COMPARA CONTRA TANGO.       19/11/2026
+     Las otras llamadas leen vista_margen_v2_oc, que trae SOLO facturas: la
+     pantalla publicaba $7.384.007.040,03 cuando Tango decia
+     $7.301.119.398,57, porque tiraba 64 notas de credito por $83.383.873,90.
+     Esta trae facturas, notas de debito y notas de credito por separado, con
+     el mismo calculo del subdiario de IVA cuya identidad cierra contra la
+     cuenta 214005 de la contabilidad de DISSAN.
+     NO sigue los filtros de cliente, provincia ni proveedor -el subdiario no
+     tiene la dimension proveedor-, asi que es del PERIODO y eso se dice en la
+     pantalla en vez de dejarlo a la imaginacion. */
+  var iNet = pedidos.length;
+  pedidos.push(rpc('api_ventas_netas_v1', { p_desde:f.p_desde, p_hasta:f.p_hasta }));
+
   Promise.all(pedidos).then(function(r){
-    if (r[3]){
-      VT.opciones = r[3].data || {};
+    var dn = iNet >= 0 && r[iNet] ? r[iNet].data : null;
+    VT.netas = (dn && dn.length ? dn[0] : (dn && dn.neto !== undefined ? dn : null));
+    VT.conFiltros = !!((f.p_clientes && f.p_clientes.length) ||
+                       (f.p_provincias && f.p_provincias.length) ||
+                       (f.p_proveedores && f.p_proveedores.length));
+    if (iOpc >= 0 && r[iOpc]){
+      VT.opciones = r[iOpc].data || {};
       var cl = VT.opciones.clientes || [];
       for (var i = 0; i < cl.length; i++){
         VT.mapa.Cliente[cl[i].cod + ' — ' + (cl[i].nombre || '')] = cl[i].cod;
@@ -498,6 +518,26 @@ function vtDibujar(res, det, msTotal, msPartes){
   h.push(vtKpi('Renglones', vtNum(tot.renglones), 'cada fila es un renglón de una factura'));
   h.push(vtKpi('Facturas', vtNum(tot.comprobantes), 'facturas de venta distintas'));
   h.push(vtKpi('Venta facturada', vtMillones(tot.facturado), vtExacto(tot.facturado) + ' neto sin IVA'));
+
+  /* LAS NOTAS DE CREDITO Y LA VENTA NETA.                       19/11/2026
+     Hasta hoy la pantalla publicaba SOLO las facturas y ni nombraba las notas
+     de credito: $7.384.007.040,03 contra los $7.301.119.398,57 de Tango.
+     Los dos renglones van SIEMPRE, aunque no haya ninguna nota: una seccion
+     que desaparece se lee como "falta algo" (16/11/2026). */
+  var nt = VT.netas;
+  if (nt){
+    var nc = Number(nt.notas_credito || 0);
+    h.push(vtKpi('Notas de crédito',
+                 nc ? vtMillones(nt.notas_credito_neto) : 'Ninguna',
+                 nc ? vtNum(nc) + ' en el período · ' + vtExacto(nt.notas_credito_neto)
+                    : 'no hubo notas de crédito en el período'));
+    h.push(vtKpi('VENTA NETA', vtMillones(nt.neto),
+                 vtExacto(nt.neto) + ' · facturas + notas de débito − notas de crédito' +
+                 (VT.conFiltros ? ' · del PERÍODO, sin los filtros de cliente/proveedor' : '')));
+  } else {
+    h.push(vtKpi('Venta neta', 'no medida',
+                 'no contestó api_ventas_netas_v1: la cifra de arriba son SOLO facturas'));
+  }
   h.push(vtKpi('Renglones con costo', vtNum(mesS.cc) +
                (Number(tot.renglones) ? ' (' + vtDec(mesS.cc / Number(tot.renglones) * 100) + '%)' : ''),
                'los que se pueden medir'));
