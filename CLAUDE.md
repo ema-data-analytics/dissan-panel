@@ -2012,3 +2012,89 @@ de `ema`, también `from authenticated`. Medido después, no supuesto: la de
 `public` queda `anon=false / authenticated=true` y la de `ema` **cerrada a los
 dos**. Es la tercera redacción de esta regla (10/11 decía `anon`, 12/11 decía
 `public`, 14/11 descubrió que hacen falta los dos).
+
+## 19/11/2026 (tarde, 2) — EL MAPA MEDÍA LOS DISTINTOS SOBRE 5.000 FILAS
+
+**ES EL DEFECTO DEL 16/11 VIVO EN LA COLUMNA DE AL LADO.** Ese día se remidió
+`llenos` de `ema.diccionario` porque contaba el texto vacío como lleno.
+**`distintos` quedó sin tocar, con el mismo defecto de origen**: 143 columnas en
+75 tablas decían exactamente **5.000** —el tamaño de la muestra— y 24 decían más
+valores distintos que filas tiene la tabla, que es imposible. Lo peor de
+negocio: **`historial_precios_ventas.precio` decía 2.485 y son 70.679.** De
+`distintos` sale **`es_constante`**, que es lo que le dice a la IA de la Ayuda
+que filtrar por un campo no cambia nada.
+
+**QUÉ NO ESTABA MAL, Y TAMBIÉN SE MIDIÓ.** En la dirección peligrosa —el mapa
+diciendo «constante» cuando no lo es— había **1 sola columna, y es mía**
+(`cliente_mayor_menor.cargado_en`, 6 filas). *Decir «está todo mal» es tan falso
+como decir «está todo bien».*
+
+**`ema.distintos_remedido` + `ema.remedir_distintos` + `..._todo`**, gemelas de
+las del llenado: **una sola lectura por tabla** con un
+`count(distinct nullif(btrim(col::text),''))` por columna. **646 tablas y 10.718
+columnas en 81,5 s.** En 5.000: 143 → **0**. Imposibles: 24 → **0**. Y la
+**segunda pasada corrigió 0**, que es la prueba de que coincide. El mapa viejo
+quedó en `ema.diccionario_antes_del_19_11`.
+
+**Y VA EN SU PROPIO PASO DE LA TAREA (el 4), ANTES DE LAS IDENTIDADES.** 81,5 s
+no entran adentro de `api_correr_identidades`, que ya usa ~99 s con un reloj de
+120. `mapa_distintos_coincide` **suma las tablas que faltan en la remedición**,
+así que una pasada a medias no puede dar un verde falso. Cuatro caras: limpia 0
+· mapa con un valor de la muestra 1 · **remedición a medias 1 con el mapa bien**
+· restaurada 0.
+
+**UNA IDENTIDAD QUE SE PONE ROJA CUANDO EL PROBLEMA SE ARREGLA NO ES UNA
+IDENTIDAD.** `tablas_sin_clave_declaradas` comparaba contra el literal **613**,
+el conteo del 10/11. Al declarar las claves esa mañana, **gritó**. Un número
+congelado de un día **no es una fuente independiente: es una foto**, y una
+identidad que castiga una mejora se termina apagando igual que una que grita
+siempre. Reescrita contra fuente mecánica —las tablas distintas de
+`public.carga_detalle`, que son por definición las que el cargador trae de
+Tango— y lado B **cero**. Tres caras: 0 · 1 con una tabla sin clave plantada en
+`carga_detalle` · 0 al volver atrás.
+
+**LAS CLAVES: 598 DE 598 TABLAS DE TANGO.** El 10/11 decía «sólo 79 de 692». Las
+últimas cuatro se declararon hoy midiendo antes de tocar que la clave natural
+fuera única y sin nulos: `cpa04_axdeleted` (681), `cpa29_axdeleted` (7),
+`gva12_axtsdeleted` (105) y `tipo_movimiento_stock` (7). **Las 11 sin clave que
+quedan son mías** (respaldos, exports, arneses) y no entran en la identidad
+porque no las trae el cargador.
+
+**LO QUE COSTARON LOS 49 DÍAS CONGELADOS, MEDIDO.** `ema.barrido_rehacer`
+—nueva, porque `ema.barrido_contar` sólo cuenta lo que tiene `filas is null` y
+después de la primera pasada devuelve «0 hechas» **y parece que midió**—:
+**809 objetos con `count(*)` real en 0,8 s, 4.933.614 filas**. Contra el 10/11:
+**540 tablas sin moverse una fila** (Tango tampoco las cambió: ahí el
+congelamiento no costó datos), 98 crecieron (+32.059), **18 nuevas con
++533.804**, y una encogió 4 filas. Entre las nuevas, el rastro de lo borrado en
+Tango: **`cpa04_axdeleted` 681 facturas de compra borradas** y
+`gva12_axtsdeleted` 105 de venta, que no mira nadie todavía.
+
+**DESPUÉS DE UNA CARGA COMPLETA, LAS IDENTIDADES QUE COMPARAN TANGO CONTRA UNA
+MATERIALIZADA ESTÁN EN ROJO HASTA QUE CORRA EL REFRESCO.** `facturas_2026_dos_rutas`
+y `facturas_11_dos_rutas` salieron en rojo por 11 y 10 facturas y la conclusión
+fácil era un agujero nuevo. Medido antes de decirlo: corrido
+`api_refrescar_margen_real()` → ok 36,9 s y **datos hasta el 19/11** (antes
+llegaban al 13/11: **la carga completa le ganó seis días a la pantalla de
+Margen**), las dos pasaron a **verde** — noviembre 176 = 176, 2026 2.927 contra
+2.926. **El orden es carga → refresco → identidades**, y así está la tarea
+(paso 1 antes del 5); mi corrida a mano fue al revés. Habría sido la sexta vez
+en cinco días que acuso de agujero a algo que no lo es.
+
+**UN `DELETE` EN UN LOTE INTERACTIVO LO FRENA EL CLASIFICADOR Y CORTA EL
+CONECTOR A LOS 230 s.** Lo volví a hacer, y está escrito desde el 16/11 con el
+`DROP`. El lote era una sola transacción y volvió atrás solo, **pero eso se
+midió, no se supuso**: 645 tablas, las 138 columnas de `cpa04`, `gva12.t_comp`
+8 = 8, 0 faltantes, ninguna temporal suelta. **Para plantarle un defecto a una
+puerta se CREA algo al lado, no se borran filas**: la tercera cara se rehizo con
+una tabla vacía (`prueba_remedicion_a_medias_19_11`, el motivo en su
+comentario), que queda fuera de la remedición y hace sonar la identidad igual.
+
+**Y EL PASO 5 DE LA TAREA NOCTURNA TIENE 21 SEGUNDOS DE MARGEN.** Medido hoy:
+`api_correr_identidades` **98,8 s** con reloj de **120** (subdiario 0,4 ·
+remedir llenado 29,8 · identidades 68,6), contra 86,9 s el 18/11. **Creció
+solo**: 90 → 93 identidades y 627 → 646 tablas. Es lo que se cayó las noches del
+17 y del 18. La salida limpia es mover también la remedición del llenado al paso
+4, que ya existe, y dejar el 5 en ~69 s. **No se tocó hoy porque no puedo ver
+correr la tarea de esta noche**, y cambiar la función que murió dos veces sin
+verla andar es exactamente lo que no se hace.
