@@ -131,8 +131,36 @@
       neto: 7356963417.69, clientes: 113,
       desde: '2026-01-01', hasta: '2026-12-31',
       lectura: 'Venta neta sin IVA: facturas mas notas de debito MENOS notas de credito.'
-    }]
+    }],
+
+    /* LAS NOTAS DE CREDITO, POR CLIENTE.                        19/11/2026
+       Valores MEDIDOS en la base ese dia para 2026 (los cinco clientes que
+       mas devolvieron, de 32 con nota de credito). HOSPITAL ITALO PERRUPATO
+       y ENTE HOSPITAL RAMON CARRILLO estan a proposito: el segundo devolvio
+       el 23,2% de lo que se le facturo, que es el caso que la pantalla tiene
+       que marcar. */
+    api_ventas_notas_credito_v1: [
+      { cod_client:'00000090', cliente:'HOSPITAL CENTRAL', notas:4,
+        nc_monto:20764000.00, facturas:260, facturado:1394022727.96,
+        pct_sobre_facturado:1.49 },
+      { cod_client:'00000731', cliente:'ENTE HOSPITAL RAMON CARRILLO O. P.', notas:5,
+        nc_monto:11601960.87, facturas:41, facturado:50063638.48,
+        pct_sobre_facturado:23.17 },
+      { cod_client:'00000001', cliente:'PARTICULAR', notas:11,
+        nc_monto:9598128.07, facturas:318, facturado:124991763.68,
+        pct_sobre_facturado:7.68 },
+      { cod_client:'00000214', cliente:'HOSPITAL ITALO PERRUPATO', notas:3,
+        nc_monto:7692796.69, facturas:52, facturado:172550213.54,
+        pct_sobre_facturado:4.46 },
+      { cod_client:'00000502', cliente:'LA SEGUNDA ASEG.RIESGO DE TRAB.SA', notas:2,
+        nc_monto:5400100.00, facturas:19, facturado:17788465.32,
+        pct_sobre_facturado:30.36 }
+    ]
   };
+
+  /* Y SU CASO VACIO: el periodo sin una sola nota de credito. La seccion
+     tiene que seguir estando y decir «Ninguna» con el motivo. */
+  RPC['api_ventas_notas_credito_v1_vacia'] = [];
 
   /* EL CASO SIN NINGUNA NOTA DE CREDITO, que es el que asusta.  19/11/2026
      Al agregar una respuesta al juguete va tambien su caso vacio: si no, el

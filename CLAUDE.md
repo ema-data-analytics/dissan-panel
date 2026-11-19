@@ -1949,3 +1949,66 @@ tarea nueva (`DISSAN - carga completa 598`, 03:10) se creó sin elevar y quedó 
 
 **Resultado medido:** 598 tablas, **597 bien, 0 con error**, 2.843.107 filas,
 13,3 minutos, y los 58 controles del motor pasan.
+
+## 19/11/2026 (tarde) — ESPERAR A QUE APAREZCA UN RÓTULO QUE YA ESTÁ NO ES ESPERAR
+
+**DOS VECES SEGUIDAS LEÍ UN REPINTADO VIEJO Y CASI PUBLICO EL PAR EQUIVOCADO.**
+Para probar la Venta Neta en la pantalla publicada escribí un bucle que esperaba
+a que **apareciera** el rótulo «VENTA NETA». El rótulo ya estaba pintado, del
+rango anterior: a los **705 ms** me devolvió los números de 2024-a-hoy
+—20.395 renglones, $18.374 M— como si fueran los de 2026. La segunda vez leí el
+repintado que disparó el botón «Desde 2024 a hoy» que yo mismo había apretado un
+segundo antes. **La regla: esperar a que el VALOR CAMBIE y a que no quede
+ninguna llamada en vuelo, nunca a que aparezca un texto que ya puede estar.** Y
+el par se lee **con el rango que la pantalla tiene puesto en ese momento**, leído
+de los campos, no del que yo creo haber apretado.
+
+**EL PAR, MEDIDO BIEN:** ventas.html publicada, apretando **2026** y **Ver** →
+«Notas de crédito **64 · -$83.383.873,90**» y «**VENTA NETA
+$7.356.963.417,69**»; `api_ventas_netas_v1` en esa misma corrida: **64** y
+**7.356.963.417,69**, idénticos al centavo, y por `gva12`+`gva15` directo
+**7.356.963.416,70** → **$0,99**. Repetido con **2025**: $6.397.070.218,01 =
+$6.397.070.218,01, ruta independiente $6.397.070.214,56 (**$3,45**).
+
+**LA TARJETA NETEA EL TOTAL; LOS DESGLOSES NO.** Medido: **ninguna** de las 24
+funciones `api_ventas*` mira `gva15.clase_operacion` salvo la nueva. Los
+desgloses —por cliente, mes, provincia, proveedor y artículo— salen de
+`vista_margen_v2_oc` con **`t_comp = 'FAC'`**: no suman las notas de crédito,
+pero **tampoco las restan**, así que cada cliente figura por lo que se le
+facturó y no por lo que quedó. Medido en 2026: **el top 15 no cambia de
+puesto**, y eso hay que decirlo igual que lo otro —*decir «está todo mal» es tan
+falso como decir «está todo bien»*— pero hay clientes con **23,2%**
+(ENTE HOSPITAL RAMON CARRILLO) y **30,4%** (LA SEGUNDA ART) de lo facturado
+devuelto. **Se muestra aparte** (`api_ventas_notas_credito_v1`, cabeceras de
+`gva12`) **en vez de tocar `vista_margen_v2_oc`**, que el 10/11 dejó el Tablero
+caído nueve horas. La sección aparece **siempre** y dice «Ninguna» con el motivo.
+El total por cliente da **$83.383.873,73** contra los **$83.383.873,90** de la
+tarjeta: **$0,17**, porque las dos rutas no son la misma —una deriva del IVA del
+subdiario y la otra suma `importe_gr + importe_ex`—.
+
+**LA FECHA CONTABLE AÑO 2206: UNA FACTURA QUE NO CAE EN NINGÚN MES.**
+`cpa04` tipo **FP** número **15935** → en el subdiario sale como **FAC
+A0001600019600**, **CONCORD GAS SA**, **$114.912,64**, en pesos, **emitida el
+14/10/2026** y con **fecha contable 14/10/2206**. El subdiario de compras va por
+fecha contable, así que **no está en ningún mes que alguien vaya a pedir**:
+medido, octubre 2026 trae 409 renglones y **no la incluye**, todo 2026 trae
+3.386 y **tampoco**, y la ventana 10/2206 trae **exactamente 1: ella**. Es un año
+tipeado mal en Tango, del mismo tipo que el `05/12/2202` de `gva12` —que es un
+**REC de $0,00**, no una factura, al revés de lo que escribí el 13/11—.
+
+**LAS FECHAS, MEDIDAS DE PUNTA A PUNTA:** 170 tablas, **384 columnas de fecha en
+1 segundo** (`ema.coherencia_fecha` + `ema.medir_fechas`). **50 columnas nunca
+tienen una fecha.** **129 columnas con fechas anteriores a 1990**, 814.704 filas:
+es el centinela `1800-01-01` de Tango, que **no es nulo** — `gva12.fecha_anu`
+lo tiene en **23.146 de 23.302 filas**, así que `where fecha_anu is null` no
+encuentra nada y quien lo escriba va a creer que están todas anuladas.
+**29 columnas con fechas futuras**, 12.639 filas: las de 2027 a 2035 son
+vencimientos legítimos (`3031-07-31` es el centinela de «no vence»), y las de
+2202, 2203 y 2206 son años tipeados mal.
+
+**Y EL `revoke` VA SIEMPRE EN TRES RENGLONES, NO EN UNO.** Al crear
+`api_ventas_notas_credito_v1` fueron `from public`, `from anon` y, en la interna
+de `ema`, también `from authenticated`. Medido después, no supuesto: la de
+`public` queda `anon=false / authenticated=true` y la de `ema` **cerrada a los
+dos**. Es la tercera redacción de esta regla (10/11 decía `anon`, 12/11 decía
+`public`, 14/11 descubrió que hacen falta los dos).

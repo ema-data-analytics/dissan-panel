@@ -325,9 +325,23 @@ function vtCargar(){
   var iNet = pedidos.length;
   pedidos.push(rpc('api_ventas_netas_v1', { p_desde:f.p_desde, p_hasta:f.p_hasta }));
 
+  /* LAS NOTAS DE CREDITO, POR CLIENTE.                          19/11/2026
+     La tarjeta VENTA NETA las resta en el TOTAL, pero los desgloses -por
+     cliente, mes, provincia, proveedor y articulo- salen de
+     vista_margen_v2_oc con t_comp = 'FAC': no las suman, pero tampoco las
+     restan, asi que cada cliente figura por lo que se le facturo y no por lo
+     que quedo. Medido en 2026: el top 15 NO cambia de puesto al netear, pero
+     hay clientes con 23% y 30% de lo facturado devuelto.
+     Se muestra aparte en vez de tocar vista_margen_v2_oc, que el 10/11/2026
+     dejo el Tablero caido nueve horas. */
+  var iNC = pedidos.length;
+  pedidos.push(rpc('api_ventas_notas_credito_v1',
+                   { p_desde:f.p_desde, p_hasta:f.p_hasta, p_limite:300 }));
+
   Promise.all(pedidos).then(function(r){
     var dn = iNet >= 0 && r[iNet] ? r[iNet].data : null;
     VT.netas = (dn && dn.length ? dn[0] : (dn && dn.neto !== undefined ? dn : null));
+    VT.nc = (iNC >= 0 && r[iNC] && r[iNC].data) ? r[iNC].data : null;
     VT.conFiltros = !!((f.p_clientes && f.p_clientes.length) ||
                        (f.p_provincias && f.p_provincias.length) ||
                        (f.p_proveedores && f.p_proveedores.length));
@@ -718,6 +732,69 @@ function vtDibujar(res, det, msTotal, msPartes){
     h.push('</tr>');
   }
   h.push('</tbody></table></div>');
+
+  /* ---- las notas de credito, por cliente ----               19/11/2026
+     LA SECCION APARECE SIEMPRE, con datos o sin ellos. Una seccion que
+     desaparece se lee como «falta algo» y el que mira no puede distinguir
+     «no hubo ninguna» de «se rompio» (16/11/2026, ICU). */
+  var nc = VT.nc;
+  var ncTotM = 0, ncTotN = 0;
+  if (nc) for (var ni = 0; ni < nc.length; ni++){
+    ncTotM += Number(nc[ni].nc_monto || 0);
+    ncTotN += Number(nc[ni].notas   || 0);
+  }
+  h.push('<div class="db-sec">Las notas de crédito, por cliente<small>' +
+         'Todo lo de arriba son <b>facturas</b>: así está armada ' +
+         '<code>vista_margen_v2_oc</code>, que es de donde salen los desgloses. ' +
+         'No suman las notas de crédito, pero <b>tampoco las restan</b>, así que ' +
+         'cada cliente figura por lo que se le facturó y no por lo que quedó. ' +
+         'Acá están, para poder restarlas a mano. La clase sale de ' +
+         '<code>gva15.clase_operacion</code>, no de una lista de tipos escrita a ' +
+         'mano. El total de esta columna es el de la tarjeta <b>Notas de ' +
+         'crédito</b> salvo centavos de redondeo: las dos rutas no son la misma ' +
+         '(una lee el subdiario de IVA y la otra las cabeceras de ' +
+         '<code>gva12</code>).</small></div>');
+  if (!nc){
+    h.push('<div class="db-pie"><b>No medidas.</b> La llamada a ' +
+           '<code>api_ventas_notas_credito_v1</code> no contestó en esta corrida, ' +
+           'así que acá no hay nada que mostrar — y eso no quiere decir que no ' +
+           'haya notas de crédito.</div>');
+  } else if (!nc.length){
+    h.push('<div class="db-pie"><b>Ninguna.</b> En el período elegido no hay una ' +
+           'sola nota de crédito, así que lo facturado y lo neto coinciden y cada ' +
+           'cliente de la tabla de arriba figura por lo que de verdad quedó.</div>');
+  } else {
+    h.push('<div class="db-tb-caja"><table class="db-tb"><thead><tr>' +
+           '<th>Código</th><th>Cliente</th><th class="db-num">Notas</th>' +
+           '<th class="db-num">Devuelto</th><th class="db-num">Le facturamos</th>' +
+           '<th class="db-num">Le queda</th><th class="db-num">% devuelto</th>' +
+           '</tr></thead><tbody>');
+    for (var nj = 0; nj < nc.length; nj++){
+      var n2 = nc[nj];
+      var pct = Number(n2.pct_sobre_facturado || 0);
+      h.push('<tr' + (pct >= 10 ? ' class="aparte"' : '') + '>');
+      h.push('<td class="db-cod">' + vtEsc(n2.cod_client) + '</td>');
+      h.push('<td class="db-desc" title="' + vtEsc(n2.cliente) + '">' +
+             vtEsc(n2.cliente) + '</td>');
+      h.push(vtCelNum(n2.notas));
+      h.push(vtCelPesos(n2.nc_monto));
+      h.push(vtCelPesos(n2.facturado));
+      h.push(vtCelPesos(Number(n2.facturado || 0) - Number(n2.nc_monto || 0)));
+      h.push('<td class="db-num" data-v="' + pct.toFixed(2) + '"' +
+             (pct >= 10 ? ' title="más del 10% de lo facturado volvió"' : '') + '>' +
+             vtDec(pct) + '%</td>');
+      h.push('</tr>');
+    }
+    h.push('<tr class="bien"><td><b>Total</b></td><td></td>');
+    h.push(vtCelNum(ncTotN));
+    h.push(vtCelPesos(ncTotM));
+    h.push('<td class="db-num"></td><td class="db-num"></td><td class="db-num"></td>');
+    h.push('</tr></tbody></table></div>');
+    h.push('<div class="db-pie">' + vtNum(nc.length) + ' cliente(s) con ' +
+           vtNum(ncTotN) + ' nota(s) de crédito por ' + vtExacto(ncTotM) + '. ' +
+           'Las filas marcadas son las que devolvieron <b>más del 10%</b> de lo ' +
+           'que se les facturó.</div>');
+  }
 
   /* ---- por proveedor ---- */
   var pv = res.por_proveedor || [];
