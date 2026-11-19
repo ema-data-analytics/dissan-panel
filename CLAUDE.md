@@ -2098,3 +2098,17 @@ solo**: 90 → 93 identidades y 627 → 646 tablas. Es lo que se cayó las noche
 4, que ya existe, y dejar el 5 en ~69 s. **No se tocó hoy porque no puedo ver
 correr la tarea de esta noche**, y cambiar la función que murió dos veces sin
 verla andar es exactamente lo que no se hace.
+
+**UN BLANCO SIN EXPLICACIÓN NO SE DISTINGUE DE UN OLVIDO.** `ema.tabla_modulo`
+tenía **199 tablas con el módulo en blanco y nada escrito**, 152 de ellas
+traídas por el cargador con **1.173.045 filas**. El motivo: Tango nombra los
+módulos **por prefijo** (`GVA`→GV, `CPA`→CP, `STA`→ST) y esas 152 no lo siguen,
+así que no figuran en su tabla `MODULO`. Medido el camino mecánico que queda —las
+claves foráneas—: **21 se pueden deducir** porque TODAS sus foráneas apuntan a
+tablas de **un solo** módulo (no las elegí yo), **3 apuntan a varios** y quedan
+declaradas como ambiguas con sus candidatos, y **128 no tienen ninguna foránea a
+una tabla con módulo**. Esas 128 se **declaran**, no se adivinan. Y las 47
+restantes son mías, medido mecánicamente: no figuran en `carga_detalle`.
+Resultado: **467 con módulo · 178 declarando por qué no · 0 en blanco sin
+declarar**, con la puerta `modulo_de_cada_tabla_declarado` y sus tres caras
+(0 · 1 borrándole el motivo a una · 0 al volver atrás).
