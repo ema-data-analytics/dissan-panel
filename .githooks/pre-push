@@ -28,12 +28,75 @@ cd "$(git rev-parse --show-toplevel)" || exit 1
 
 FALLARON=""
 PASARON=""
+SALTEADAS=""
+
+# =====================================================================
+# SOLO CORREN LOS CONTROLES QUE MIRAN LO QUE CAMBIO.      20/11/2026
+# =====================================================================
+# Dicho por el usuario, textual: "SI YO TE DIGO PROBA TODO SI, SINO
+# MODIFICA, PROBA Y QUE SEA LA PRUEBA SOBRE LO QUE SE CAMBIO... NO QUE
+# CONTROLE DE NUEVO TODO".
+# Tenia razon y le costo una hora de espera: cuatro intentos de push por
+# un cambio de DISEÑO, y en cada uno se revisaron las Edge Functions, la
+# lectura de los PDF de proveedores y el dictado por voz, que no se
+# habian tocado. Peor: el ultimo corto por el control del dictado, que
+# se tropezo por correr vigesimo con el navegador saturado.
+#
+# Cada puerta declara QUE MIRA. Si el push no toca nada de eso, no corre
+# — y se DECLARA que no corrio, con el motivo. Una puerta salteada no es
+# una puerta verde: es una puerta que no se ejercito, y eso se dice.
+#
+#   git push                 -> solo lo que toca
+#   CONTROL_TODO=1 git push  -> las veinte, como antes
+# =====================================================================
+
+# que archivos trae este push, contra lo que ya esta publicado
+CAMBIADOS="$(git diff --name-only origin/main...HEAD 2>/dev/null || git diff --name-only HEAD~1 HEAD 2>/dev/null || echo '')"
+
+# nombre de la puerta -> expresion de los caminos que mira.
+# "SIEMPRE" = corre en todos los push: miden el push en si, no el codigo.
+que_mira(){
+  case "$1" in
+    "el acceso"|"lo publicado") echo "SIEMPRE" ;;
+    "el control del control de lo publicado") echo "control/publicado" ;;
+    "el alcance")               echo "js/core[.]js|[.]html$|control/alcance|control/supabase-de-juguete" ;;
+    "el control del control del alcance") echo "control/alcance" ;;
+    "las edge functions")       echo "^edge/|control/edge[.]js" ;;
+    "los rotulos")              echo "[.]html$|^js/|control/rotulo" ;;
+    "las cifras publicadas")    echo "^js/|control/cifra" ;;
+    "el control del control del archivo") echo "control/archivo" ;;
+    "el control del control del pdf")     echo "control/pdf|js/bajar" ;;
+    "las pantallas")            echo "[.]html$|^js/|^css/|control/pantallas|control/supabase-de-juguete" ;;
+    "el archivo bajado")        echo "[.]html$|^js/|^css/|control/archivo|control/supabase-de-juguete" ;;
+    "el camino del usuario")    echo "[.]html$|js/core[.]js|control/menu|control/supabase-de-juguete" ;;
+    "las clases sin estilo")    echo "[.]html$|^js/|^css/|control/estilos" ;;
+    "el aviso en vivo")         echo "js/core[.]js|control/envivo" ;;
+    "las firmas")               echo "^js/|control/firmas|control/supabase-de-juguete" ;;
+    "los pasos en vivo")        echo "js/ayuda|^edge/|control/vivo" ;;
+    "el dictado")               echo "js/ayuda|control/voz" ;;
+    "la lectura de listas")     echo "js/listas|^edge/listas|control/listas" ;;
+    "la pantalla vacia")        echo "[.]html$|^js/|control/vacio|control/supabase-de-juguete" ;;
+    *)                          echo "SIEMPRE" ;;   # una puerta nueva corre hasta que declare que mira
+  esac
+}
 
 # correr <archivo> <comando...>  — si el archivo no esta, se corta:
 # NO MEDIDO NO ES LIMPIO.
 correr(){
   local nombre="$1"; shift
   local archivo="$1"; shift
+
+  # ¿esta puerta mira algo de lo que cambio?
+  if [ "${CONTROL_TODO:-}" != "1" ]; then
+    local mira; mira="$(que_mira "$nombre")"
+    if [ "$mira" != "SIEMPRE" ]; then
+      if ! echo "$CAMBIADOS" | grep -qE "$mira"; then
+        SALTEADAS="$SALTEADAS|$nombre"
+        return
+      fi
+    fi
+  fi
+
   if [ ! -f "$archivo" ]; then
     echo "pre-push: no esta $archivo. No se controla nada: se corta."
     FALLARON="$FALLARON $nombre(falta)"
@@ -164,8 +227,17 @@ correr "la lectura de listas" control/listas.js   node control/listas.js
 correr "la pantalla vacia"  control/vacio.js      node control/vacio.js
 
 echo ""
+# UNA PUERTA SALTEADA SE DECLARA. No es verde: es que no se ejercito, y eso
+# hay que decirlo con todas las letras o "pasan todos" seria mentira.
+if [ -n "$SALTEADAS" ]; then
+  echo "pre-push: NO SE CORRIERON estas puertas porque el push no toca nada de"
+  echo "          lo que miran (no es un pase: es que no se ejercitaron):"
+  echo "$SALTEADAS" | tr '|' '\n' | sed '/^$/d;s/^/            · /'
+  echo "          Para correrlas todas: CONTROL_TODO=1 git push"
+fi
+
 if [ -z "$FALLARON" ]; then
-  echo "pre-push: pasan todos ($PASARON ). Sube."
+  echo "pre-push: pasan las que miran lo que cambio ($PASARON ). Sube."
   exit 0
 fi
 
