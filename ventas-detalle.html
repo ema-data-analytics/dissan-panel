@@ -64,7 +64,17 @@
         <div id="fechaHoy"></div>
       </div>
       <div id="contenido">
-<div class="db" id="vdInforme">
+<!-- EL ID ES `vtInforme` A PROPOSITO, NO UN COPIAR Y PEGAR.    20/11/2026
+     css/ventas-informe.css encierra sus 59 reglas adentro de `#vtInforme`
+     —a proposito, para que un cambio global no rompa las otras pantallas—.
+     Esta pantalla nacio con `id="vdInforme"` y por eso NINGUNA de esas
+     reglas le llegaba: las tarjetas salian como texto apilado, sin caja ni
+     cifra grande. Lo vi recien al sacar una captura de la pantalla
+     publicada; las 18 puertas no lo vieron porque miden TEXTO, no COMO SE
+     VE. Compartir el id es lo correcto: son dos pantallas del mismo informe
+     de ventas y tienen que verse igual. Duplicar las 59 reglas seria la
+     lista escrita a mano del 14/10. -->
+<div class="db" id="vtInforme">
 
   <div class="vi-cab">
     <h1>Detalle de ventas — renglón por renglón de cada comprobante</h1>

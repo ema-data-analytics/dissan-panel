@@ -110,6 +110,17 @@ correr "el control del control del pdf" control/pdf-senuelos.js \
                                                   node control/pdf-senuelos.js
 correr "las pantallas"      control/pantallas.js  node control/pantallas.js
 correr "el archivo bajado"  control/archivo.js    node control/archivo.js
+# PUERTA 19, 20/11/2026. Todas las de arriba cargan la pantalla POR SU URL.
+# El usuario entra por el menu. El 20/11 entregue "Detalle de Ventas" probada
+# -el par de numeros contra la base, 0 diferencias- y el menu le decia "No
+# tenes acceso", porque me olvide de agregarla a PANTALLAS de core.js. Esta
+# entra al panel y APRIETA el renglon, que es lo que hace el.
+correr "el camino del usuario" control/menu.js    node control/menu.js
+# PUERTA 20, 20/11/2026. Todas las de arriba miden TEXTO. Ninguna mide COMO SE
+# VE: ventas-detalle.html usaba el id "vdInforme" y la hoja encierra todo en
+# "#vtInforme", asi que las tarjetas salian como texto apilado. Esta le
+# pregunta a cada elemento si alguna regla cargada le LLEGA de verdad.
+correr "las clases sin estilo" control/estilos.js node control/estilos.js
 # PUERTA 13, 10/11/2026. El Tablero estuvo nueve horas caido a 54 s y las doce
 # puertas de arriba no lo vieron, porque corren cuando yo pusheo. El panel
 # ahora avisa solo cuando una llamada pasa de 3 s o da error; esto controla
