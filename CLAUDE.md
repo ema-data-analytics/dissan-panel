@@ -2217,3 +2217,98 @@ tipo por **`clase_operacion` y no por el código** —la regla del 12/11, que es
 cargada en `ayuda.saber`— y cerró sola el cabo suelto del 11/11: *"estos
 borrados explican los 206 comprobantes que nombra la cuenta corriente de
 proveedores y no aparecen en compras. No son datos rotos."*
+
+## 20/11/2026 — EL EXCEL DE MONICA, Y EL JUGUETE QUE LE MENTIA AL MENU
+
+**«PESTAÑAS OCULTAS» NO ALCANZA SI EL OTRO NO LAS VE.** El usuario dijo que veia
+dos y yo habia dicho cuatro ocultas: las dos cosas eran ciertas. No estan
+`hidden`, estan **`state="veryHidden"`**, que Excel **no lista en «Mostrar
+hoja»** — solo se ven desde el editor de Visual Basic o abriendo el `.xlsx` como
+lo que es, un zip. Las pone **Tango** al exportar: tres guardan los valores de
+los campos adicionales y la cuarta, `_metadata`, el nombre interno de cada
+columna. **Antes de decirle a alguien que su archivo tiene algo que el no ve,
+decirle DONDE no lo ve y por que.**
+
+**UN TOTAL QUE CIERRA PUEDE ESTAR TAPANDO DIFERENCIAS QUE SE COMPENSAN.** El
+total cerraba y la huella md5 renglon por renglon NO. El unico renglon distinto
+en 14.613 era mio: `A0000800000273 · DMZ · SLGR003`, donde Python escribia
+`-0.00` y Postgres `0.00` — **`Decimal` conserva el cero negativo** y `round()`
+no. **La huella se busca por mitades:** archivo entero → 25 de 26 meses iguales
+→ un solo dia → las 39 claves de ese dia a la vista. Cuatro pasos, no 14.613.
+
+**`_metadata` DESTAPO DOS ROTULOS MENTIROSOS.** «Provincia» es la **zona**
+(`gva05`): 14.652 de 14.652, con el mapa del maestro y no deducido de que los
+conteos coincidan. Y «PROVEEDOR» **no es el vendedor**: la hoja tiene columnas
+insertadas a mano y el mapeo quedo corrido. **Y acuse de mas:** dije que NINGUN
+valor estaba en la lista de VENDEDORES y es falso, `JHONSON` esta, 1 de 51.
+
+**LOS 254 RENGLONES QUE «FALTAN» NO FALTAN.** Tango guarda el mismo articulo dos
+veces en un comprobante cuando salio de dos lotes, y las dos filas son
+**identicas**: 188 combinaciones en 293 filas. El export las fusiona. Las claves
+distintas son **14.613 en las dos puntas, contadas, no restadas**. Por eso
+`ema.mv_ventas_detalle` **NO lleva indice unico** y no se puede refrescar
+`CONCURRENTLY`: declarado en el comentario de la vista.
+
+**EL JUGUETE LE MENTIA AL MENU Y NINGUNA DE LAS 18 PUERTAS LO MIRABA.**
+`core.js` arma las cabezas con `if (g !== cabeza)` — **texto exacto**. Cree
+`VentasDetalle` con `grupo = 'Ventas'` en la base y el juguete decia
+`'CONSULTAS'`: el menu publicado iba a dibujar **tres cabezas donde van dos**.
+Y al ponerle la puerta aparecio que **los dos subdiarios dicen `'IMPUESTOS'` en
+el juguete y `'COMPRAS'`/`'VENTAS'` en la base desde el 10/11**: diez dias de
+puertas midiendo un menu que DISSAN nunca vio. **Puerta nueva dentro del
+alcance:** el juguete tiene que decir lo mismo que la base en `nombre` y
+`grupo`, los dos textos que el usuario LEE. `api_alcance_modulos_v2` al lado de
+la v1 para traer `grupo`. Dos arneses, los dos agarrados — y **el primero
+REVENTO por un ancla vieja en vez de dar verde**, que es para lo que esta.
+
+**`data-plata` NO SIGNIFICA «ESTA COLUMNA ES PLATA»: SIGNIFICA «ES UNA PARTE DEL
+TOTAL DEL RENGLON».** Lo copie de `subdiario.js` —donde si lo es— y lo puse en
+todas las columnas num. La puerta del archivo bajado sumo **«Precio unitario» +
+«Importe Tango» = 867.768,60 contra un Total de 433.884,30**. Precio unitario es
+**por unidad**: es el defecto del 14/10 en mi pantalla nueva. Esta grilla **no
+tiene descomposicion aditiva** y eso se DECLARA en vez de inventarle una.
+
+**UN CODIGO SE MARCA, O EL PDF LO CORTA.** El comprobante salia
+`A0000800007...` y el articulo `FAVE002...`: van con `db-cod`, que `js/bajar.js`
+ya reconoce. **Y la clase NO va en la celda vacia**, porque esa rama corre antes
+que la del guion largo y hacia viajar el `—` al Excel como TEXTO.
+
+**UNA ABREVIATURA MIA NO SE DISTINGUE DE UN NUMERO CORTADO.** La pantalla decia
+`md5 25e5f0a3…` y la puerta del PDF lo corto. Tenia razon. Va la afirmacion, no
+el hash.
+
+**EL ANCHO DE LA HOJA LO MANDA EL DATO, IGUAL QUE EL DE LA COLUMNA.** 18
+columnas no entran en A4 y cortaban `Lic10cmx...`, una descripcion con digitos.
+**Desde 17 columnas, A3 apaisado.** Con 16 o menos no cambia nada — que son
+todas las demas pantallas.
+
+**EL ARNES DEL ALCANCE COPIABA POR `require` Y YO LEI UN ARCHIVO SIN
+REQUERIRLO.** `alcance.js` paso a leer `control/supabase-de-juguete.js` con
+`readFileSync` y la copia del arnes se quedo sin el: los seis senuelos cortaron
+por **ENOENT en vez de por el defecto plantado**, o sea que cantaba «corto» sin
+haber probado nada. Es textual lo que su propio comentario del 16/11 decia de
+`sesion.js`. La convencion se extiende, no se agrega un nombre: ahora sigue
+tambien los `path.join(__dirname, 'x.js')`, **exigiendo extension** para no
+intentar copiar `'..'`.
+
+**Y LEI UN REPINTADO VIEJO POR TERCERA VEZ, CON LA REGLA YA ESCRITA DOS VECES.**
+La pantalla **se carga sola al abrirse** (core.js llama a `calcular()` despues de
+armar el menu). Marque la huella ANTES de que esa carga terminara, no habia
+datos que marcar, y mi espera se dio por satisfecha con el resultado de ESA
+carga —el rango por defecto— mientras los campos ya decian 2026: lei
+**$14.045.541.520,62** creyendo que era 2026. La version que sirve: **esperar a
+que la carga en curso TERMINE, marcar la huella del objeto de datos, recien ahi
+apretar, y esperar a que ese objeto sea OTRO.**
+
+**PROBADO, CON LA DEFINICION DE LA CASA.** Pantalla **publicada**, entrando con
+usuario y contrasenia, apretando el control con la mano, y la base en la misma
+corrida: **2026** total $7.356.963.336,56 = 7.356.963.336,56 · 1.030.514 =
+1.030.514 · 2.994 = 2.994, en 358 ms. **2025** $6.397.069.784,60 =
+6.397.069.784,60 · 1.181.069 = 1.181.069 · 3.742 = 3.742, en 463 ms. **0
+errores, 0 diferencias**, y el menu la muestra.
+
+**LAS DOS PANTALLAS DE VENTAS DAN LO MISMO, MEDIDO.** Venta neta 2026
+$7.356.963.417,69 contra `importe_tango` del detalle $7.356.963.417,09 =
+**$0,60**; contra `total` (cantidad x precio) **$81,13**, que es el redondeo del
+propio Tango entre sus dos cuentas y es lo que la columna **Control** muestra
+dentro de cada renglon.
