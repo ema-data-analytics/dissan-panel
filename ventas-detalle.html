@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DISSAN · Detalle de ventas</title>
+<link rel="icon" href="data:,">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/app.css?v=29">
+<link rel="stylesheet" href="css/tablero-db.css?v=4">
+<link rel="stylesheet" href="css/ventas-informe.css?v=3">
+</head>
+<body>
+
+<!-- ================== LOGIN ================== -->
+<div id="login-wrap">
+  <div class="login-box">
+    <div class="marca">CAPA INTELIGENTE</div>
+    <h1 class="login-tit">Ingresar al panel DISSAN</h1>
+
+    <label class="fl">Usuario</label>
+    <input id="l-user" class="fi" autocomplete="username" spellcheck="false">
+
+    <label class="fl">Contraseña</label>
+    <div class="clave">
+      <input id="l-pass" class="fi" type="password" autocomplete="current-password">
+      <button type="button" class="ojo" id="l-ojo" onclick="verClave()"
+              aria-label="Mostrar la contraseña" aria-pressed="false"></button>
+    </div>
+
+    <button id="l-btn" class="btn" onclick="entrar()">Entrar</button>
+    <div id="l-err" class="err"></div>
+    <div class="pie">Mismo usuario y contraseña que el panel de siempre</div>
+  </div>
+</div>
+
+<!-- ================== APP ================== -->
+<div id="app" hidden data-modulo="VentasDetalle">
+    <div id="shell">
+    <div id="sidebar">
+      <div class="marca">
+        <div class="marca-sistema">Capa Inteligente</div>
+        <div class="marca-pie">DISSAN</div>
+      </div>
+      <div class="marca-logos">
+        <img class="marca-logo" src="img/ema.png" alt="EMA Data Analytics">
+        <span class="marca-socio"><img src="img/macromanager.png" alt="MACROmanager Consultora"></span>
+      </div>
+      <nav id="menuLateral"></nav>
+      <div id="panelUsuario">
+        <div class="avatar" id="avatarInicial">?</div>
+        <div class="datos">
+          <div class="nombre" id="nombreUsuario">&mdash;</div>
+          <div class="rol" id="rolUsuario">&mdash;</div>
+        </div>
+        <button id="btnSalir" onclick="salir()" title="Cerrar sesion"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/></svg></button>
+      </div>
+    </div>
+
+    <div id="areaContenido">
+      <div id="topbar">
+        <div id="tituloModulo">Detalle de ventas</div>
+        <div id="fechaHoy"></div>
+      </div>
+      <div id="contenido">
+<div class="db" id="vdInforme">
+
+  <div class="vi-cab">
+    <h1>Detalle de ventas — renglón por renglón de cada comprobante</h1>
+    <p class="vi-bajada" id="vdBajada">DISSAN S.R.L. &middot; apretá <b>Ver</b> para medir contra la base</p>
+  </div>
+
+  <details class="vi-ayuda" id="vdAyuda" open>
+    <summary>Cómo leer esta pantalla (abrir / cerrar)</summary>
+    <div class="vi-ayuda-cuerpo">
+      <div>
+        <h3>Qué reemplaza</h3>
+        <p>El Excel que hoy se exporta a mano desde Tango
+        (<code>DETALLE DE VENTAS 2024 A LA FECHA</code>). Se controló contra la base
+        renglón por renglón: <b>14.613 de 14.613</b> combinaciones de comprobante y
+        artículo idénticas, por huella md5, en código, cantidad e importe.</p>
+      </div>
+      <div>
+        <h3>Renglones de Tango o agrupados</h3>
+        <p>Tango guarda <b>el mismo artículo dos veces</b> en un comprobante cuando
+        salió de dos lotes o depósitos. El Excel los fusiona; por eso muestra 14.652
+        renglones donde Tango tiene 14.906. <b>No se pierde ni una unidad ni un peso.</b>
+        El interruptor <b>Agrupar</b> deja elegir cuál de las dos se mira, y la pantalla
+        dice siempre cuántos se fusionaron.</p>
+      </div>
+      <div>
+        <h3>Las dos columnas de importe</h3>
+        <p><b>Total</b> es <code>cantidad × precio unitario</code>, que es lo que trae el
+        Excel de DISSAN. <b>Importe Tango</b> es <code>gravado + exento</code>, que es lo
+        que Tango guarda. No son iguales: difieren <b>$524,32 en 3.773 renglones</b> de
+        toda la historia, por redondeo del propio Tango. La diferencia se muestra en
+        <b>Control</b>, dentro del renglón, en vez de elegir una a escondidas.</p>
+      </div>
+      <div>
+        <h3>El signo de las notas de crédito</h3>
+        <p>Las notas de crédito (<b>DMZ</b> y <b>DVM</b>) van <b>en negativo</b>, así que
+        el total ya está neteado. Se reconocen por <code>gva15.clase_operacion = 'NC'</code>,
+        nunca por <code>t_comp = 'N/C'</code>, que en esta empresa devuelve cero.</p>
+      </div>
+      <div>
+        <h3>«Zona», no provincia</h3>
+        <p>El Excel rotula <b>Provincia</b> una columna que en Tango es la <b>zona</b> del
+        cliente (<code>gva05</code>). Acá las zonas se llaman como provincias: 1 SAN LUIS,
+        2 MENDOZA, 3 SAN JUAN. Se muestran las dos, el código y el nombre.</p>
+      </div>
+      <div>
+        <h3>«Proveedor» es del artículo, no el vendedor</h3>
+        <p>Sale de los campos adicionales del artículo en Tango. Hay además
+        <b>Vendedor</b>, <b>Línea</b> y <b>Sublínea</b>, que <b>el Excel no trae</b>.</p>
+      </div>
+      <div>
+        <h3>El precio es sin IVA</h3>
+        <p><code>gva53.precio_net</code>, neto. La cabecera del comprobante en Tango
+        incluye el IVA y por eso es mayor.</p>
+      </div>
+    </div>
+  </details>
+
+  <div class="db-filtros">
+    <div class="db-rej">
+      <div class="db-campo">
+        <label for="vdDesde">Desde (fecha de emisión)</label>
+        <input type="date" id="vdDesde" value="2024-09-02">
+      </div>
+      <div class="db-campo">
+        <label for="vdHasta">Hasta</label>
+        <input type="date" id="vdHasta" value="2026-10-07">
+      </div>
+      <div class="db-campo">
+        <label for="vdZona">Zona (el Excel la llama Provincia)</label>
+        <select id="vdZona">
+          <option value="">las tres</option>
+          <option value="2">MENDOZA (2)</option>
+          <option value="1">SAN LUIS (1)</option>
+          <option value="3">SAN JUAN (3)</option>
+        </select>
+      </div>
+      <div class="db-campo">
+        <label for="vdProveedor">Proveedor (del artículo)</label>
+        <input type="text" id="vdProveedor" autocomplete="off" placeholder="COLOPLAST, JOHNSON…">
+      </div>
+      <div class="db-campo">
+        <label for="vdEntidad">Entidad</label>
+        <select id="vdEntidad">
+          <option value="">las dos</option>
+          <option value="PUBLICO">PUBLICO</option>
+          <option value="PRIVADO">PRIVADO</option>
+        </select>
+      </div>
+      <div class="db-campo">
+        <label for="vdTipoCliente">Tipo de cliente</label>
+        <select id="vdTipoCliente">
+          <option value="">todos</option>
+          <option value="CLINICA">CLINICA</option>
+          <option value="HOSPITAL">HOSPITAL</option>
+          <option value="OBRA SOCIAL">OBRA SOCIAL</option>
+          <option value="OTROS">OTROS</option>
+        </select>
+      </div>
+      <div class="db-campo doble">
+        <label for="vdCliente">Cliente (código o razón social)</label>
+        <input type="text" id="vdCliente" autocomplete="off" placeholder="MZ0072 o HOSPITAL…">
+      </div>
+      <div class="db-campo doble">
+        <label for="vdArticulo">Artículo (código, descripción o sinónimo)</label>
+        <input type="text" id="vdArticulo" autocomplete="off" placeholder="JHO0121 o Vicryl…">
+      </div>
+      <div class="db-campo">
+        <label for="vdTipoComp">Tipo de comprobante</label>
+        <select id="vdTipoComp">
+          <option value="">todos</option>
+          <option value="FAC">FAC — Factura</option>
+          <option value="DMZ">DMZ — N/C descuentos</option>
+          <option value="DVM">DVM — N/C devoluciones</option>
+          <option value="NDE">NDE — Nota de débito espec.</option>
+          <option value="N/D">N/D — Nota de débito</option>
+        </select>
+      </div>
+      <div class="db-campo">
+        <label for="vdAgrupar">Renglones</label>
+        <select id="vdAgrupar">
+          <option value="0">como los guarda Tango</option>
+          <option value="1">agrupados por artículo (como el Excel)</option>
+        </select>
+      </div>
+      <div class="db-campo">
+        <label for="vdLimite">Renglones que se traen</label>
+        <select id="vdLimite">
+          <option value="500">500</option>
+          <option value="2000" selected>2.000</option>
+          <option value="8000">8.000</option>
+          <option value="40000">todos</option>
+        </select>
+      </div>
+    </div>
+    <div class="db-acciones">
+      <button class="db-btn" id="vdAplicar">Ver</button>
+      <button class="db-btn sec" id="vd2024">2024</button>
+      <button class="db-btn sec" id="vd2025">2025</button>
+      <button class="db-btn sec" id="vd2026">2026</button>
+      <button class="db-btn sec" id="vdExcel">Como el Excel del 08/10</button>
+      <span id="vdLeyenda" class="db-pie" style="margin:0"></span>
+    </div>
+  </div>
+
+  <div id="vdEstado"></div>
+  <div id="vdCuerpo" hidden></div>
+</div>
+      </div>
+    </div>
+  </div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="js/core.js?v=23"></script>
+<script src="js/bajar-formatos.js?v=7"></script>
+<script src="js/bajar.js?v=9"></script>
+<script src="js/filas.js?v=5"></script>
+<script src="js/ventas-detalle.js?v=1"></script>
+</body>
+</html>

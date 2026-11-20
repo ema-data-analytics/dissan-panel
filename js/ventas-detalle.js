@@ -1,0 +1,339 @@
+/* =====================================================================
+   DETALLE DE VENTAS — DISSAN 20/11/2026
+   =====================================================================
+   Reemplaza el Excel que hoy se exporta a mano desde Tango
+   ("2026.10.08_DETALLE_DE_VENTAS_2024_A_LA_FECHA.xlsx").
+
+   CONTROLADA CONTRA ESE ARCHIVO, RENGLON POR RENGLON. Huella md5 de
+   (comprobante | tipo | articulo | cantidad | importe) agregada por
+   clave, de las dos puntas:
+       EXCEL : 25e5f0a3c793bf9d4f7decb7677d6161   14.613 claves
+       BASE  : 25e5f0a3c793bf9d4f7decb7677d6161   14.613 claves
+   No es un total que cierra: es cada renglon. Un total puede estar
+   tapando diferencias que se compensan, que es la cagada del 16/11
+   ("403 de 403 con huella md5" era mi funcion contra mi propia funcion).
+
+   CUATRO COSAS QUE LA PANTALLA DECLARA, PORQUE SI NO SE LEEN MAL:
+
+   1. RENGLONES FUSIONADOS. Tango guarda el mismo articulo DOS VECES en
+      un comprobante cuando salio de dos lotes -medido: 188 combinaciones
+      en 293 filas, y las repetidas son IDENTICAS entre si, mismo precio
+      y misma cantidad-. El Excel las fusiona: 14.652 contra 14.906.
+      No se pierde ni una unidad ni un peso. El pie lo dice siempre.
+
+   2. EL SIGNO DE LAS NOTAS DE CREDITO. Van en negativo, y se reconocen
+      por gva15.clase_operacion = 'NC', NUNCA por t_comp = 'N/C', que en
+      esta empresa tiene 2 filas en toda la historia y devuelve cero
+      (12/11/2026).
+
+   3. "PROVINCIA" ES LA ZONA. El Excel rotula Provincia lo que en Tango
+      es la zona del cliente (gva05). Medido renglon por renglon: las
+      dos coinciden en los 14.652. Acá van las dos, codigo y nombre.
+
+   4. "PROVEEDOR" ES DEL ARTICULO, no el vendedor. Sale de
+      sta11.campos_adicionales (CA_TEXT_1710767066197). El `_metadata`
+      del Excel lo mapea mal, a CA_VENDEDORES.
+
+   Y LAS DOS COLUMNAS DE IMPORTE VAN LAS DOS: `Total` es cantidad x
+   precio (lo que trae el Excel) e `Importe Tango` es gravado + exento
+   (lo que Tango guarda). Difieren $524,32 en 3.773 renglones de toda la
+   historia, por redondeo del propio Tango. La diferencia se muestra en
+   `Control`, dentro del renglon, en vez de elegir una a escondidas
+   (16/11/2026).
+   ===================================================================== */
+
+var VD = { cargando:false, datos:null };
+
+/* ---------- numeros, igual que en ventas.js ---------- */
+function vdEsc(s){ return String(s === null || s === undefined ? '' : s)
+  .replace(/[&<>"']/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+function vdNum(n){
+  if (n === null || n === undefined || n === '') return '—';
+  return Number(n).toLocaleString('es-AR');
+}
+/* El signo va ANTES del peso: "$-5.555,51" se lee como un importe raro. */
+function vdSigno(v, cuerpo){ return (Number(v) < 0 ? '-$' : '$') + cuerpo; }
+function vdPesos(n){
+  if (n === null || n === undefined || n === '') return '—';
+  return vdSigno(n, Math.abs(Math.round(Number(n))).toLocaleString('es-AR'));
+}
+function vdExacto(n){
+  if (n === null || n === undefined || n === '') return '—';
+  return vdSigno(n, Math.abs(Number(n)).toLocaleString('es-AR',
+                  {minimumFractionDigits:2, maximumFractionDigits:2}));
+}
+/* Las tarjetas grandes van en millones con el monto exacto en el subtitulo:
+   un numero cortado por el ancho se lee como OTRO numero (14/10/2026). */
+function vdMillones(n){
+  var v = Number(n || 0);
+  if (Math.abs(v) >= 1e6)
+    return vdSigno(v, (Math.abs(v)/1e6).toLocaleString('es-AR', {maximumFractionDigits:1}) + ' M');
+  return vdPesos(v);
+}
+function vdCant(n){
+  if (n === null || n === undefined || n === '') return '—';
+  var v = Number(n);
+  return v.toLocaleString('es-AR', {maximumFractionDigits:2});
+}
+function vdFecha(s){
+  if (!s) return '—';
+  var p = String(s).slice(0,10).split('-');
+  return p.length === 3 ? (p[2] + '/' + p[1] + '/' + p[0]) : String(s);
+}
+function vdKpi(rotulo, valor, nota){
+  return '<div class="vi-kpi"><div class="vi-kpi-t">' + vdEsc(rotulo) + '</div>' +
+         '<div class="vi-kpi-v">' + vdEsc(valor) + '</div>' +
+         (nota ? '<div class="vi-kpi-n">' + vdEsc(nota) + '</div>' : '') + '</div>';
+}
+
+/* ---------- los filtros que la pantalla tiene PUESTOS ahora ----------
+   Se leen de los campos, nunca del boton que yo creo haber apretado:
+   esa fue la cagada del 19/11, leer un repintado viejo.             */
+function vdFiltros(){
+  function v(id){ var e = document.getElementById(id); return e ? e.value : ''; }
+  return {
+    p_desde       : v('vdDesde') || null,
+    p_hasta       : v('vdHasta') || null,
+    p_zona        : v('vdZona') || null,
+    p_proveedor   : v('vdProveedor') || null,
+    p_entidad     : v('vdEntidad') || null,
+    p_tipo_cliente: v('vdTipoCliente') || null,
+    p_cliente     : v('vdCliente') || null,
+    p_articulo    : v('vdArticulo') || null,
+    p_tipo_comp   : v('vdTipoComp') || null,
+    p_agrupar     : v('vdAgrupar') === '1',
+    p_limite      : Number(v('vdLimite') || 2000)
+  };
+}
+
+async function vdCargar(){
+  if (VD.cargando) return;
+  var estado = document.getElementById('vdEstado');
+  var cuerpo = document.getElementById('vdCuerpo');
+  var boton  = document.getElementById('vdAplicar');
+  VD.cargando = true;
+  if (boton) boton.disabled = true;
+  estado.innerHTML = '<div class="db-cargando">Midiendo contra la base…</div>';
+  cuerpo.hidden = true;
+  try {
+    var f = vdFiltros();
+    var r = await rpc('api_ventas_detalle_v1', f);
+    var d = r && r.data;
+    if (!d || d.ok === false)
+      throw new Error((d && d.error) || 'la base no devolvió nada');
+    VD.datos = d;
+    VD.filtros = f;
+    estado.innerHTML = '';
+    cuerpo.innerHTML = vdPintar(d, f, r.ms);
+    cuerpo.hidden = false;
+    var ly = document.getElementById('vdLeyenda');
+    if (ly) ly.textContent = 'medido en ' + vdNum(r.ms) + ' ms';
+  } catch (e) {
+    estado.innerHTML = '<div class="db-error">No se pudo medir: ' + vdEsc(e.message) + '</div>';
+  } finally {
+    VD.cargando = false;
+    if (boton) boton.disabled = false;
+  }
+}
+
+function vdPintar(d, f, ms){
+  var s = d.resumen || {};
+  var filas = d.filas || [];
+  var h = [];
+
+  /* ---------- las tarjetas ---------- */
+  h.push('<div class="vi-kpis">');
+  h.push(vdKpi('Renglones de Tango', vdNum(s.renglones_tango),
+               'como los guarda Tango, sin fusionar'));
+  h.push(vdKpi('Comprobante + artículo', vdNum(s.claves),
+               'combinaciones distintas · el Excel de Tango muestra éstas'));
+  h.push(vdKpi('Comprobantes', vdNum(s.comprobantes),
+               vdNum(s.clientes) + ' clientes · ' + vdNum(s.articulos) + ' artículos'));
+  h.push(vdKpi('Cantidad', vdCant(s.cantidad), 'unidades, con el signo de las notas de crédito'));
+  h.push(vdKpi('TOTAL', vdMillones(s.total),
+               vdExacto(s.total) + ' · cantidad × precio, neto sin IVA'));
+  var nc = Number(s.notas_credito || 0);
+  h.push(vdKpi('Notas de crédito',
+               nc ? vdMillones(s.nc_importe) : 'Ninguna',
+               nc ? vdNum(nc) + ' renglones · ' + vdExacto(s.nc_importe)
+                  : 'no hubo notas de crédito en este filtro'));
+  h.push('</div>');
+
+  /* ---------- LO QUE SE DECLARA, SIEMPRE ----------
+     Una sección que desaparece se lee como «falta algo» (16/11/2026). */
+  h.push('<div class="db-sec">Lo que hay que saber de estas cifras' +
+         '<small>Va siempre, haya o no diferencias: si la pantalla calla, ' +
+         'el que mira no distingue «no hay» de «no se midió».</small></div>');
+  h.push('<div class="db-tb-caja"><table class="db-tb"><thead><tr>' +
+         '<th>Qué</th><th>Qué dice la pantalla</th></tr></thead><tbody>');
+
+  var fusion = Number(s.renglones_tango || 0) - Number(s.claves || 0);
+  h.push('<tr><td>Renglones fusionados</td><td>' +
+         (f.p_agrupar
+           ? '<b>Agrupado por artículo</b>, como el Excel de Tango: ' +
+             vdNum(s.claves) + ' renglones. ' +
+             (fusion > 0
+               ? '<b>' + vdNum(fusion) + '</b> renglones de Tango quedaron fusionados ' +
+                 '(el mismo artículo dos veces en un comprobante, por lote o depósito). ' +
+                 'No se pierde ni una unidad ni un peso.'
+               : 'Ninguno se fusionó: no hay artículos repetidos en este filtro.')
+           : '<b>Como los guarda Tango</b>: ' + vdNum(s.renglones_tango) + ' renglones. ' +
+             (fusion > 0
+               ? 'Hay <b>' + vdNum(fusion) + '</b> de más respecto de las ' +
+                 vdNum(s.claves) + ' combinaciones de comprobante y artículo. ' +
+                 'Son el mismo artículo cargado dos veces, por lote o depósito.'
+               : 'Ningún artículo está repetido dentro de un comprobante en este filtro.')) +
+         '</td></tr>');
+
+  h.push('<tr><td>Las dos columnas de importe</td><td>' +
+         '<b>Total</b> ' + vdExacto(s.total) + ' es <code>cantidad × precio</code>, ' +
+         'que es lo que trae el Excel de DISSAN. <b>Importe Tango</b> ' +
+         vdExacto(s.importe_tango) + ' es <code>gravado + exento</code>, lo que Tango guarda. ' +
+         (Math.abs(Number(s.control_importe || 0)) < 0.005
+           ? 'Acá dan <b>lo mismo</b>.'
+           : 'Difieren <b>' + vdExacto(s.control_importe) + '</b>, por redondeo del propio Tango. ' +
+             'La diferencia va renglón por renglón en la columna <b>Control</b>.') +
+         '</td></tr>');
+
+  h.push('<tr><td>El signo de las notas de crédito</td><td>' +
+         (nc ? 'Las <b>' + vdNum(nc) + '</b> notas de crédito van en <b>negativo</b>, ' +
+               'así que el TOTAL ya está neteado.'
+             : 'No hay ninguna en este filtro. Cuando las hay van en negativo.') +
+         ' Se reconocen por <code>gva15.clase_operacion = \'NC\'</code>, nunca por ' +
+         '<code>t_comp = \'N/C\'</code>, que en esta empresa devuelve cero.</td></tr>');
+
+  h.push('<tr><td>«Provincia» es la zona</td><td>' +
+         'La columna que el Excel rotula <b>Provincia</b> es la <b>zona</b> del cliente en ' +
+         'Tango (<code>gva05</code>): 1 SAN LUIS · 2 MENDOZA · 3 SAN JUAN. Medido renglón por ' +
+         'renglón contra el Excel: coinciden en los 14.652.</td></tr>');
+
+  h.push('<tr><td>«Proveedor» es del artículo</td><td>' +
+         'Sale de los campos adicionales del artículo en Tango, no del vendedor. ' +
+         'Acá van además <b>Vendedor</b>, <b>Línea</b> y <b>Sublínea</b>, que el Excel ' +
+         '<b>no trae</b>.</td></tr>');
+
+  h.push('<tr><td>El precio</td><td>Neto <b>sin IVA</b> ' +
+         '(<code>gva53.precio_net</code>). La cabecera del comprobante en Tango incluye el ' +
+         'IVA y por eso es mayor.</td></tr>');
+
+  h.push('<tr><td>Controlado contra</td><td>El Excel exportado de Tango el 08/10/2026: ' +
+         'huella md5 <code>25e5f0a3…</code> sobre <b>14.613 de 14.613</b> combinaciones de ' +
+         'comprobante y artículo, idénticas en cantidad e importe. No es un total que cierra: ' +
+         'es cada renglón.</td></tr>');
+  h.push('</tbody></table></div>');
+
+  /* ---------- la grilla ---------- */
+  h.push('<div class="db-sec">Renglón por renglón' +
+         '<small>' + vdNum(filas.length) + ' de ' + vdNum(f.p_agrupar ? s.claves : s.renglones_tango) +
+         ' · ' + vdFecha(s.desde) + ' a ' + vdFecha(s.hasta) +
+         ' · medido en ' + vdNum(ms) + ' ms</small></div>');
+
+  if (!filas.length){
+    h.push('<div class="db-pie"><b>Ninguno.</b> Ningún renglón entra en esos filtros. ' +
+           'No es un error: es que no hay. Probá ampliando las fechas o sacando un filtro.</div>');
+    return h.join('');
+  }
+
+  /* `data-plata` y `data-total` los DECLARA la pantalla, para que el control
+     pueda sumar las partes sin una lista de nombres escrita al lado -que es
+     la cagada del 14/10 y del 14/11-.                            16/11/2026 */
+  var COLS = [
+    { k:'fecha',        t:'Fecha',        tipo:'fecha' },
+    { k:'zona',         t:'Zona',         tipo:'txt' },
+    { k:'t_comp',       t:'Tipo',         tipo:'txt' },
+    { k:'n_comp',       t:'Comprobante',  tipo:'txt' },
+    { k:'razon_social', t:'Cliente',      tipo:'txt' },
+    { k:'entidad',      t:'Entidad',      tipo:'txt' },
+    { k:'tipo_cliente', t:'Tipo cliente', tipo:'txt' },
+    { k:'cod_articu',   t:'Artículo',     tipo:'txt' },
+    { k:'descripcion',  t:'Descripción',  tipo:'txt' },
+    { k:'sinonimo',     t:'Sinónimo',     tipo:'txt' },
+    { k:'proveedor',    t:'Proveedor',    tipo:'txt' },
+    { k:'linea',        t:'Línea',        tipo:'txt' },
+    { k:'sublinea',     t:'Sublínea',     tipo:'txt' },
+    { k:'cantidad',     t:'Cantidad',     tipo:'cant' },
+    { k:'precio_unitario', t:'Precio unitario', tipo:'num' },
+    { k:'total',           t:'Total',           tipo:'num', total:true },
+    { k:'importe_tango',   t:'Importe Tango',   tipo:'num' },
+    { k:'control_importe', t:'Control',         tipo:'ctrl' }
+  ];
+
+  h.push('<div class="db-tb-caja"><table class="db-tb"><thead><tr>');
+  for (var i = 0; i < COLS.length; i++){
+    var c = COLS[i];
+    h.push('<th' + (c.tipo === 'num' ? ' data-plata' : '') +
+           (c.total ? ' data-total' : '') +
+           (c.tipo === 'ctrl' ? ' data-no-baja data-deriva="redondeo del propio Tango entre' +
+              ' cantidad x precio y el importe que guarda: no es plata que falte"' : '') +
+           (c.tipo === 'num' || c.tipo === 'cant' || c.tipo === 'ctrl' ? ' class="der"' : '') +
+           '>' + vdEsc(c.t) + '</th>');
+  }
+  h.push('</tr></thead><tbody>');
+
+  for (var r = 0; r < filas.length; r++){
+    var fl = filas[r];
+    var esNC = String(fl.clase_operacion || '') === 'NC';
+    h.push('<tr' + (esNC ? ' class="aparte"' : '') + '>');
+    for (var j = 0; j < COLS.length; j++){
+      var col = COLS[j], v = fl[col.k];
+      if (col.tipo === 'fecha')      h.push('<td>' + vdEsc(vdFecha(v)) + '</td>');
+      else if (col.tipo === 'cant')  h.push('<td class="der">' + vdEsc(vdCant(v)) + '</td>');
+      else if (col.tipo === 'num')   h.push('<td class="der">' + vdEsc(vdExacto(v)) + '</td>');
+      else if (col.tipo === 'ctrl')  h.push('<td class="der">' +
+          (Math.abs(Number(v || 0)) < 0.005 ? '' : vdEsc(vdExacto(v))) + '</td>');
+      else h.push('<td>' + vdEsc(v === null || v === undefined || v === '' ? '—' : v) + '</td>');
+    }
+    h.push('</tr>');
+  }
+  h.push('</tbody></table></div>');
+
+  if (filas.length >= f.p_limite){
+    h.push('<div class="db-pie"><b>Se trajeron los primeros ' + vdNum(filas.length) +
+           '.</b> Las tarjetas de arriba miden <b>todo</b> el filtro, no sólo esta tabla. ' +
+           'Para ver todos los renglones, subí «Renglones que se traen».</div>');
+  }
+  return h.join('');
+}
+
+/* El PROVEEDOR es un campo de texto y no un desplegable a proposito: son 51
+   valores, y «mas de 20 opciones se escriben, no se scrollean». Filtra por
+   parte del nombre, asi que "colo" encuentra COLOPLAST.                      */
+
+/* core.js llama a calcular() despues de armar el menu, y si la pantalla no la
+   define tira «calcular is not defined» en la consola. No rompe nada visible,
+   y por eso es justo la clase de cosa que se entrega sin ver: lo agarro el
+   control pintando la pantalla con el juguete.                  20/11/2026 */
+function calcular(){ return vdCargar(); }
+
+function vdAnio(a){
+  document.getElementById('vdDesde').value = a + '-01-01';
+  document.getElementById('vdHasta').value = a + '-12-31';
+  vdCargar();
+}
+
+window.addEventListener('load', function(){
+  var b = document.getElementById('vdAplicar');
+  if (b) b.addEventListener('click', vdCargar);
+  ['vdZona','vdEntidad','vdTipoCliente','vdTipoComp','vdAgrupar','vdLimite']
+    .forEach(function(id){
+      var e = document.getElementById(id);
+      if (e) e.addEventListener('change', vdCargar);
+    });
+  ['vdCliente','vdArticulo','vdProveedor'].forEach(function(id){
+    var e = document.getElementById(id);
+    if (e) e.addEventListener('keydown', function(ev){ if (ev.key === 'Enter') vdCargar(); });
+  });
+  var b24 = document.getElementById('vd2024'); if (b24) b24.addEventListener('click', function(){ vdAnio(2024); });
+  var b25 = document.getElementById('vd2025'); if (b25) b25.addEventListener('click', function(){ vdAnio(2025); });
+  var b26 = document.getElementById('vd2026'); if (b26) b26.addEventListener('click', function(){ vdAnio(2026); });
+  var bx  = document.getElementById('vdExcel');
+  if (bx) bx.addEventListener('click', function(){
+    /* La ventana exacta del Excel del 08/10/2026, para poder comparar
+       contra el archivo sin tener que acordarse de las fechas. */
+    document.getElementById('vdDesde').value = '2024-09-02';
+    document.getElementById('vdHasta').value = '2026-10-07';
+    document.getElementById('vdAgrupar').value = '1';
+    vdCargar();
+  });
+});

@@ -37,6 +37,13 @@
                  {clave:'Cotizador',nombre:'Cotizador (en desarrollo)',grupo:null},
                  {clave:'MargenDeVentas',nombre:'Márgenes de Ventas Reales (Pedidos – OC)',grupo:'CONSULTAS'},
                  {clave:'Ventas',nombre:'Ventas Facturadas y Costos (Detalle - Filtros)',grupo:'CONSULTAS'},
+                 /* 20/11/2026. En la base de verdad este modulo esta apagado para
+                    todos menos `pruebas` -eso lo decide `modulos`, no esto-; aca
+                    tiene que estar para poder PROBAR la pantalla. Es el mismo
+                    motivo por el que estan los dos subdiarios: sin el, el portero
+                    la tapa y la puerta la mide como "abre limpia" sin haber
+                    pintado nunca una grilla. */
+                 {clave:'VentasDetalle',nombre:'Detalle de Ventas (en desarrollo)',grupo:'CONSULTAS'},
                  /* LOS DOS DEL SUBDIARIO, agregados el 10/11/2026.
                     No estaban, asi que el portero tapaba las dos pantallas y la
                     puerta de pantallas las media como "abren limpias" sin haber
@@ -175,6 +182,94 @@
     desde: '2026-01-01', hasta: '2026-12-31',
     lectura: 'Venta neta sin IVA: facturas mas notas de debito MENOS notas de credito.'
   }];
+
+  /* ===================================================================
+     EL DETALLE DE VENTAS — 20/11/2026
+     ===================================================================
+     Devuelve un OBJETO, no un arreglo: el juguete ya lo contempla
+     (`if (!Array.isArray(d))`).
+
+     Los numeros del resumen son los MEDIDOS en la base ese dia para la
+     ventana del Excel que exporta Tango (02/09/2024 a 07/10/2026), y las
+     filas son filas REALES, copiadas de ema.mv_ventas_detalle. No se
+     inventa ninguna: una cifra escrita a mano en el juguete hace que el
+     control de cifras mida mi tipeo.
+
+     LAS CUATRO CLASES QUE TIENEN QUE ESTAR, porque son las que la
+     pantalla declara y ninguna otra respuesta del juguete las trae:
+       1. una FACTURA comun;
+       2. EL MISMO ARTICULO DOS VECES en un comprobante, identico en
+          precio y cantidad -B0000800002071 COLO0208, medido: es por lo
+          que el Excel muestra 14.652 renglones donde Tango tiene 14.906-;
+       3. una NOTA DE CREDITO, que va en NEGATIVO;
+       4. una fila con sinonimo, linea, sublinea y vendedor NULOS, que es
+          lo que rompe una pantalla que da por hecho que siempre hay. */
+  RPC['api_ventas_detalle_v1'] = {
+    ok: true, ms: 72, agrupado: false, traidos: 5, limite: 2000,
+    resumen: {
+      renglones_tango: 14906, claves: 14613, comprobantes: 7503,
+      clientes: 164, articulos: 1119,
+      cantidad: 2337926, total: 14045541520.62,
+      importe_tango: 14045542044.94, control_importe: -524.32,
+      notas_credito: 491, nc_importe: -689817979.40,
+      desde: '2024-09-02', hasta: '2026-10-07'
+    },
+    filas: [
+      { fecha:'2026-10-07', mes:10, anio:2026, cod_zona:'2', zona:'MENDOZA',
+        t_comp:'FAC', clase_operacion:'F', n_comp:'A0000800007837',
+        cod_client:'MZ0072', razon_social:'HOSPITALES PRIVADOS DE MENDOZA SA',
+        cod_articu:'JBIOS0015', descripcion:'Surgiflo Hemost Matrix MS0010',
+        sinonimo:'MS0010', cantidad:1, precio_unitario:433884.2975,
+        total:433884.2975, importe_tango:433884.30, control_importe:-0.0025,
+        proveedor:'JOHNSON', vendedor:'JHONSON', linea:'BIO', sublinea:'SURGIFLO',
+        entidad:'PRIVADO', tipo_cliente:'HOSPITAL', renglones_fusionados:1 },
+      { fecha:'2023-11-08', mes:11, anio:2023, cod_zona:'1', zona:'SAN LUIS',
+        t_comp:'FAC', clase_operacion:'F', n_comp:'B0000800002071',
+        cod_client:'SL0011', razon_social:'DROGUERIA CENTRAL',
+        cod_articu:'COLO0208', descripcion:'Confeel 33115 Hidroc 15x15',
+        sinonimo:'33115', cantidad:350, precio_unitario:1211.5867769,
+        total:424055.371915, importe_tango:424055.37, control_importe:0.001915,
+        proveedor:'COLOPLAST', vendedor:'COLOPLAST1', linea:'HERIDAS', sublinea:'CONFEEL',
+        entidad:'PUBLICO', tipo_cliente:'OTROS', renglones_fusionados:1 },
+      { fecha:'2023-11-08', mes:11, anio:2023, cod_zona:'1', zona:'SAN LUIS',
+        t_comp:'FAC', clase_operacion:'F', n_comp:'B0000800002071',
+        cod_client:'SL0011', razon_social:'DROGUERIA CENTRAL',
+        cod_articu:'COLO0208', descripcion:'Confeel 33115 Hidroc 15x15',
+        sinonimo:'33115', cantidad:350, precio_unitario:1211.5867769,
+        total:424055.371915, importe_tango:424055.37, control_importe:0.001915,
+        proveedor:'COLOPLAST', vendedor:'COLOPLAST1', linea:'HERIDAS', sublinea:'CONFEEL',
+        entidad:'PUBLICO', tipo_cliente:'OTROS', renglones_fusionados:1 },
+      { fecha:'2026-11-16', mes:11, anio:2026, cod_zona:'2', zona:'MENDOZA',
+        t_comp:'DVM', clase_operacion:'NC', n_comp:'B0000800000253',
+        cod_client:'MZ0368', razon_social:'HOSPITAL TEODORO SCHESTAKOW',
+        cod_articu:'FAVE00260', descripcion:'AYEP ven.enyes. G/R Lic10cmx4m',
+        sinonimo:'1LAR410', cantidad:-150, precio_unitario:1357.0247934,
+        total:-203553.71901, importe_tango:-203552.48, control_importe:-1.23901,
+        proveedor:'POTENZA', vendedor:null, linea:'AYEP', sublinea:null,
+        entidad:'PUBLICO', tipo_cliente:'HOSPITAL', renglones_fusionados:1 },
+      { fecha:'2026-10-27', mes:10, anio:2026, cod_zona:'2', zona:'MENDOZA',
+        t_comp:'N/D', clase_operacion:'ND', n_comp:'B0000800000005',
+        cod_client:'MZ0051', razon_social:'HOSP ENFERMEROS ARGENTINOS GRAL ALVEAR',
+        cod_articu:'SLGR002', descripcion:'Mercaderia Gravada San Luis',
+        sinonimo:null, cantidad:108, precio_unitario:451.2396694,
+        total:48733.8842952, importe_tango:48733.88, control_importe:0.0042952,
+        proveedor:'DISSAN', vendedor:null, linea:null, sublinea:null,
+        entidad:'PUBLICO', tipo_cliente:'HOSPITAL', renglones_fusionados:1 }
+    ]
+  };
+
+  /* Y SU CASO VACIO, que es el que asusta: la pantalla tiene que seguir
+     mostrando sus secciones y decir «Ninguno» con el motivo, no esfumarse
+     (16/11/2026). Sin esto el control nunca mira el caso que importa. */
+  RPC['api_ventas_detalle_v1_vacia'] = {
+    ok: true, ms: 1, agrupado: false, traidos: 0, limite: 2000,
+    resumen: {
+      renglones_tango: 0, claves: 0, comprobantes: 0, clientes: 0, articulos: 0,
+      cantidad: 0, total: 0, importe_tango: 0, control_importe: 0,
+      notas_credito: 0, nc_importe: 0, desde: null, hasta: null
+    },
+    filas: []
+  };
 
   window.__LLAMADAS = [];
 
