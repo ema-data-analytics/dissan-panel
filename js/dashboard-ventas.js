@@ -34,7 +34,7 @@
    medido, no una explicacion.
    ===================================================================== */
 
-var DV = { datos: null, cargando: false, pestania: 'general', tope: 12 };
+var DV = { datos: null, cargando: false, pestania: 'general', tope: 12, abierto: {} };
 
 /* LAS DOS «PROVINCIAS» SON DOS COSAS DISTINTAS, Y LA DIFERENCIA ES PLATA.
    El segmentador «Provincia» de su Excel es la ZONA comercial de Tango
@@ -110,6 +110,32 @@ function dvKpi(rot, val, nota){
          (nota ? '<div class="dv-kpi-n">' + dvEsc(nota) + '</div>' : '') + '</div>';
 }
 
+/* ---------- LO QUE NO SE MIRA, NO SE PINTA ----------        20/11/2026
+   El usuario abrio la primera version y dijo, textual: «TE PARECE QUE VER UNA
+   PANTALLA ASI, ESTA COHERENTE, SENCILLA???». No lo estaba: una tabla de 118
+   clientes por 10 columnas arriba de todo, otra de 14 columnas abajo, seis
+   tarjetas y un cartel amarillo, todo junto. Eso es un volcado, no un
+   dashboard. Y no lo vi porque mido las CIFRAS y nunca miro la PANTALLA:
+   veinte controles comprueban que cada numero coincida con la base y NINGUNO
+   mira si se entiende.
+
+   Un dashboard entra en una pantalla y se lee de un vistazo. Las tablas
+   siguen estando —con su Excel y su PDF— pero PLEGADAS.
+   Y plegar aca NO es esconder con `hidden`: el contenido NO SE PINTA hasta
+   que se abre. Pintado y oculto, la puerta de pantallas lo leeria como «una
+   tabla con N renglones y ningun control para llegar al resto» —el defecto
+   del 28/10— y tendria razon. */
+function dvPlegable(id, rotulo, cuantos, pintar){
+  var abierto = !!DV.abierto[id], h = [];
+  h.push('<div class="dv-mas"><button type="button" class="dv-mas-b' +
+         (abierto ? ' abierta' : '') + '" data-plegar="' + dvEsc(id) + '">' +
+         (abierto ? 'Ocultar ' : 'Ver ') + dvEsc(rotulo) +
+         (cuantos ? ' <span class="dv-mas-n">' + dvEsc(cuantos) + '</span>' : '') +
+         '</button></div>');
+  if (abierto) h.push(pintar());
+  return h.join('');
+}
+
 function dvFiltros(){
   var v = function(id){ var e = document.getElementById(id); return e ? e.value : null; };
   return { p_desde: v('dvDesde') || null, p_hasta: v('dvHasta') || null,
@@ -153,14 +179,16 @@ function dvPintar(d){
   /* EL DENOMINADOR, ARRIBA DE TODO Y SIEMPRE.
      Sin periodo no hay cobertura que publicar, y «hay costo medido en $—» no
      es una frase: ahi se dice que no se midio, que es otra cosa. */
+  /* UNA LINEA, NO UN CARTEL. El denominador va SIEMPRE —un margen sin el
+     miente (08/10)— pero cuatro renglones de texto amarillo arriba de todo le
+     ganan la pantalla a las cifras. El detalle vive plegado, mas abajo. */
   var cob = s.cobertura_plata_pct;
-  h.push('<div class="dv-denominador"><b>' +
+  h.push('<div class="dv-nota">' +
          ((cob === null || cob === undefined)
-            ? 'No hay ventas en este período, así que no hay cobertura de costo que medir.'
-            : 'De cada $100 facturados, hay costo medido en $' +
-              dvEsc(Number(cob).toFixed(0)) + '.') +
-         '</b> ' + dvEsc(d.denominador || '') +
-         ' Las cifras de margen de esta pantalla salen de esos renglones, no de todo lo facturado.</div>');
+            ? 'Sin ventas en este período: no hay cobertura de costo que medir.'
+            : 'El margen se mide sobre los renglones que tienen costo: <b>$' +
+              dvEsc(Number(cob).toFixed(0)) + ' de cada $100 facturados</b>. ' +
+              'Lo que falta es consignación, que DISSAN no compra.') + '</div>');
 
   /* las pestañas */
   h.push('<div class="dv-pestanias">');
@@ -267,17 +295,15 @@ function dvGeneral(d){
 
   var n = d.netas || null;
 
+  /* CUATRO TARJETAS. Eran seis y la pantalla no se leia. «Con costo medido» y
+     «Costo» viven en la tabla del costo, plegada: el que quiere el reparto lo
+     abre, y el que mira el dashboard ve lo que vendio y lo que gano. */
   h.push('<div class="dv-kpis">');
-  h.push(dvKpi('Facturado', dvMillones(s.venta_universo),
-               dvPesos(s.venta_universo) + ' · bruto, sin restar notas de crédito'));
+  h.push(dvKpi('Facturado', dvMillones(s.venta_universo), dvPesos(s.venta_universo)));
   if (n) h.push(dvKpi('Venta neta', dvMillones(n.neto),
-                 dvPesos(n.neto) + ' · es la misma cifra que publica la pantalla de Ventas'));
-  h.push(dvKpi('Con costo medido', dvMillones(s.venta_medida),
-               dvPct(s.cobertura_plata_pct) + ' de lo facturado · ' +
-               dvNum(s.renglones_medidos) + ' de ' + dvNum(s.renglones_universo) + ' renglones'));
-  h.push(dvKpi('Costo', dvMillones(s.costo), dvPesos(s.costo)));
+                 'descontando ' + dvNum(n.notas_credito) + ' notas de crédito'));
   h.push(dvKpi('Margen', dvMillones(s.margen), dvPesos(s.margen)));
-  h.push(dvKpi('Margen %', dvPct(s.margen_pct), 'sobre la venta con costo'));
+  h.push(dvKpi('Margen %', dvPct(s.margen_pct), 'sobre lo que tiene costo'));
   h.push('</div>');
 
   /* LAS DOS PANTALLAS DE VENTAS TIENEN QUE PODER PONERSE AL LADO.
@@ -287,21 +313,6 @@ function dvGeneral(d){
      distintas para «ventas 2026» y no sabe cual creer. Y de paso queda a la
      vista un control de DOS RUTAS INDEPENDIENTES: el facturado por las
      cabeceras de gva12 contra el de los renglones de gva53. */
-  if (n){
-    h.push('<div class="db-pie"><b>Las dos pantallas de Ventas, al lado.</b> ' +
-      'Acá los cortes van sobre lo facturado <b>bruto</b>: ' + dvEsc(dvPesos(s.venta_universo)) +
-      ' en ' + dvEsc(dvNum(n.facturas)) + ' facturas. Restando ' +
-      dvEsc(dvNum(n.notas_credito)) + ' notas de crédito (' + dvEsc(dvPesos(n.notas_credito_neto)) +
-      ') y sumando ' + dvEsc(dvNum(n.notas_debito)) + ' notas de débito (' +
-      dvEsc(dvPesos(n.notas_debito_neto)) + ') da <b>' + dvEsc(dvPesos(n.neto)) +
-      '</b>, que es lo que muestra la pantalla de Ventas. ' +
-      'El mismo facturado medido por las cabeceras de los comprobantes da ' +
-      dvEsc(dvPesos(n.facturas_neto)) + ': <b>' + dvEsc(dvPesos(n.contra_el_universo)) +
-      '</b> de diferencia entre las dos rutas.</div>');
-  }
-
-  h.push(dvDeDondeSaleElCosto(d));
-
   /* EL ROTULO VA IGUAL AUNQUE NO HAYA NADA (16/11): una seccion que
      desaparece se lee como «falta algo», y el que mira no puede distinguir
      «no hay» de «se rompio». */
@@ -315,20 +326,41 @@ function dvGeneral(d){
   var bM = meses.filter(function(m){ return m.margen !== null; })
                 .map(function(m){ return { et:dvMes(m.mes), val:Number(m.margen)||0, m:m }; });
 
-  h.push('<div class="dv-grafs">');
-  h.push('<div><div class="dv-graf-t">Facturado mes a mes</div>' +
+  /* UN SOLO GRAFICO, GRANDE. Dos chicos al lado se leen peor que uno bien
+     hecho, y el margen mes a mes ya se ve en el tooltip de cada barra. */
+  h.push('<div class="dv-grafs uno"><div><div class="dv-graf-t">Facturado mes a mes</div>' +
     dbGrafBarras(bV, 'et', 'val',
       function(f){ return dvMes(f.m.mes) + ': ' + dvPesos(f.val) + ' · ' +
-                          dvNum(f.m.renglones) + ' renglones'; },
-      function(f){ return dvMillones(f.val); }, '', 62, 20) + '</div>');
-  h.push('<div><div class="dv-graf-t">Margen mes a mes</div>' +
-    (bM.length ? dbGrafBarras(bM, 'et', 'val',
-      function(f){ return dvMes(f.m.mes) + ': ' + dvPesos(f.val) + ' · ' + dvPct(f.m.margen_pct); },
-      function(f){ return dvMillones(f.val); }, 'v', 62, 20)
-      : '<div class="db-pie"><b>Ninguno.</b> No hay renglones con costo medido en ese período.</div>')
-    + '</div>');
-  h.push('</div>');
+                          dvNum(f.m.renglones) + ' renglones' +
+                          (f.m.margen === null ? '' : ' · margen ' + dvPct(f.m.margen_pct)); },
+      function(f){ return dvMillones(f.val); }, '', 70, 26) + '</div></div>');
 
+  /* y de aca para abajo, TODO PLEGADO */
+  h.push(dvPlegable('costo', 'de dónde sale el costo',
+                    (d.costos || []).length + ' grupos',
+                    function(){ return dvDeDondeSaleElCosto(d); }));
+
+  if (n) h.push(dvPlegable('netas', 'cómo se llega a la venta neta', '',
+    function(){
+      return '<div class="db-pie">Acá los cortes van sobre lo facturado <b>bruto</b>: ' +
+        dvEsc(dvPesos(s.venta_universo)) + ' en ' + dvEsc(dvNum(n.facturas)) +
+        ' facturas. Restando ' + dvEsc(dvNum(n.notas_credito)) + ' notas de crédito (' +
+        dvEsc(dvPesos(n.notas_credito_neto)) + ') y sumando ' + dvEsc(dvNum(n.notas_debito)) +
+        ' notas de débito (' + dvEsc(dvPesos(n.notas_debito_neto)) + ') da <b>' +
+        dvEsc(dvPesos(n.neto)) + '</b>, que es lo que muestra la pantalla de Ventas. ' +
+        'El mismo facturado medido por las cabeceras de los comprobantes da ' +
+        dvEsc(dvPesos(n.facturas_neto)) + ': <b>' + dvEsc(dvPesos(n.contra_el_universo)) +
+        '</b> de diferencia entre las dos rutas.</div>';
+    }));
+
+  h.push(dvPlegable('mesames', 'el mes a mes en una tabla',
+                    dvNum(meses.length) + ' meses',
+                    function(){ return dvGeneralTabla(meses); }));
+  return h.join('');
+}
+
+function dvGeneralTabla(meses){
+  var h = [];
   h.push('<div class="db-sec">Mes a mes<small>' + dvNum(meses.length) +
          ' meses · «con costo» es la parte que se puede medir</small></div>');
   h.push('<div class="db-tb-caja"><table class="db-tb"><thead><tr>' +
@@ -382,12 +414,11 @@ function dvCorte(d, p){
   /* el rotulo es el plural pelado: «Provincias distintos» no concuerda y
      «distintas» obligaria a declararle genero a cada corte. Lo que importa
      es el numero, y el «en el período» de abajo ya dice de que habla. */
-  h.push(dvKpi(p.plural, dvNum(tot.length), 'distintos en el período'));
   h.push(dvKpi('Facturado', dvMillones(vU), dvPesos(vU)));
-  h.push(dvKpi('Margen', dvMillones(mA), vM ? dvPct(100*mA/vM) + ' sobre la venta con costo' : 'sin costo'));
-  h.push(dvKpi('El más grande', dvEsc(tot[0].clave),
-               dvMillones(tot[0].venta_universo) + ' · ' +
-               (vU ? dvPct(100*(Number(tot[0].venta_universo)||0)/vU) : '—') + ' del total'));
+  h.push(dvKpi('Margen', dvMillones(mA), vM ? dvPct(100*mA/vM) + ' sobre lo que tiene costo' : 'sin costo'));
+  /* «El más grande» se fue: es la primera barra del grafico de abajo, y una
+     tarjeta que repite lo que ya se ve es una tarjeta de menos en la pantalla. */
+  h.push(dvKpi(p.plural, dvNum(tot.length), 'en el período'));
   h.push('</div>');
 
   var top = tot.slice(0, DV.tope);
@@ -398,9 +429,18 @@ function dvCorte(d, p){
       function(f){ return f.clave + ': ' + dvPesos(f.venta_universo) +
                           (f.margen_pct === null || f.margen_pct === undefined
                             ? ' · sin costo medido' : ' · margen ' + dvPct(f.margen_pct)); },
-      function(f){ return dvMillones(f.venta_universo); }, '', 150, 21) + '</div></div>');
+      function(f){ return dvMillones(f.venta_universo); }, '', 165, 26) + '</div></div>');
 
-  /* el cuadro de totales */
+  h.push(dvPlegable('corte-' + id, 'la tabla completa', dvNum(tot.length) + ' ' + p.plural.toLowerCase(),
+                    function(){ return dvCorteTabla(p, tot, vU, vM, cO, mA); }));
+  h.push(dvPlegable('mes-' + id, 'el mes a mes', '',
+                    function(){ return dvCorteMesAMes(d, p, serie); }));
+  return h.join('');
+}
+
+/* la tabla completa del corte, que solo se pinta si se la pide */
+function dvCorteTabla(p, tot, vU, vM, cO, mA){
+  var rot = p.rot, h = [];
   h.push('<div class="db-sec">' + dvEsc(rot) + ' · total del período' +
          '<small>' + dvNum(tot.length) + ' en total, de mayor a menor</small></div>');
   h.push('<div class="db-tb-caja"><table class="db-tb"><thead><tr>' +
@@ -440,8 +480,14 @@ function dvCorte(d, p){
          '<td class="der"><b>' + dvEsc(vM ? dvPct(100*mA/vM) : '—') + '</b></td>' +
          '</tr></tfoot></table></div>');
 
-  /* MES A MES: los meses abajo, las claves al costado. Es la forma en que
-     el usuario lo mira hoy en su tabla dinamica. */
+  return h.join('');
+}
+
+/* la matriz mes a mes del corte, que solo se pinta si se la pide.
+   Los meses abajo, las claves al costado: es la forma en que el usuario lo
+   mira hoy en su tabla dinamica. */
+function dvCorteMesAMes(d, p, serie){
+  var rot = p.rot, h = [];
   var meses = [], claves = [], por = {};
   for (var k = 0; k < serie.length; k++){
     var r = serie[k];
@@ -525,6 +571,21 @@ function dvRepintar(){
 function dvEnganchar(){
   var cuerpo = document.getElementById('dvCuerpo');
   if (!cuerpo) return;
+
+  /* abrir o cerrar un detalle REPINTA: el contenido plegado no existe en la
+     pagina hasta que se lo pide, asi que no hay nada oculto que confunda ni a
+     la persona ni a los controles. */
+  var ms = cuerpo.querySelectorAll('.dv-mas-b');
+  for (var q = 0; q < ms.length; q++){
+    (function(b){
+      b.addEventListener('click', function(){
+        var k = b.getAttribute('data-plegar');
+        DV.abierto[k] = !DV.abierto[k];
+        dvRepintar();
+      });
+    })(ms[q]);
+  }
+
   var bs = cuerpo.querySelectorAll('.dv-pest');
   for (var i = 0; i < bs.length; i++){
     (function(b){

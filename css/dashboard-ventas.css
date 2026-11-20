@@ -57,3 +57,18 @@
   border-left:3px solid #e3b341; border-radius:7px; padding:10px 13px;
   font-size:12.5px; color:#e8eef3; margin:0 0 14px; }
 #dvInforme .dv-denominador b{ color:#fff; }
+
+/* --- LO PLEGADO: el boton que abre un detalle ---          20/11/2026
+   Las tablas no se van, se corren del camino. El boton dice QUE abre y
+   CUANTO trae, para que nadie tenga que abrirlo para saber si le sirve. */
+#dvInforme .dv-mas{ margin:14px 0 4px; }
+#dvInforme .dv-mas-b{ background:transparent; color:#9fc4d4;
+  border:1px solid rgba(255,255,255,.14); border-radius:8px; padding:7px 13px;
+  font-size:12.5px; font-weight:600; cursor:pointer; }
+#dvInforme .dv-mas-b:hover{ color:var(--texto); border-color:rgba(255,255,255,.32); }
+#dvInforme .dv-mas-b.abierta{ color:var(--texto); border-color:rgba(255,255,255,.32); }
+#dvInforme .dv-mas-n{ opacity:.65; font-weight:400; }
+
+/* --- el denominador, en una linea --- */
+#dvInforme .dv-nota{ font-size:12.5px; color:#9fc4d4; margin:0 0 14px; }
+#dvInforme .dv-nota b{ color:var(--texto); font-weight:600; }
