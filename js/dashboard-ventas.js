@@ -80,6 +80,24 @@ function dvPct(n){
   if (n === null || n === undefined || isNaN(Number(n))) return 'sin costo';
   return Number(n).toLocaleString('es-AR', { minimumFractionDigits:2, maximumFractionDigits:2 }) + '%';
 }
+
+/* DENTRO DE UNA TABLA, «no hay dato» SE ESCRIBE CON EL GUION LARGO, NO CON
+   UNA FRASE.                                                    20/11/2026
+   Lo encontro la puerta del archivo bajado, con 8 fallas: poner «sin costo»
+   en la columna Costo hace que la columna tenga texto y numeros mezclados, y
+   el Excel la baja en formato General —sin el $— aunque las otras celdas sean
+   plata. `bajarCelda` ya sabe que el guion largo es una celda VACIA, y una
+   celda vacia no le rompe el tipo a la columna.
+   En las TARJETAS se sigue escribiendo «sin costo», que ahi se lee mejor y no
+   baja a ningun archivo. */
+function dvCelda(n){
+  if (n === null || n === undefined || isNaN(Number(n))) return '—';
+  return dvPesos(n);
+}
+function dvCeldaPct(n){
+  if (n === null || n === undefined || isNaN(Number(n))) return '—';
+  return dvPct(n);
+}
 function dvMes(s){
   if (!s) return '—';
   var p = String(s).substring(0,10).split('-');
@@ -215,18 +233,18 @@ function dvDeDondeSaleElCosto(d){
     var x = c[j];
     h.push('<tr><td>' + dvEsc(x.de_donde) + '</td>' +
            '<td class="der">' + dvEsc(dvNum(x.renglones)) + '</td>' +
-           '<td class="der">' + dvEsc(dvPesos(x.venta)) + '</td>' +
-           '<td class="der">' + dvEsc(dvPct(x.pct_facturado)) + '</td>' +
-           '<td class="der">' + dvEsc(dvPesos(x.costo)) + '</td>' +
-           '<td class="der">' + dvEsc(dvPesos(x.margen)) + '</td>' +
-           '<td class="der">' + dvEsc(dvPct(x.margen_pct)) + '</td></tr>');
+           '<td class="der">' + dvEsc(dvCelda(x.venta)) + '</td>' +
+           '<td class="der">' + dvEsc(dvCeldaPct(x.pct_facturado)) + '</td>' +
+           '<td class="der">' + dvEsc(dvCelda(x.costo)) + '</td>' +
+           '<td class="der">' + dvEsc(dvCelda(x.margen)) + '</td>' +
+           '<td class="der">' + dvEsc(dvCeldaPct(x.margen_pct)) + '</td></tr>');
   }
   h.push('</tbody><tfoot><tr><td><b>Todo lo facturado</b></td>' +
          '<td class="der"><b>' + dvEsc(dvNum(tR)) + '</b></td>' +
-         '<td class="der"><b>' + dvEsc(dvPesos(tV)) + '</b></td>' +
+         '<td class="der"><b>' + dvEsc(dvCelda(tV)) + '</b></td>' +
          '<td class="der"><b>100,00%</b></td>' +
-         '<td class="der"><b>' + dvEsc(dvPesos(tC)) + '</b></td>' +
-         '<td class="der"><b>' + dvEsc(dvPesos(tM)) + '</b></td>' +
+         '<td class="der"><b>' + dvEsc(dvCelda(tC)) + '</b></td>' +
+         '<td class="der"><b>' + dvEsc(dvCelda(tM)) + '</b></td>' +
          /* EL MARGEN DEL PIE VA SOBRE LA VENTA QUE TIENE COSTO, NO SOBRE TODO.
             Dividir el margen por TODO lo facturado mezcla dos denominadores y
             da un numero mas chico que el de cualquiera de sus propios
@@ -325,18 +343,18 @@ function dvGeneral(d){
     tC += Number(m.costo)||0; tM += Number(m.margen)||0; tR += Number(m.renglones)||0;
     h.push('<tr><td>' + dvEsc(dvMes(m.mes)) + '</td>' +
            '<td class="der">' + dvEsc(dvNum(m.renglones)) + '</td>' +
-           '<td class="der">' + dvEsc(dvPesos(m.venta_universo)) + '</td>' +
-           '<td class="der">' + dvEsc(dvPesos(m.venta)) + '</td>' +
-           '<td class="der">' + dvEsc(dvPesos(m.costo)) + '</td>' +
-           '<td class="der">' + dvEsc(dvPesos(m.margen)) + '</td>' +
-           '<td class="der">' + dvEsc(dvPct(m.margen_pct)) + '</td></tr>');
+           '<td class="der">' + dvEsc(dvCelda(m.venta_universo)) + '</td>' +
+           '<td class="der">' + dvEsc(dvCelda(m.venta)) + '</td>' +
+           '<td class="der">' + dvEsc(dvCelda(m.costo)) + '</td>' +
+           '<td class="der">' + dvEsc(dvCelda(m.margen)) + '</td>' +
+           '<td class="der">' + dvEsc(dvCeldaPct(m.margen_pct)) + '</td></tr>');
   }
   h.push('</tbody><tfoot><tr><td><b>Total</b></td>' +
          '<td class="der"><b>' + dvEsc(dvNum(tR)) + '</b></td>' +
-         '<td class="der"><b>' + dvEsc(dvPesos(tU)) + '</b></td>' +
-         '<td class="der"><b>' + dvEsc(dvPesos(tV)) + '</b></td>' +
-         '<td class="der"><b>' + dvEsc(dvPesos(tC)) + '</b></td>' +
-         '<td class="der"><b>' + dvEsc(dvPesos(tM)) + '</b></td>' +
+         '<td class="der"><b>' + dvEsc(dvCelda(tU)) + '</b></td>' +
+         '<td class="der"><b>' + dvEsc(dvCelda(tV)) + '</b></td>' +
+         '<td class="der"><b>' + dvEsc(dvCelda(tC)) + '</b></td>' +
+         '<td class="der"><b>' + dvEsc(dvCelda(tM)) + '</b></td>' +
          '<td class="der"><b>' + dvEsc(tV ? dvPct(100*tM/tV) : '—') + '</b></td>' +
          '</tr></tfoot></table></div>');
   return h.join('');
@@ -403,22 +421,22 @@ function dvCorte(d, p){
     h.push('<tr><td class="der">' + (j+1) + '</td>' +
            '<td>' + dvEsc(t.clave) + '</td>' +
            '<td class="der">' + dvEsc(dvNum(t.renglones)) + '</td>' +
-           '<td class="der">' + dvEsc(dvPesos(t.venta_universo)) + '</td>' +
+           '<td class="der">' + dvEsc(dvCelda(t.venta_universo)) + '</td>' +
            '<td class="der">' + dvEsc(vU ? dvPct(100*(Number(t.venta_universo)||0)/vU) : '—') + '</td>' +
-           '<td class="der">' + dvEsc(dvPesos(t.venta)) + '</td>' +
+           '<td class="der">' + dvEsc(dvCelda(t.venta)) + '</td>' +
            '<td class="der">' + dvEsc(t.venta_universo
                ? dvPct(100*(Number(t.venta)||0)/Number(t.venta_universo)) : '—') + '</td>' +
-           '<td class="der">' + dvEsc(dvPesos(t.costo)) + '</td>' +
-           '<td class="der">' + dvEsc(dvPesos(t.margen)) + '</td>' +
-           '<td class="der">' + dvEsc(dvPct(t.margen_pct)) + '</td></tr>');
+           '<td class="der">' + dvEsc(dvCelda(t.costo)) + '</td>' +
+           '<td class="der">' + dvEsc(dvCelda(t.margen)) + '</td>' +
+           '<td class="der">' + dvEsc(dvCeldaPct(t.margen_pct)) + '</td></tr>');
   }
   h.push('</tbody><tfoot><tr><td></td><td><b>Total</b></td><td></td>' +
-         '<td class="der"><b>' + dvEsc(dvPesos(vU)) + '</b></td>' +
+         '<td class="der"><b>' + dvEsc(dvCelda(vU)) + '</b></td>' +
          '<td class="der"><b>100,00%</b></td>' +
-         '<td class="der"><b>' + dvEsc(dvPesos(vM)) + '</b></td>' +
+         '<td class="der"><b>' + dvEsc(dvCelda(vM)) + '</b></td>' +
          '<td class="der"><b>' + dvEsc(vU ? dvPct(100*vM/vU) : '—') + '</b></td>' +
-         '<td class="der"><b>' + dvEsc(dvPesos(cO)) + '</b></td>' +
-         '<td class="der"><b>' + dvEsc(dvPesos(mA)) + '</b></td>' +
+         '<td class="der"><b>' + dvEsc(dvCelda(cO)) + '</b></td>' +
+         '<td class="der"><b>' + dvEsc(dvCelda(mA)) + '</b></td>' +
          '<td class="der"><b>' + dvEsc(vM ? dvPct(100*mA/vM) : '—') + '</b></td>' +
          '</tr></tfoot></table></div>');
 
@@ -475,16 +493,16 @@ function dvCorte(d, p){
     for (var c2 = 0; c2 < claves.length; c2++){
       var vv = por[meses[m2] + '|' + claves[c2]] || 0;
       totCol[claves[c2]] = (totCol[claves[c2]] || 0) + vv;
-      h.push('<td class="der">' + (vv ? dvEsc(dvPesos(vv)) : '—') + '</td>');
+      h.push('<td class="der">' + (vv ? dvEsc(dvCelda(vv)) : '—') + '</td>');
     }
     var tm = totMes[String(meses[m2]).substring(0,10)] || 0;
     granTotal += tm;
-    h.push('<td class="der"><b>' + dvEsc(dvPesos(tm)) + '</b></td></tr>');
+    h.push('<td class="der"><b>' + dvEsc(dvCelda(tm)) + '</b></td></tr>');
   }
   h.push('</tbody><tfoot><tr><td><b>Total</b></td>');
   for (var c3 = 0; c3 < claves.length; c3++)
-    h.push('<td class="der"><b>' + dvEsc(dvPesos(totCol[claves[c3]] || 0)) + '</b></td>');
-  h.push('<td class="der"><b>' + dvEsc(dvPesos(granTotal)) + '</b></td></tr></tfoot></table></div>');
+    h.push('<td class="der"><b>' + dvEsc(dvCelda(totCol[claves[c3]] || 0)) + '</b></td>');
+  h.push('<td class="der"><b>' + dvEsc(dvCelda(granTotal)) + '</b></td></tr></tfoot></table></div>');
   return h.join('');
 }
 
