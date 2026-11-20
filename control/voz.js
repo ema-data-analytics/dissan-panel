@@ -105,14 +105,46 @@ async function abrir(b, { conVoz, romperArmado }){
   if (fs.existsSync(JUGUETE)) await pg.addInitScript({ path: JUGUETE });
   if (conVoz) await pg.addInitScript({ content: DOBLE });
   else        await pg.addInitScript({ content: SIN_VOZ });
-  /* EL ARNES: le rompo el armado a proposito, como si me hubiera olvidado
-     de llamar a ayVozArmar() en iniciarAyuda(). */
-  if (romperArmado) await pg.addInitScript({ content:
-    'window.addEventListener("DOMContentLoaded",function(){' +
-    ' var t=setInterval(function(){ if (typeof window.ayVozArmar==="function"){' +
-    '   window.ayVozArmar=function(){}; clearInterval(t);} },5); });' });
+  /* EL ARNES: le saco la llamada a ayVozArmar(), como si me hubiera olvidado
+     de ponerla en iniciarAyuda().
+
+     SE PLANTA EN EL ARCHIVO SERVIDO, NO EN UNA CARRERA.        20/11/2026
+     La primera version esperaba con un setInterval a que `window.ayVozArmar`
+     existiera para reemplazarla. Eso es una CARRERA: con el navegador
+     cargado —corriendo ultimo, despues de diecinueve controles— la pagina
+     arrancaba mas lento, la funcion se definia Y SE LLAMABA antes de que el
+     intervalo la agarrara, el defecto no llegaba a plantarse, el control no
+     encontraba nada mal y se declaraba CIEGO. Corto un push entero por eso,
+     y corriendo solo pasaba: una puerta que falla segun la carga es tan mala
+     como una que no mira.
+     Ahora se sirve `js/ayuda.js` con la llamada sacada, que es como plantan
+     los demas arneses de la casa (14/11). Sin carrera: cuando el navegador
+     lee el archivo, el defecto ya esta adentro. Y si el ancla no aparece,
+     REVIENTA: un arnes que no planta nada da verde sin haber probado. */
+  if (romperArmado){
+    await pg.route('**/js/ayuda.js*', async r => {
+      const crudo = fs.readFileSync(path.join(RAIZ, 'js', 'ayuda.js'), 'utf8');
+      const ANCLA = '\n  ayVozArmar();';
+      if (crudo.split(ANCLA).length - 1 !== 1)
+        throw new Error('ARNES ROTO: el ancla «ayVozArmar();» no aparece exactamente ' +
+                        'una vez en js/ayuda.js. No se planto nada, asi que el ' +
+                        'control no probo nada.');
+      await r.fulfill({ status:200, contentType:'text/javascript',
+                        body: crudo.replace(ANCLA, '\n  /* ARNES: llamada sacada */') });
+    });
+  }
   await pg.goto('http://127.0.0.1:' + PUERTO + '/ayuda.html?f=' + Date.now(), { waitUntil:'load' });
-  await pg.waitForTimeout(2200);
+
+  /* SE ESPERA UNA CONDICION, NO UN NUMERO DE SEGUNDOS. Eran 2.200 ms fijos y
+     con el navegador cargado la pantalla no habia terminado de arrancar. */
+  try {
+    await pg.waitForFunction(() => !!document.getElementById('ayQ') &&
+                                   typeof window.ayVozArmar === 'function',
+                             null, { timeout: 25000 });
+  } catch (e) {
+    throw new Error('la pantalla de Ayuda no termino de arrancar en 25 s: ' + e.message);
+  }
+  await pg.waitForTimeout(400);
   return { ctx, pg, errores };
 }
 
