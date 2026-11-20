@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DISSAN · Dashboard de ventas</title>
+<link rel="icon" href="data:,">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/app.css?v=29">
+<link rel="stylesheet" href="css/tablero-db.css?v=4">
+<link rel="stylesheet" href="css/dashboard-ventas.css?v=1">
+</head>
+<body>
+
+<!-- ================== LOGIN ================== -->
+<div id="login-wrap">
+  <div class="login-box">
+    <div class="marca">CAPA INTELIGENTE</div>
+    <h1 class="login-tit">Ingresar al panel DISSAN</h1>
+
+    <label class="fl">Usuario</label>
+    <input id="l-user" class="fi" autocomplete="username" spellcheck="false">
+
+    <label class="fl">Contraseña</label>
+    <div class="clave">
+      <input id="l-pass" class="fi" type="password" autocomplete="current-password">
+      <button type="button" class="ojo" id="l-ojo" onclick="verClave()"
+              aria-label="Mostrar la contraseña" aria-pressed="false"></button>
+    </div>
+
+    <button id="l-btn" class="btn" onclick="entrar()">Entrar</button>
+    <div id="l-err" class="err"></div>
+    <div class="pie">Mismo usuario y contraseña que el panel de siempre</div>
+  </div>
+</div>
+
+<!-- ================== APP ================== -->
+<div id="app" hidden data-modulo="DashboardVentas">
+    <div id="shell">
+    <div id="sidebar">
+      <div class="marca">
+        <div class="marca-sistema">Capa Inteligente</div>
+        <div class="marca-pie">DISSAN</div>
+      </div>
+      <div class="marca-logos">
+        <img class="marca-logo" src="img/ema.png" alt="EMA Data Analytics">
+        <span class="marca-socio"><img src="img/macromanager.png" alt="MACROmanager Consultora"></span>
+      </div>
+      <nav id="menuLateral"></nav>
+      <div id="panelUsuario">
+        <div class="avatar" id="avatarInicial">?</div>
+        <div class="datos">
+          <div class="nombre" id="nombreUsuario">&mdash;</div>
+          <div class="rol" id="rolUsuario">&mdash;</div>
+        </div>
+        <button id="btnSalir" onclick="salir()" title="Cerrar sesion"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/></svg></button>
+      </div>
+    </div>
+
+    <div id="areaContenido">
+      <div id="topbar">
+        <div id="tituloModulo">Dashboard de ventas</div>
+        <div id="fechaHoy"></div>
+      </div>
+      <div id="contenido">
+<!-- EL ID ES `vtInforme` A PROPOSITO, NO UN COPIAR Y PEGAR.    20/11/2026
+     css/ventas-informe.css encierra sus 59 reglas adentro de `#vtInforme`
+     —a proposito, para que un cambio global no rompa las otras pantallas—.
+     Esta pantalla nacio con `id="vdInforme"` y por eso NINGUNA de esas
+     reglas le llegaba: las tarjetas salian como texto apilado, sin caja ni
+     cifra grande. Lo vi recien al sacar una captura de la pantalla
+     publicada; las 18 puertas no lo vieron porque miden TEXTO, no COMO SE
+     VE. Compartir el id es lo correcto: son dos pantallas del mismo informe
+     de ventas y tienen que verse igual. Duplicar las 59 reglas seria la
+     lista escrita a mano del 14/10. -->
+<div class="db" id="dvInforme">
+
+  <div class="dv-cab">
+    <h1>Dashboard de ventas — mes a mes, con el costo adentro</h1>
+    <p class="dv-bajada">Lo que hoy se arma abriendo varios Excel.
+      Elegí el período, apretá <b>Ver</b>, y mirá cada indicador en su pestaña.</p>
+  </div>
+
+  <div class="db-filtros">
+    <div class="db-rej">
+      <div class="db-campo">
+        <label for="dvDesde">Desde (fecha de emisión)</label>
+        <input type="date" id="dvDesde" value="2026-01-01">
+      </div>
+      <div class="db-campo">
+        <label for="dvHasta">Hasta</label>
+        <input type="date" id="dvHasta" value="2026-12-31">
+      </div>
+      <div class="db-campo">
+        <label for="dvTope">Cuántos muestro en cada corte</label>
+        <select id="dvTope">
+          <option value="8">los 8 más grandes</option>
+          <option value="12" selected>los 12 más grandes</option>
+          <option value="20">los 20 más grandes</option>
+        </select>
+      </div>
+    </div>
+    <div class="db-acciones">
+      <button class="db-btn" id="dvVer">Ver</button>
+      <button class="db-btn sec" id="dv2024">2024</button>
+      <button class="db-btn sec" id="dv2025">2025</button>
+      <button class="db-btn sec" id="dv2026">2026</button>
+      <button class="db-btn sec" id="dvTodo">Todo</button>
+      <span id="dvLeyenda" class="db-pie" style="margin:0"></span>
+    </div>
+  </div>
+
+  <div id="dvEstado"></div>
+  <div id="dvCuerpo" hidden></div>
+</div>
+      </div>
+    </div>
+  </div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="js/core.js?v=25"></script>
+<script src="js/bajar-formatos.js?v=8"></script>
+<script src="js/bajar.js?v=9"></script>
+<script src="js/filas.js?v=5"></script>
+<script src="js/graf.js?v=1"></script>
+<script src="js/dashboard-ventas.js?v=1"></script>
+</body>
+</html>

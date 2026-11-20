@@ -1,0 +1,59 @@
+/* =====================================================================
+   DASHBOARD DE VENTAS — las pestañas y sus bloques.        20/11/2026
+   =====================================================================
+   Pedido textual del usuario: "basta de excel, tenemos el sistema
+   armemos un dashboard general, y luego pestañas con dashboards con
+   cada kpi indicadore que piden".
+
+   TODO VA ENCERRADO EN `#dvInforme`, igual que ventas-informe.css hace
+   con `#vtInforme`: un cambio global de CSS rompe las otras pantallas
+   que ya andan (la regla del 21/10). Los colores salen de las variables
+   del panel, no de valores tipeados: si manana cambia el tema, esto
+   cambia con el (la cagada del 28/10, tarjetas blancas sobre fondo
+   oscuro).
+   No se define `display` sobre nada que se esconda con `hidden`: manda
+   `[hidden]{display:none !important}` de app.css.
+   ===================================================================== */
+
+#dvInforme{ color:var(--texto); }
+
+#dvInforme .dv-cab{ background:var(--navy-card, #0e2e49); border-radius:10px;
+  padding:16px 18px; margin-bottom:14px; }
+#dvInforme .dv-cab h1{ margin:0; font-size:21px; font-weight:650; letter-spacing:-.01em; }
+#dvInforme .dv-bajada{ margin:6px 0 0; font-size:13px; color:#cfe6ec; }
+#dvInforme .dv-bajada b{ color:#fff; font-weight:600; }
+
+/* --- las pestañas --- */
+#dvInforme .dv-pestanias{ display:flex; flex-wrap:wrap; gap:6px; margin:0 0 14px; }
+#dvInforme .dv-pest{ background:var(--navy-card, #0e2e49); color:var(--texto);
+  border:1px solid rgba(255,255,255,.12); border-radius:8px; padding:8px 14px;
+  font-size:13px; font-weight:600; cursor:pointer; line-height:1.2; }
+#dvInforme .dv-pest:hover{ border-color:rgba(255,255,255,.3); }
+#dvInforme .dv-pest.activa{ background:var(--verde, #16a34a); color:#fff;
+  border-color:transparent; }
+#dvInforme .dv-pest small{ display:block; font-weight:400; font-size:11px; opacity:.8; }
+
+/* --- las tarjetas de arriba --- */
+#dvInforme .dv-kpis{ display:grid; gap:10px; margin:0 0 14px;
+  grid-template-columns:repeat(auto-fit, minmax(min(100%, 190px), 1fr)); }
+#dvInforme .dv-kpi{ background:var(--navy-card, #0e2e49); border-radius:9px;
+  padding:12px 14px; min-width:0; }
+#dvInforme .dv-kpi-t{ font-size:10.5px; letter-spacing:.07em; text-transform:uppercase;
+  color:#9fc4d4; font-weight:600; }
+#dvInforme .dv-kpi-v{ font-size:22px; font-weight:700; margin-top:3px;
+  font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+#dvInforme .dv-kpi-n{ font-size:11px; color:#9fc4d4; margin-top:3px; }
+
+/* --- los graficos, al lado cuando hay lugar --- */
+#dvInforme .dv-grafs{ display:grid; gap:14px; margin:10px 0 14px;
+  grid-template-columns:repeat(auto-fit, minmax(min(100%, 320px), 1fr)); }
+#dvInforme .dv-grafs.uno{ grid-template-columns:1fr; }
+#dvInforme .dv-grafs > div{ min-width:0; }
+#dvInforme .dv-graf-t{ font-size:11px; letter-spacing:.06em; text-transform:uppercase;
+  color:#9fc4d4; font-weight:600; margin:0 0 5px 2px; }
+
+/* --- el aviso del denominador, que va SIEMPRE --- */
+#dvInforme .dv-denominador{ background:rgba(255,196,0,.08);
+  border-left:3px solid #e3b341; border-radius:7px; padding:10px 13px;
+  font-size:12.5px; color:#e8eef3; margin:0 0 14px; }
+#dvInforme .dv-denominador b{ color:#fff; }

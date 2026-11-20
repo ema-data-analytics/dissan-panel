@@ -265,7 +265,8 @@ const PANTALLAS = {
      FRENABA: comparaba el data-modulo de los .html contra `modulos` y nunca
      miraba ESTA lista. Un comentario que promete un control que no existe es
      peor que no tener el control, porque uno deja de mirar. */
-  VentasDetalle:    { archivo: 'ventas-detalle.html',    rotulo: 'Detalle de Ventas' }
+  VentasDetalle:    { archivo: 'ventas-detalle.html',    rotulo: 'Detalle de Ventas' },
+  DashboardVentas:  { archivo: 'dashboard-ventas.html',  rotulo: 'Dashboard de ventas' }
 };
 
 let MI_ROL = '', EMAIL_ENTRO = '';

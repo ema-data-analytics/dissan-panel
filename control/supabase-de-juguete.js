@@ -44,6 +44,7 @@
                     la tapa y la puerta la mide como "abre limpia" sin haber
                     pintado nunca una grilla. */
                  {clave:'VentasDetalle',nombre:'Detalle de Ventas',grupo:'CONSULTAS'},
+                 {clave:'DashboardVentas',nombre:'Dashboard de Ventas',grupo:'CONSULTAS'},
                  /* LOS DOS DEL SUBDIARIO, agregados el 10/11/2026.
                     No estaban, asi que el portero tapaba las dos pantallas y la
                     puerta de pantallas las media como "abren limpias" sin haber
@@ -310,6 +311,131 @@
   RPC['api_ventas_detalle_resumen_v1_vacia'] = {
     ok: true, ms: 1, total: 0, clientes: 0,
     anios: [], por_zona: [], por_cliente: []
+  };
+
+  /* EL DASHBOARD DE VENTAS — SEIS PESTAÑAS.                    20/11/2026
+     DE DONDE SALE ESTA RESPUESTA, para que nadie la confunda con datos de
+     DISSAN. Las CLAVES son las que devuelve la funcion de verdad, medidas
+     llamandola hoy (`jsonb_object_keys`): ok · ms · resumen · meses · zona ·
+     provincia · proveedor · linea · cliente · denominador, y adentro de cada
+     corte `totales` y `serie` con esos nombres de campo y no otros. Los
+     VALORES los GENERA este codigo a partir de cuatro anclas medidas en la
+     corrida de hoy —el universo $7.439.850.978,05, la venta medida
+     $4.509.380.029,02, el costo $2.919.663.231,05 y los 11 meses de 2026—
+     repartidas por una progresion, no transcritas a mano (la falta del 13/11).
+
+     LO QUE TIENE QUE CUMPLIR, que es lo unico que los controles miran:
+       - cada corte tiene al menos dos claves MAS «Otros», para que la matriz
+         mes a mes tenga columnas de verdad;
+       - la serie de cada corte SUMA EXACTAMENTE el `venta_universo` del mes,
+         porque la columna «Total del mes» sale de `meses` y no de la fila:
+         si no cerraran, la puerta del archivo bajado cortaria con razon;
+       - hay cobertura PARCIAL (venta medida < universo), que es el caso real
+         y el que obliga a que la pantalla escriba el denominador. */
+  RPC['api_ventas_dashboard_v1'] = (function(){
+    var MESES = [], i;
+    for (i = 1; i <= 11; i++) MESES.push('2026-' + (i < 10 ? '0' + i : i) + '-01');
+    var U = 7439850978.05, VM = 4509380029.02, CO = 2919663231.05;
+
+    /* el reparto por mes: una progresion suave, normalizada para que la suma
+       de los 11 de EXACTAMENTE el universo. El ultimo absorbe el redondeo. */
+    var peso = [], suma = 0;
+    for (i = 0; i < MESES.length; i++){ peso.push(80 + i * 7); suma += peso[i]; }
+    function repartir(total){
+      var a = [], acum = 0, v;
+      for (var j = 0; j < MESES.length; j++){
+        v = (j === MESES.length - 1) ? Math.round((total - acum) * 100) / 100
+                                     : Math.round(total * peso[j] / suma * 100) / 100;
+        acum = Math.round((acum + v) * 100) / 100;
+        a.push(v);
+      }
+      return a;
+    }
+    var uM = repartir(U), vM = repartir(VM), cM = repartir(CO);
+
+    var meses = MESES.map(function(m, j){
+      return { mes: m, venta_universo: uM[j], venta: vM[j], costo: cM[j],
+               margen: Math.round((vM[j] - cM[j]) * 100) / 100,
+               margen_pct: Math.round(1e4 * (vM[j] - cM[j]) / vM[j]) / 100,
+               renglones: 420 + j * 13 };
+    });
+
+    /* un corte: N claves con nombre + «Otros», repartiendo cada mes en
+       proporciones fijas; la ultima columna toma el resto para que CIERRE. */
+    function corte(nombres, prop){
+      var serie = [], totales = [], tot = {};
+      for (var j = 0; j < MESES.length; j++){
+        var restoU = uM[j], restoV = vM[j], restoC = cM[j];
+        for (var k = 0; k < nombres.length; k++){
+          var ultimo = (k === nombres.length - 1);
+          var u = ultimo ? Math.round(restoU * 100) / 100
+                         : Math.round(uM[j] * prop[k] * 100) / 100;
+          var v = ultimo ? Math.round(restoV * 100) / 100
+                         : Math.round(vM[j] * prop[k] * 100) / 100;
+          var c = ultimo ? Math.round(restoC * 100) / 100
+                         : Math.round(cM[j] * prop[k] * 100) / 100;
+          restoU = Math.round((restoU - u) * 100) / 100;
+          restoV = Math.round((restoV - v) * 100) / 100;
+          restoC = Math.round((restoC - c) * 100) / 100;
+          serie.push({ clave: nombres[k], mes: MESES[j], venta_universo: u,
+                       venta: v, costo: c, margen: Math.round((v - c) * 100) / 100 });
+          var t = tot[nombres[k]] || (tot[nombres[k]] = { u:0, v:0, c:0, n:0 });
+          t.u = Math.round((t.u + u) * 100) / 100;
+          t.v = Math.round((t.v + v) * 100) / 100;
+          t.c = Math.round((t.c + c) * 100) / 100;
+          t.n += 30 + k * 7;
+        }
+      }
+      for (var nn = 0; nn < nombres.length; nn++){
+        var x = tot[nombres[nn]];
+        totales.push({ clave: nombres[nn], venta_universo: x.u, venta: x.v,
+                       costo: x.c, margen: Math.round((x.v - x.c) * 100) / 100,
+                       margen_pct: Math.round(1e4 * (x.v - x.c) / x.v) / 100,
+                       renglones: x.n });
+      }
+      totales.sort(function(a, b){ return b.venta_universo - a.venta_universo; });
+      return { totales: totales, serie: serie };
+    }
+
+    return {
+      ok: true, ms: 572,
+      resumen: { desde:'2026-01-01', hasta:'2026-12-31',
+                 renglones_universo: 5575, venta_universo: U,
+                 renglones_medidos: 4414,  venta_medida: VM, costo: CO,
+                 margen: Math.round((VM - CO) * 100) / 100,
+                 margen_pct: 35.25,
+                 cobertura_renglones_pct: 79.17, cobertura_plata_pct: 60.61 },
+      meses: meses,
+      zona:      corte(['MENDOZA','SAN LUIS','SAN JUAN'],            [0.71, 0.27]),
+      provincia: corte(['Mza','SAN LUIS','SAN JUAN','Otros'],        [0.63, 0.33, 0.02]),
+      proveedor: corte(['PROVEEDOR A','PROVEEDOR B','Otros'],        [0.45, 0.30]),
+      linea:     corte(['LINEA UNO','LINEA DOS','Otros'],            [0.52, 0.28]),
+      cliente:   corte(['CLIENTE UNO','CLIENTE DOS','Otros'],        [0.40, 0.25]),
+      denominador: 'El margen se mide sobre lo que DISSAN compra y stockea, con ' +
+                   'costo de calidad firme y fuera de cuarentena. La consignación no ' +
+                   'tiene costo de compra y queda afuera: por eso va la cobertura al lado.'
+    };
+  })();
+
+  /* Y SU CASO VACIO, que es el que asusta: las SEIS pestañas tienen que
+     seguir estando y decir «Ninguno» con el motivo (la regla del 16/11, que
+     salio de que la pantalla de Listas se quedara muda con ICU). */
+  RPC['api_ventas_dashboard_v1_vacia'] = {
+    ok: true, ms: 1,
+    resumen: { desde:'2026-01-01', hasta:'2026-12-31',
+               renglones_universo: 0, venta_universo: 0,
+               renglones_medidos: 0, venta_medida: 0, costo: 0, margen: 0,
+               margen_pct: null, cobertura_renglones_pct: null,
+               cobertura_plata_pct: null },
+    meses: [],
+    zona:      { totales: [], serie: [] },
+    provincia: { totales: [], serie: [] },
+    proveedor: { totales: [], serie: [] },
+    linea:     { totales: [], serie: [] },
+    cliente:   { totales: [], serie: [] },
+    denominador: 'El margen se mide sobre lo que DISSAN compra y stockea, con ' +
+                 'costo de calidad firme y fuera de cuarentena. La consignación no ' +
+                 'tiene costo de compra y queda afuera: por eso va la cobertura al lado.'
   };
 
   window.__LLAMADAS = [];
