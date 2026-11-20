@@ -64,6 +64,19 @@ function copiar(destino){
     let m;
     while ((m = re.exec(texto)) !== null)
       seguirRequires(m[1].endsWith('.js') ? m[1] : m[1] + '.js');
+    /* Y LO QUE EL CONTROL LEE SIN REQUERIR.                      20/11/2026
+       Seguir los `require` no alcanzo: ese mismo dia `alcance.js` paso a LEER
+       control/supabase-de-juguete.js con readFileSync -para comparar el
+       juguete contra la base- y la copia se quedo sin ese archivo, asi que
+       los seis senuelos cortaron por ENOENT en vez de por el defecto
+       plantado. Textual lo que ya dice el comentario de arriba: el arnes
+       cantaba «corto» sin haber probado nada. La convencion se extiende, no
+       se agrega un nombre a mano: se siguen tambien los path.join(__dirname,
+       '...') del propio codigo. */
+    /* exige nombre CON extension: `path.join(__dirname, '..')` tambien
+       aparece en el codigo y copiarlo intentaba copiar una carpeta. */
+    const re2 = /path\.join\(\s*__dirname\s*,\s*'([A-Za-z0-9_-][A-Za-z0-9_.-]*\.[A-Za-z0-9]+)'\s*\)/g;
+    while ((m = re2.exec(texto)) !== null) seguirRequires(m[1]);
   })('alcance.js');
   return destino;
 }
