@@ -397,8 +397,51 @@
       return { totales: totales, serie: serie };
     }
 
+    /* DE DONDE SALE EL COSTO: los seis grupos. Los NOMBRES son los que
+       devuelve la funcion de verdad, medidos llamandola hoy; los VALORES se
+       generan de las mismas anclas. Lo unico que tienen que cumplir, que es
+       lo que la pantalla y los controles miran: que los seis SUMEN el
+       facturado entero, y que DOS de ellos vengan con `costo: null`, que es
+       el caso que la pantalla tiene que saber pintar sin escribir
+       «undefined» ni inventar un cero. */
+    var GRUPOS = [
+      { orden:1, de_donde:'A — costo firme (es el que se publica)',      p:0.6061, m:0.3525 },
+      { orden:2, de_donde:'B — costo estimado o de más de 180 días',     p:0.0375, m:0.4420 },
+      { orden:3, de_donde:'Consignación, con costo de compras anteriores', p:0.1200, m:0.6515 },
+      { orden:4, de_donde:'Costo apartado en cuarentena',                p:0.0129, m:0.3221 },
+      { orden:5, de_donde:'Stock propio sin costo encontrado',           p:0.0084, m:null },
+      { orden:6, de_donde:'Consignación sin costo: nunca se compró',     p:0.2150, m:null }
+    ];
+    var costos = [], restoU = U, restoR = 5575;
+    for (i = 0; i < GRUPOS.length; i++){
+      var g = GRUPOS[i], ultimo = (i === GRUPOS.length - 1);
+      var ve = ultimo ? Math.round(restoU * 100) / 100 : Math.round(U * g.p * 100) / 100;
+      var re = ultimo ? restoR : Math.round(5575 * g.p);
+      restoU = Math.round((restoU - ve) * 100) / 100; restoR -= re;
+      costos.push({ orden:g.orden, de_donde:g.de_donde, renglones:re, venta:ve,
+        costo:  g.m === null ? null : Math.round(ve * (1 - g.m) * 100) / 100,
+        margen: g.m === null ? null : Math.round(ve * g.m * 100) / 100,
+        margen_pct: g.m === null ? null : Math.round(g.m * 1e4) / 100,
+        pct_facturado: Math.round(1e4 * ve / U) / 100 });
+    }
+
+    /* LAS NOTAS DE CREDITO, por la misma ruta que usa ventas.html. Las claves
+       son las que devuelve `ema.ventas_netas` medidas hoy; los valores salen
+       de las anclas. Lo que el control mira: que el neto sea DISTINTO del
+       bruto -si fueran iguales, la pantalla no podria mostrar nunca la
+       diferencia que existe de verdad, y seria el juguete que siempre cierra
+       del 16/11-. */
+    var NC = Math.round(U * 0.01121 * 100) / 100, ND = Math.round(U * 0.0000667 * 100) / 100;
+    var netas = { facturas: 2927, facturas_neto: Math.round((U + 79.64) * 100) / 100,
+                  notas_credito: 64, notas_credito_neto: -NC,
+                  notas_debito: 3,  notas_debito_neto: ND,
+                  neto: Math.round((U - NC + ND) * 100) / 100,
+                  contra_el_universo: 79.64 };
+
     return {
-      ok: true, ms: 572,
+      ok: true, ms: 864,
+      costos: costos,
+      netas: netas,
       resumen: { desde:'2026-01-01', hasta:'2026-12-31',
                  renglones_universo: 5575, venta_universo: U,
                  renglones_medidos: 4414,  venta_medida: VM, costo: CO,
@@ -422,6 +465,14 @@
      salio de que la pantalla de Listas se quedara muda con ICU). */
   RPC['api_ventas_dashboard_v1_vacia'] = {
     ok: true, ms: 1,
+    costos: [],
+    /* EN CERO, NO EN `null`: `ema.ventas_netas` devuelve SIEMPRE una fila, asi
+       que un null aca seria un caso que la funcion de verdad no puede producir
+       —y de paso dejaria la tarjeta «Venta neta» sin aparecer, que es
+       exactamente lo que el 16/11 quedo prohibido: una tarjeta que se esfuma
+       se lee como «falta algo»—. */
+    netas: { facturas:0, facturas_neto:0, notas_credito:0, notas_credito_neto:0,
+             notas_debito:0, notas_debito_neto:0, neto:0, contra_el_universo:0 },
     resumen: { desde:'2026-01-01', hasta:'2026-12-31',
                renglones_universo: 0, venta_universo: 0,
                renglones_medidos: 0, venta_medida: 0, costo: 0, margen: 0,

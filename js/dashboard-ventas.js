@@ -5,21 +5,33 @@
    armemos un dashboard general, y luego pestañas con dashboards con
    cada kpi indicadore que piden". Hoy eso lo arma abriendo varios Excel.
 
-   CINCO PESTAÑAS: General · Provincia (que es la ZONA: su segmentador
-   tiene MENDOZA / SAN JUAN / SAN LUIS) · Proveedor · Línea · Cliente.
-   Cada una con sus tarjetas, su grafico y su tabla, y todas mes a mes.
+   SEIS PESTAÑAS: General · Provincia (que es la ZONA de Tango, la de su
+   Excel) · Provincia fiscal (el domicilio del cliente) · Proveedor ·
+   Línea · Cliente. Cada una con sus tarjetas, su grafico, su tabla de
+   totales y su matriz mes a mes.
+
+   SE PINTA UNA SOLA, LA ACTIVA. Pintar las seis y esconder cinco hace que
+   para la puerta de pantallas cada tabla oculta sea «0 de N renglones sin
+   control para llegar al resto»: corto 40 veces y tenia razon. Lo que esta
+   en la pagina tiene que ser lo que se puede ver.
 
    EL COSTO NO SE REINVENTA. Sale de api_ventas_dashboard_v1, que lee
    ema.margen_medido -la vista del margen con la cuarentena del Tablero
    ya resuelta, el MISMO predicado- y filtra por las CUATRO calidades
    firmes. Medido contra lo que publica el Tablero en el mismo periodo:
    4.414 renglones = 4.414 · venta 4.509.380.029,02 = 4.509.380.029 ·
-   costo 2.919.663.231,05 = 2.919.663.231.
+   costo 2.919.663.231,05 = 2.919.663.231. Y por una TERCERA ruta, la
+   cuarentena escrita de nuevo sobre vista_margen_v2_oc: las seis cifras
+   identicas.
 
    Y EL DENOMINADOR SE DECLARA ARRIBA DE TODO, siempre: el margen se mide
    sobre lo que DISSAN compra y stockea; la consignacion queda afuera.
    Publicar un margen sin decir sobre cuanto se midio es la falta del
    08/10, y aca seria peor porque el dashboard es para mostrarlo.
+   Mas: la tabla «De donde sale el costo» pone los SEIS grupos con su
+   plata -incluido el que no tiene con que costearse- porque el usuario
+   pregunto «como que no sale el costo?» y la respuesta es un reparto
+   medido, no una explicacion.
    ===================================================================== */
 
 var DV = { datos: null, cargando: false, pestania: 'general', tope: 12 };
@@ -142,13 +154,92 @@ function dvPintar(d){
   }
   h.push('</div>');
 
-  for (var j = 0; j < DV_PESTANIAS.length; j++){
-    var id = DV_PESTANIAS[j].id;
-    h.push('<div class="dv-hoja" data-hoja="' + id + '"' +
-           (id === DV.pestania ? '' : ' hidden') + '>');
-    h.push(id === 'general' ? dvGeneral(d) : dvCorte(d, DV_PESTANIAS[j]));
-    h.push('</div>');
+  /* SE PINTA UNA SOLA HOJA, LA ACTIVA.                        20/11/2026
+     La primera version las pintaba a las seis y escondia cinco con `hidden`.
+     La puerta de pantallas corto con 40 fallas y TENIA RAZON: para ella esas
+     tablas mostraban «0 de 11 renglones y ningun control para llegar al
+     resto», que es exactamente el defecto del 28/10 que esa puerta existe
+     para agarrar. Ella no puede saber que el control es el boton de la
+     pestaña, y yo no voy a enseñarle a mirar para otro lado: lo que esta en
+     la pagina tiene que ser lo que se puede ver. De paso se van las barras de
+     Excel y PDF de tablas que nadie estaba mirando. */
+  var p2 = null;
+  for (var j = 0; j < DV_PESTANIAS.length; j++)
+    if (DV_PESTANIAS[j].id === DV.pestania) p2 = DV_PESTANIAS[j];
+  if (!p2) { p2 = DV_PESTANIAS[0]; DV.pestania = p2.id; }
+  h.push('<div class="dv-hoja" data-hoja="' + p2.id + '">');
+  h.push(p2.id === 'general' ? dvGeneral(d) : dvCorte(d, p2));
+  h.push('</div>');
+  return h.join('');
+}
+
+/* ---------- DE DONDE SALE EL COSTO, Y QUE QUEDA SIN COSTEAR ----------
+   Dicho por el usuario el 20/11: «el costo tiene que ser para todo, cómo que
+   no sale? si todo tiene precio de costo». Medido: en 2026 NO todo lo tiene,
+   y esta tabla es la respuesta con la plata adelante en vez de una
+   explicacion. Seis grupos, mecanicos, que SUMAN el facturado entero —la
+   base lo controla: renglones y plata de los seis contra el universo—.
+   Importa tanto lo que se puede costear como lo que no: los 365 renglones de
+   consignacion dan 65,2% de margen con un costo de mas de 180 dias, que es
+   una cifra creible y mal, y eso solo se ve si el reparto esta a la vista.
+   La seccion va SIEMPRE y dice «Ninguno» con el motivo (16/11). */
+function dvDeDondeSaleElCosto(d){
+  var c = d.costos || [], h = [];
+  h.push('<div class="db-sec">De dónde sale el costo' +
+         '<small>los ' + (c.length || 'cero') + ' grupos suman el facturado entero. ' +
+         'El margen que publica la pantalla sale sólo del primero, y el % del ' +
+         'pie va sobre lo que tiene costo, no sobre todo lo facturado.</small></div>');
+  if (!c.length){
+    h.push('<div class="db-pie"><b>Ninguno.</b> No hay renglones en ese período, ' +
+           'así que no hay costo que repartir.</div>');
+    return h.join('');
   }
+  var tV = 0, tC = 0, tM = 0, tR = 0, sinCosto = 0, conCosto = 0;
+  for (var i = 0; i < c.length; i++){
+    tV += Number(c[i].venta) || 0; tC += Number(c[i].costo) || 0;
+    tM += Number(c[i].margen) || 0; tR += Number(c[i].renglones) || 0;
+    if (c[i].costo === null || c[i].costo === undefined) sinCosto += Number(c[i].venta) || 0;
+    else conCosto += Number(c[i].venta) || 0;
+  }
+  h.push('<div class="db-tb-caja"><table class="db-tb"><thead><tr>' +
+         /* SIN `data-plata` NI `data-total`: aca las FILAS suman al pie, no las
+            columnas al renglon. `data-plata` significa «parte del total del
+            renglon» (20/11) y marcar Facturado como parte Y como total haria
+            que el control se comparara consigo mismo y pasara siempre.
+            Esta grilla no tiene descomposicion aditiva por renglon: se declara. */
+         '<th>De dónde sale</th><th class="der">Renglones</th>' +
+         '<th class="der">Facturado</th><th class="der">% de lo facturado</th>' +
+         '<th class="der">Costo</th><th class="der">Margen</th><th class="der">Margen %</th>' +
+         '</tr></thead><tbody>');
+  for (var j = 0; j < c.length; j++){
+    var x = c[j];
+    h.push('<tr><td>' + dvEsc(x.de_donde) + '</td>' +
+           '<td class="der">' + dvEsc(dvNum(x.renglones)) + '</td>' +
+           '<td class="der">' + dvEsc(dvPesos(x.venta)) + '</td>' +
+           '<td class="der">' + dvEsc(dvPct(x.pct_facturado)) + '</td>' +
+           '<td class="der">' + dvEsc(dvPesos(x.costo)) + '</td>' +
+           '<td class="der">' + dvEsc(dvPesos(x.margen)) + '</td>' +
+           '<td class="der">' + dvEsc(dvPct(x.margen_pct)) + '</td></tr>');
+  }
+  h.push('</tbody><tfoot><tr><td><b>Todo lo facturado</b></td>' +
+         '<td class="der"><b>' + dvEsc(dvNum(tR)) + '</b></td>' +
+         '<td class="der"><b>' + dvEsc(dvPesos(tV)) + '</b></td>' +
+         '<td class="der"><b>100,00%</b></td>' +
+         '<td class="der"><b>' + dvEsc(dvPesos(tC)) + '</b></td>' +
+         '<td class="der"><b>' + dvEsc(dvPesos(tM)) + '</b></td>' +
+         /* EL MARGEN DEL PIE VA SOBRE LA VENTA QUE TIENE COSTO, NO SOBRE TODO.
+            Dividir el margen por TODO lo facturado mezcla dos denominadores y
+            da un numero mas chico que el de cualquiera de sus propios
+            renglones: es la falta del 08/10 adentro de la tabla que existe
+            justamente para evitarla. El denominador va escrito en el rotulo. */
+         '<td class="der"><b>' + dvEsc(conCosto ? dvPct(100*tM/conCosto) : '—') + '</b></td>' +
+         '</tr></tfoot></table></div>');
+  h.push('<div class="db-pie">Lo que <b>no tiene con qué costearse</b> en este ' +
+         'período: <b>' + dvEsc(dvPesos(sinCosto)) + '</b>' +
+         (tV ? ' (' + dvEsc(dvPct(100*sinCosto/tV)) + ' de lo facturado)' : '') +
+         '. Casi todo es consignación: el proveedor deja el material y DISSAN no lo ' +
+         'compra, así que no hay factura de compra de dónde sacar un precio. ' +
+         'Un costo tomado de una compra posterior a la venta no se usa nunca.</div>');
   return h.join('');
 }
 
@@ -156,9 +247,13 @@ function dvPintar(d){
 function dvGeneral(d){
   var s = d.resumen || {}, meses = d.meses || [], h = [];
 
+  var n = d.netas || null;
+
   h.push('<div class="dv-kpis">');
   h.push(dvKpi('Facturado', dvMillones(s.venta_universo),
-               dvPesos(s.venta_universo) + ' · todo, con y sin costo'));
+               dvPesos(s.venta_universo) + ' · bruto, sin restar notas de crédito'));
+  if (n) h.push(dvKpi('Venta neta', dvMillones(n.neto),
+                 dvPesos(n.neto) + ' · es la misma cifra que publica la pantalla de Ventas'));
   h.push(dvKpi('Con costo medido', dvMillones(s.venta_medida),
                dvPct(s.cobertura_plata_pct) + ' de lo facturado · ' +
                dvNum(s.renglones_medidos) + ' de ' + dvNum(s.renglones_universo) + ' renglones'));
@@ -166,6 +261,28 @@ function dvGeneral(d){
   h.push(dvKpi('Margen', dvMillones(s.margen), dvPesos(s.margen)));
   h.push(dvKpi('Margen %', dvPct(s.margen_pct), 'sobre la venta con costo'));
   h.push('</div>');
+
+  /* LAS DOS PANTALLAS DE VENTAS TIENEN QUE PODER PONERSE AL LADO.
+     Este dashboard corta sobre el facturado BRUTO —asi es como estan armados
+     los cortes por provincia, proveedor, linea y cliente— y ventas.html
+     publica la VENTA NETA. Sin esta linea, el usuario encuentra dos cifras
+     distintas para «ventas 2026» y no sabe cual creer. Y de paso queda a la
+     vista un control de DOS RUTAS INDEPENDIENTES: el facturado por las
+     cabeceras de gva12 contra el de los renglones de gva53. */
+  if (n){
+    h.push('<div class="db-pie"><b>Las dos pantallas de Ventas, al lado.</b> ' +
+      'Acá los cortes van sobre lo facturado <b>bruto</b>: ' + dvEsc(dvPesos(s.venta_universo)) +
+      ' en ' + dvEsc(dvNum(n.facturas)) + ' facturas. Restando ' +
+      dvEsc(dvNum(n.notas_credito)) + ' notas de crédito (' + dvEsc(dvPesos(n.notas_credito_neto)) +
+      ') y sumando ' + dvEsc(dvNum(n.notas_debito)) + ' notas de débito (' +
+      dvEsc(dvPesos(n.notas_debito_neto)) + ') da <b>' + dvEsc(dvPesos(n.neto)) +
+      '</b>, que es lo que muestra la pantalla de Ventas. ' +
+      'El mismo facturado medido por las cabeceras de los comprobantes da ' +
+      dvEsc(dvPesos(n.facturas_neto)) + ': <b>' + dvEsc(dvPesos(n.contra_el_universo)) +
+      '</b> de diferencia entre las dos rutas.</div>');
+  }
+
+  h.push(dvDeDondeSaleElCosto(d));
 
   /* EL ROTULO VA IGUAL AUNQUE NO HAYA NADA (16/11): una seccion que
      desaparece se lee como «falta algo», y el que mira no puede distinguir
@@ -271,7 +388,14 @@ function dvCorte(d, p){
   h.push('<div class="db-tb-caja"><table class="db-tb"><thead><tr>' +
          '<th>#</th><th>' + dvEsc(rot) + '</th><th class="der">Renglones</th>' +
          '<th class="der">Facturado</th><th class="der">Particip.</th>' +
-         '<th class="der">Con costo</th><th class="der">Costo</th>' +
+         /* LA COBERTURA VA AL LADO DEL MARGEN, POR CORTE, NO SOLO ARRIBA.
+            La consignacion no se reparte pareja: hay proveedores y clientes
+            donde es casi todo lo facturado. Un 65% de margen medido sobre el
+            12% de lo que ese cliente compro no es el margen de ese cliente, y
+            sin esta columna se lee como si lo fuera. Es la regla del 08/10
+            aplicada renglon por renglon. */
+         '<th class="der">Con costo</th><th class="der">% con costo</th>' +
+         '<th class="der">Costo</th>' +
          '<th class="der">Margen</th><th class="der">Margen %</th>' +
          '</tr></thead><tbody>');
   for (var j = 0; j < tot.length; j++){
@@ -282,6 +406,8 @@ function dvCorte(d, p){
            '<td class="der">' + dvEsc(dvPesos(t.venta_universo)) + '</td>' +
            '<td class="der">' + dvEsc(vU ? dvPct(100*(Number(t.venta_universo)||0)/vU) : '—') + '</td>' +
            '<td class="der">' + dvEsc(dvPesos(t.venta)) + '</td>' +
+           '<td class="der">' + dvEsc(t.venta_universo
+               ? dvPct(100*(Number(t.venta)||0)/Number(t.venta_universo)) : '—') + '</td>' +
            '<td class="der">' + dvEsc(dvPesos(t.costo)) + '</td>' +
            '<td class="der">' + dvEsc(dvPesos(t.margen)) + '</td>' +
            '<td class="der">' + dvEsc(dvPct(t.margen_pct)) + '</td></tr>');
@@ -290,6 +416,7 @@ function dvCorte(d, p){
          '<td class="der"><b>' + dvEsc(dvPesos(vU)) + '</b></td>' +
          '<td class="der"><b>100,00%</b></td>' +
          '<td class="der"><b>' + dvEsc(dvPesos(vM)) + '</b></td>' +
+         '<td class="der"><b>' + dvEsc(vU ? dvPct(100*vM/vU) : '—') + '</b></td>' +
          '<td class="der"><b>' + dvEsc(dvPesos(cO)) + '</b></td>' +
          '<td class="der"><b>' + dvEsc(dvPesos(mA)) + '</b></td>' +
          '<td class="der"><b>' + dvEsc(vM ? dvPct(100*mA/vM) : '—') + '</b></td>' +
@@ -361,7 +488,22 @@ function dvCorte(d, p){
   return h.join('');
 }
 
-/* ---------- las pestañas se cambian sin volver a pedir nada ---------- */
+/* ---------- las pestañas se cambian sin volver a pedir nada ----------
+   Cambiar de pestaña REPINTA el cuerpo con los datos que ya estan en `DV.datos`:
+   no se vuelve a llamar a la base. Repintar y no esconder es lo que hace que
+   en la pagina este SOLO lo que se puede ver (la puerta de pantallas cortó 40
+   veces con la version que escondia, y tenia razon).
+   Y el repintado despierta a los MutationObserver de `filas.js` y `bajar.js`,
+   que son los que ponen el paginado y los botones de Excel y PDF: por eso no
+   hay que llamarlos a mano. */
+function dvRepintar(){
+  var cuerpo = document.getElementById('dvCuerpo');
+  if (!cuerpo || !DV.datos) return;
+  cuerpo.innerHTML = dvPintar(DV.datos);
+  if (typeof dbConectarTips === 'function') dbConectarTips(cuerpo);
+  dvEnganchar();
+}
+
 function dvEnganchar(){
   var cuerpo = document.getElementById('dvCuerpo');
   if (!cuerpo) return;
@@ -369,23 +511,9 @@ function dvEnganchar(){
   for (var i = 0; i < bs.length; i++){
     (function(b){
       b.addEventListener('click', function(){
+        if (b.getAttribute('data-pest') === DV.pestania) return;
         DV.pestania = b.getAttribute('data-pest');
-        var todas = cuerpo.querySelectorAll('.dv-pest');
-        for (var j = 0; j < todas.length; j++)
-          todas[j].classList.toggle('activa', todas[j] === b);
-        var hojas = cuerpo.querySelectorAll('.dv-hoja');
-        for (var k = 0; k < hojas.length; k++)
-          hojas[k].hidden = (hojas[k].getAttribute('data-hoja') !== DV.pestania);
-        /* NO hace falta volver a equipar nada, y esto se midio antes de
-           escribirlo: las CINCO hojas se pintan de una sola vez (cuatro con
-           `hidden`), asi que el unico cambio de `#contenido` es ese innerHTML,
-           y ahi `filasPonerControl` y `bajarPonerBotones` ya recorren
-           `cont.querySelectorAll('table')`, que devuelve tambien las tablas
-           ocultas. Ninguno de los dos lee el layout —medido: la unica llamada
-           a `getBoundingClientRect` del panel esta en el `mouseenter` de
-           graf.js, que sobre algo oculto no se dispara—, asi que paginan y
-           ponen los botones igual. Cambiar `hidden` es un cambio de ATRIBUTO
-           y esos observadores miran `childList`: no los despertaria. */
+        dvRepintar();
       });
     })(bs[i]);
   }
