@@ -555,7 +555,18 @@ function bajarEnvolver(s, pt, max, topeRenglones){
 /*  doc = { titulo, subtitulo, pie:[lineas], encabezados, filas:[[texto]],
            alinear:[ 'izq'|'der' ], anchos:[pt] }                        */
 function bajarPdf(doc){
-  var A = 841.89, L = 595.28;                /* A4 apaisado: ancho x alto */
+  /* LA HOJA LA MANDA EL DATO, IGUAL QUE EL ANCHO DE LA COLUMNA. 20/11/2026
+     Hasta hoy eran siempre A4 apaisado. Con 18 columnas no entran: la puerta
+     del archivo bajado corto «Lic10cmx...», una descripcion con digitos, y
+     una palabra cortada con digitos no se distingue de un importe cortado —
+     que es el defecto del 14/10. Achicar la letra no alcanza, y sacarle
+     columnas al archivo seria tirar dato para tapar un problema de hoja.
+     Desde 17 columnas va A3 apaisado. El umbral no es a ojo: 16 es el mismo
+     que ya usaba `ptEnc` para bajar la letra, o sea donde esto ya apretaba.
+     Las pantallas de 16 columnas o menos siguen saliendo EXACTAMENTE igual. */
+  var ANCHA = doc.encabezados.length > 16;
+  var A = ANCHA ? 1190.55 : 841.89;          /* apaisado: A3 o A4 */
+  var L = ANCHA ?  841.89 : 595.28;
   var MX = 22, ARRIBA = 74, ABAJO = 30;
   var ptEnc = doc.encabezados.length > 16 ? 6 : 7.5;
   var ptFila = ptEnc;

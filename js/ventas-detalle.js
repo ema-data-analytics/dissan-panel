@@ -217,10 +217,17 @@ function vdPintar(d, f, ms){
          '(<code>gva53.precio_net</code>). La cabecera del comprobante en Tango incluye el ' +
          'IVA y por eso es mayor.</td></tr>');
 
+  /* LA HUELLA NO VA ABREVIADA.                                   20/11/2026
+     Decia «md5 25e5f0a3…» y la puerta del PDF lo corto como lo que es: un
+     codigo con digitos terminado en puntos suspensivos. Tenia razon — el que
+     lee no puede distinguir mi abreviatura de un numero cortado, que es
+     exactamente el defecto del 14/10. La huella entera vive en el comentario
+     de arriba y en el documento del proyecto; lo que la pantalla tiene que
+     decir es la AFIRMACION y contra que se midio. */
   h.push('<tr><td>Controlado contra</td><td>El Excel exportado de Tango el 08/10/2026: ' +
-         'huella md5 <code>25e5f0a3…</code> sobre <b>14.613 de 14.613</b> combinaciones de ' +
-         'comprobante y artículo, idénticas en cantidad e importe. No es un total que cierra: ' +
-         'es cada renglón.</td></tr>');
+         'huella md5 <b>idéntica de los dos lados</b> sobre <b>14.613 de 14.613</b> ' +
+         'combinaciones de comprobante y artículo, iguales en cantidad e importe. ' +
+         'No es un total que cierra: es cada renglón.</td></tr>');
   h.push('</tbody></table></div>');
 
   /* ---------- la grilla ---------- */
@@ -235,26 +242,39 @@ function vdPintar(d, f, ms){
     return h.join('');
   }
 
-  /* `data-plata` y `data-total` los DECLARA la pantalla, para que el control
-     pueda sumar las partes sin una lista de nombres escrita al lado -que es
-     la cagada del 14/10 y del 14/11-.                            16/11/2026 */
+  /* `data-plata` SIGNIFICA «ESTA COLUMNA ES UNA PARTE DEL TOTAL DEL
+     RENGLON», no «esta columna es plata». Lo copie de subdiario.js, donde
+     SI lo es -exento + neto + IVA dan el importe- y lo puse en todas las
+     columnas de tipo num. Aca es falso, y la puerta del archivo bajado lo
+     corto el 20/11: sumaba «Precio unitario» + «Importe Tango» = 867.768,60
+     contra un Total de 433.884,30. Precio unitario es POR UNIDAD y el Total
+     es del renglon — el defecto exacto del 14/10, en mi pantalla nueva.
+     ESTA GRILLA NO TIENE DESCOMPOSICION ADITIVA, y eso se declara en vez de
+     inventarle una: Total = cantidad x precio (un producto, no una suma) e
+     Importe Tango es OTRA MEDIDA del mismo dinero, no una parte. La unica
+     identidad verdadera -Importe Tango + Control = Total- no se puede
+     declarar porque Control no baja al archivo: es columna de control, con
+     su `data-deriva` y su hoja de Controles.
+     `cod` marca los identificadores: un codigo no es un numero, y en el PDF
+     NO SE RECORTA (js/bajar.js los reconoce por la clase `db-cod`). Sin eso,
+     el comprobante salia «A0000800007...» y el articulo «FAVE002...». */
   var COLS = [
     { k:'fecha',        t:'Fecha',        tipo:'fecha' },
     { k:'zona',         t:'Zona',         tipo:'txt' },
     { k:'t_comp',       t:'Tipo',         tipo:'txt' },
-    { k:'n_comp',       t:'Comprobante',  tipo:'txt' },
+    { k:'n_comp',       t:'Comprobante',  tipo:'txt', cod:true },
     { k:'razon_social', t:'Cliente',      tipo:'txt' },
     { k:'entidad',      t:'Entidad',      tipo:'txt' },
     { k:'tipo_cliente', t:'Tipo cliente', tipo:'txt' },
-    { k:'cod_articu',   t:'Artículo',     tipo:'txt' },
+    { k:'cod_articu',   t:'Artículo',     tipo:'txt', cod:true },
     { k:'descripcion',  t:'Descripción',  tipo:'txt' },
-    { k:'sinonimo',     t:'Sinónimo',     tipo:'txt' },
+    { k:'sinonimo',     t:'Sinónimo',     tipo:'txt', cod:true },
     { k:'proveedor',    t:'Proveedor',    tipo:'txt' },
     { k:'linea',        t:'Línea',        tipo:'txt' },
     { k:'sublinea',     t:'Sublínea',     tipo:'txt' },
     { k:'cantidad',     t:'Cantidad',     tipo:'cant' },
     { k:'precio_unitario', t:'Precio unitario', tipo:'num' },
-    { k:'total',           t:'Total',           tipo:'num', total:true },
+    { k:'total',           t:'Total',           tipo:'num' },
     { k:'importe_tango',   t:'Importe Tango',   tipo:'num' },
     { k:'control_importe', t:'Control',         tipo:'ctrl' }
   ];
@@ -262,7 +282,7 @@ function vdPintar(d, f, ms){
   h.push('<div class="db-tb-caja"><table class="db-tb"><thead><tr>');
   for (var i = 0; i < COLS.length; i++){
     var c = COLS[i];
-    h.push('<th' + (c.tipo === 'num' ? ' data-plata' : '') +
+    h.push('<th' + (c.parte ? ' data-plata' : '') +
            (c.total ? ' data-total' : '') +
            (c.tipo === 'ctrl' ? ' data-no-baja data-deriva="redondeo del propio Tango entre' +
               ' cantidad x precio y el importe que guarda: no es plata que falte"' : '') +
@@ -282,7 +302,17 @@ function vdPintar(d, f, ms){
       else if (col.tipo === 'num')   h.push('<td class="der">' + vdEsc(vdExacto(v)) + '</td>');
       else if (col.tipo === 'ctrl')  h.push('<td class="der">' +
           (Math.abs(Number(v || 0)) < 0.005 ? '' : vdEsc(vdExacto(v))) + '</td>');
-      else h.push('<td>' + vdEsc(v === null || v === undefined || v === '' ? '—' : v) + '</td>');
+      else {
+        /* EL GUION LARGO NO ES UN CODIGO: es como esta pantalla escribe «no
+           hay dato», y js/bajar.js lo manda al archivo como celda VACIA. Pero
+           la rama del codigo corre ANTES de esa, asi que marcar la celda vacia
+           con db-cod hacia que el «—» viajara como TEXTO. Lo corto la puerta
+           del archivo bajado el 20/11 (J11, Sinonimo). La clase va solo cuando
+           hay valor.                                              20/11/2026 */
+        var vacio = (v === null || v === undefined || v === '');
+        h.push('<td' + (col.cod && !vacio ? ' class="db-cod"' : '') + '>' +
+               vdEsc(vacio ? '—' : v) + '</td>');
+      }
     }
     h.push('</tr>');
   }
