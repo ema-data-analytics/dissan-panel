@@ -278,6 +278,40 @@
     filas: []
   };
 
+  /* LA HOJA «RESUMEN» DEL EXCEL, REPLICADA.                   20/11/2026
+     Los valores son los MEDIDOS contra el archivo, no inventados: las tres
+     zonas por los tres anios, y el total que da 14.045.541.520,62, que es
+     la fila de totales del Excel de Tango. */
+  RPC['api_ventas_detalle_resumen_v1'] = {
+    ok: true, ms: 42, total: 14045541520.62, clientes: 3,
+    anios: [2024, 2025, 2026],
+    por_zona: [
+      {zona:'MENDOZA', anio:2024, neto:1139355877.99, renglones:1200},
+      {zona:'MENDOZA', anio:2025, neto:4164093681.91, renglones:4300},
+      {zona:'MENDOZA', anio:2026, neto:4057352130.62, renglones:4100},
+      {zona:'SAN JUAN',anio:2024, neto:31599029.03,   renglones:90},
+      {zona:'SAN JUAN',anio:2025, neto:152856652.13,  renglones:260},
+      {zona:'SAN JUAN',anio:2026, neto:102493183.80,  renglones:180},
+      {zona:'SAN LUIS',anio:2024, neto:578037009.60,  renglones:700},
+      {zona:'SAN LUIS',anio:2025, neto:2080119450.55, renglones:2300},
+      {zona:'SAN LUIS',anio:2026, neto:1739634504.99, renglones:1900}
+    ],
+    por_cliente: [
+      {razon_social:'DROGUERIA CENTRAL', cod_client:'SL0004', neto:2400725782.15, renglones:980},
+      {razon_social:'HOSPITAL CENTRAL',  cod_client:'MZ0055', neto:1726636296.02, renglones:760},
+      /* uno sin codigo, para que la celda vacia se pinte con el guion largo
+         y no con «undefined» */
+      {razon_social:'(sin cliente)',     cod_client:null,     neto:0,            renglones:1}
+    ]
+  };
+
+  /* Y SU CASO VACIO: las dos secciones tienen que seguir estando y decir
+     «Ninguno» con el motivo. */
+  RPC['api_ventas_detalle_resumen_v1_vacia'] = {
+    ok: true, ms: 1, total: 0, clientes: 0,
+    anios: [], por_zona: [], por_cliente: []
+  };
+
   window.__LLAMADAS = [];
 
   /* FIXTURES DEL CONTROL — 29/10/2026.

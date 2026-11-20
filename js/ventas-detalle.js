@@ -122,10 +122,25 @@ async function vdCargar(){
     var d = r && r.data;
     if (!d || d.ok === false)
       throw new Error((d && d.error) || 'la base no devolvió nada');
+
+    /* EL RESUMEN VA CON LOS MISMOS FILTROS QUE LA GRILLA.      20/11/2026
+       Es la hoja RESUMEN del Excel de Tango, que el usuario reclamo que
+       faltaba. Alla esos dos cuadros salen de tablas dinamicas con
+       segmentadores que hay que acordarse de mover; aca salen con lo que
+       tenga puesto la pantalla. Se pide APARTE y si falla NO se cae la
+       grilla: la grilla es el dato, el resumen es la lectura del dato. */
+    var fr = {}; for (var k in f) if (k !== 'p_agrupar' && k !== 'p_limite') fr[k] = f[k];
+    var res = null;
+    try {
+      var rr = await rpc('api_ventas_detalle_resumen_v1', fr);
+      if (rr && rr.data && rr.data.ok !== false) res = rr.data;
+    } catch (e) { res = null; }
+
     VD.datos = d;
+    VD.resumen = res;
     VD.filtros = f;
     estado.innerHTML = '';
-    cuerpo.innerHTML = vdPintar(d, f, r.ms);
+    cuerpo.innerHTML = vdPintar(d, f, r.ms, res);
     cuerpo.hidden = false;
     var ly = document.getElementById('vdLeyenda');
     if (ly) ly.textContent = 'medido en ' + vdNum(r.ms) + ' ms';
@@ -137,7 +152,109 @@ async function vdCargar(){
   }
 }
 
-function vdPintar(d, f, ms){
+/* ---------- LA HOJA «RESUMEN» DEL EXCEL, REPLICADA.          20/11/2026
+   Dos cuadros, los mismos que tiene el archivo de Tango:
+     1. Neto facturado por ZONA y por AÑO, con su % de participacion.
+     2. Neto por CLIENTE, de mayor a menor.
+   Controlados contra el archivo antes de publicarlos: las 12 cifras del
+   cuadro 1 dan EXACTO (0,00) y del 2, los 12 clientes mas grandes y los
+   114 que hay en 2026.
+   Las dos secciones aparecen SIEMPRE y dicen «Ninguno» con el motivo: una
+   seccion que desaparece se lee como «falta algo» (16/11/2026). */
+function vdResumen(res){
+  var h = [];
+  h.push('<div class="db-sec">Resumen por zona y año' +
+         '<small>Es el primer cuadro de la hoja RESUMEN del Excel de Tango. ' +
+         'Acá sale con los filtros que tengas puestos arriba.</small></div>');
+
+  var celdas = (res && res.por_zona) || [];
+  if (!celdas.length){
+    h.push('<div class="db-pie"><b>Ninguno.</b> No hay renglones en esos filtros, ' +
+           'así que no hay nada que resumir.</div>');
+  } else {
+    var anios = (res.anios || []).slice();
+    var zonas = [];
+    for (var i = 0; i < celdas.length; i++)
+      if (zonas.indexOf(celdas[i].zona) < 0) zonas.push(celdas[i].zona);
+    var por = {};
+    for (var j = 0; j < celdas.length; j++)
+      por[celdas[j].zona + '|' + celdas[j].anio] = Number(celdas[j].neto) || 0;
+    var totAnio = {}, totZona = {}, total = 0;
+    for (var z = 0; z < zonas.length; z++){
+      totZona[zonas[z]] = 0;
+      for (var a = 0; a < anios.length; a++){
+        var v = por[zonas[z] + '|' + anios[a]] || 0;
+        totZona[zonas[z]] += v;
+        totAnio[anios[a]] = (totAnio[anios[a]] || 0) + v;
+        total += v;
+      }
+    }
+    function pct(v, t){ return t ? (100 * v / t).toFixed(2).replace('.', ',') + '%' : '—'; }
+
+    h.push('<div class="db-tb-caja"><table class="db-tb"><thead><tr><th>Zona</th>');
+    for (var a2 = 0; a2 < anios.length; a2++)
+      h.push('<th class="der">' + vdEsc(anios[a2]) + ' · particip.</th>' +
+             '<th class="der" data-plata>' + vdEsc(anios[a2]) + ' · neto facturado</th>');
+    h.push('<th class="der">Total · particip.</th><th class="der" data-total>Total neto facturado</th>');
+    h.push('</tr></thead><tbody>');
+    for (var z2 = 0; z2 < zonas.length; z2++){
+      h.push('<tr><td>' + vdEsc(zonas[z2]) + '</td>');
+      for (var a3 = 0; a3 < anios.length; a3++){
+        var vv = por[zonas[z2] + '|' + anios[a3]] || 0;
+        h.push('<td class="der">' + pct(vv, totAnio[anios[a3]] || 0) + '</td>' +
+               '<td class="der">' + vdEsc(vdExacto(vv)) + '</td>');
+      }
+      h.push('<td class="der">' + pct(totZona[zonas[z2]], total) + '</td>' +
+             '<td class="der">' + vdEsc(vdExacto(totZona[zonas[z2]])) + '</td></tr>');
+    }
+    h.push('</tbody><tfoot><tr><td><b>Total general</b></td>');
+    for (var a4 = 0; a4 < anios.length; a4++)
+      h.push('<td class="der">100,00%</td><td class="der"><b>' +
+             vdEsc(vdExacto(totAnio[anios[a4]] || 0)) + '</b></td>');
+    h.push('<td class="der">100,00%</td><td class="der"><b>' +
+           vdEsc(vdExacto(total)) + '</b></td></tr></tfoot></table></div>');
+  }
+
+  /* ---------- cuadro 2: por cliente ---------- */
+  var cli = (res && res.por_cliente) || [];
+  h.push('<div class="db-sec">Resumen por cliente' +
+         '<small>' + (cli.length ? vdNum(cli.length) + ' clientes, del que más compró al que menos'
+                                 : 'el segundo cuadro de la hoja RESUMEN') + '</small></div>');
+  if (!cli.length){
+    h.push('<div class="db-pie"><b>Ninguno.</b> No hay renglones en esos filtros.</div>');
+  } else {
+    var totC = 0;
+    for (var c0 = 0; c0 < cli.length; c0++) totC += Number(cli[c0].neto) || 0;
+    h.push('<div class="db-tb-caja"><table class="db-tb"><thead><tr>' +
+           '<th>#</th><th>Cliente</th><th>Código</th>' +
+           /* SIN `data-total`: no hay partes que sumen a esta columna, y
+              declarar un total sin partes hace que la puerta del archivo
+              bajado corte con «ninguna columna de plata». En el cuadro de
+              zonas SI va, porque los netos por anio SUMAN el total. */
+           '<th class="der">Renglones</th><th class="der">Particip.</th>' +
+           '<th class="der">Neto facturado</th>' +
+           '</tr></thead><tbody>');
+    for (var c = 0; c < cli.length; c++){
+      var x = cli[c], n = Number(x.neto) || 0;
+      h.push('<tr><td class="der">' + (c + 1) + '</td>' +
+             '<td>' + vdEsc(x.razon_social) + '</td>' +
+             /* la clase `db-cod` NO va en la celda vacia: esa rama de
+                js/bajar.js corre antes que la del guion largo y hace viajar
+                el «—» al Excel como TEXTO. Mismo defecto que en la grilla. */
+             (x.cod_client ? '<td class="db-cod">' + vdEsc(x.cod_client) + '</td>'
+                           : '<td>—</td>') +
+             '<td class="der">' + vdEsc(vdNum(x.renglones)) + '</td>' +
+             '<td class="der">' + (totC ? (100 * n / totC).toFixed(2).replace('.', ',') + '%' : '—') + '</td>' +
+             '<td class="der">' + vdEsc(vdExacto(n)) + '</td></tr>');
+    }
+    h.push('</tbody><tfoot><tr><td></td><td><b>Total general</b></td><td></td><td></td>' +
+           '<td class="der">100,00%</td><td class="der"><b>' + vdEsc(vdExacto(totC)) +
+           '</b></td></tr></tfoot></table></div>');
+  }
+  return h.join('');
+}
+
+function vdPintar(d, f, ms, res){
   var s = d.resumen || {};
   var filas = d.filas || [];
   var h = [];
@@ -229,6 +346,9 @@ function vdPintar(d, f, ms){
          'combinaciones de comprobante y artículo, iguales en cantidad e importe. ' +
          'No es un total que cierra: es cada renglón.</td></tr>');
   h.push('</tbody></table></div>');
+
+  /* ---------- el resumen, antes del detalle ---------- */
+  h.push(vdResumen(res));
 
   /* ---------- la grilla ---------- */
   h.push('<div class="db-sec">Renglón por renglón' +
