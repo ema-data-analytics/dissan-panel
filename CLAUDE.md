@@ -2112,3 +2112,108 @@ restantes son mías, medido mecánicamente: no figuran en `carga_detalle`.
 Resultado: **467 con módulo · 178 declarando por qué no · 0 en blanco sin
 declarar**, con la puerta `modulo_de_cada_tabla_declarado` y sus tres caras
 (0 · 1 borrándole el motivo a una · 0 al volver atrás).
+
+## 19/11/2026 (noche) — REMEDÍ LOS DATOS TRES VECES Y NUNCA LA FÁBRICA QUE LOS ESCRIBE
+
+**`ema.diccionario_medir` —LA FUNCIÓN QUE ESCRIBE EL MAPA— SEGUÍA MIDIENDO
+SOBRE `limit 5000` Y CONTANDO EL TEXTO VACÍO COMO CARGADO.** El 12/11 corregí
+1.952 campos, el 16/11 otros 1.446, el 19/11 a la tarde 143 más, y las tres
+veces arreglé **las filas** y dejé intacta la función de la que salían. Toda
+tabla nueva nacía con los dos defectos. Es el 16/11 textual: *un arreglo de a
+uno donde la fábrica repone de a todos es una recaída programada* — lo había
+escrito ese día **para los permisos** y no se me ocurrió aplicarlo al mapa.
+Medido, sin escribir nada, con la fórmula de cada una sobre `gva12`:
+
+| campo | v1 llenos | v2 llenos | v1 distintos | v2 distintos |
+|---|---|---|---|---|
+| `t_comp` | 5.000 (21,5%) | **23.302 (100%)** | 6 | **8** |
+| `descripcion_factura` | 5.000 (100%) | **0** | 1 | 0 |
+| `n_comp` | 5.000 | **23.302** | 4.680 | **22.724** |
+
+**La muestra escondía DOS TIPOS DE COMPROBANTE ENTEROS** en `t_comp` — la misma
+columna de la que salió el "cero notas de crédito" del 12/11.
+
+**`ema.diccionario_medir_v2` mide la tabla entera** con
+`count(nullif(btrim(col::text),''))`, la misma regla que las dos remediciones,
+y **`ema.diccionario_correr` pasa a llamarla**. Los ejemplos siguen siendo una
+muestra de 5 valores y **eso se declara en `fundamento`**: un ejemplo ilustra,
+no mide.
+
+**Y MI FUNCIÓN NUEVA TRAJO SU PROPIO DEFECTO, QUE CASI ME HACE ROMPER 2.322
+FILAS BUENAS.** La v2 escribía `es_constante = (distintos = 1)` y la definición
+del sistema —la de `ema.remedir_distintos`, con la que el mapa coincide en
+10.716 de 10.716— es **`distintos <= 1`**: una columna VACÍA también cuenta como
+constante, porque filtrar por ella no cambia nada. Vi 2.322 columnas vacías
+marcadas constantes, las llamé "un tercer sobreviviente del defecto" y estuve a
+punto de reescribirlas. **La medición me frenó:** `discrepaban_al_remedir = 0`,
+o sea que las dos fuentes coincidían y **el que estaba fuera de línea era yo**.
+Habría sido la sexta vez en cinco días que acuso de agujero a algo que no lo es,
+y la primera contra 2.322 filas a la vez. **Antes de "corregir" el mapa en masa
+por la opinión de una función que escribí hoy, hay que medir si la fuente vieja
+y la remedición ya coincidían.**
+
+**UN DECIMAL DE DIFERENCIA HABRÍA HECHO SONAR LA REMEDICIÓN TODAS LAS NOCHES.**
+La v2 escribía `llenado_pct` con un decimal y la remedición con dos: 63,9
+contra 63,92, con `con_dato` idéntico. Nada estaba mal, pero la pasada nocturna
+iba a "corregir" esas 81 columnas **para siempre**. Igualado a dos decimales y
+medido: **segunda pasada, 0 corregidas**, que es la única prueba de que el mapa
+coincide con la base. *Una puerta que grita siempre se apaga*, también cuando
+grita por redondeo.
+
+**EL ANÁLISIS DE LA IA NO PODÍA CORRER SOBRE UNA TABLA QUE NO ESTÁ MEDIDA, Y
+ESO NO LO VI HASTA QUE EL CONDUCTOR SE FRENÓ SOLO.** Las 18 tablas nuevas
+estaban en `ema.mapa_cola` como pendientes y el conductor falló tres veces con
+`sin_tabla: esa tabla no esta en el mapa`: `api_mapa_para_analizar` lee
+`ema.diccionario` y `ema.diccionario_tabla`, y esas 18 no tenían una fila en
+ninguna de las dos. **El orden es medir mecánicamente y DESPUÉS pagarle a la
+IA**, nunca al revés. Su freno de 3 fallos seguidos funcionó: **costó $0**.
+
+**Resultado medido:** las 18 tablas y sus **74 campos** medidos con la v2 y
+analizados por la IA en 18 de 18, **0 fallidas, 0 columnas inventadas,
+$0,4012** de los $2 autorizados. El mapa queda en **10.716 columnas · 645
+tablas · 0 tablas de Tango sin mapear · 10.716 con significado**, y el único
+campo que la IA no pudo deducir —`asiento_analitico_cn_comprobante_ext.hasta_nro_comprobante`,
+**vacío en las 6.579 filas**— quedó **declarado**, no en blanco: *un blanco sin
+explicación no se distingue de un olvido*.
+
+**CUATRO PUERTAS NUEVAS, Y TRES NO HUBO QUE PLANTARLAS PORQUE EL DEFECTO ERA
+REAL.** `mapa_sin_rastro_de_muestra` (ninguna columna con el número redondo
+5.000, que es **la firma** de la muestra vieja) · `mapa_cubre_todo_lo_que_trae_el_cargador`
+(si Tango agrega una tabla, el mapa tiene que enterarse) ·
+`mapa_es_constante_coincide` · `mapa_sin_significado_sin_declarar`. Las caras:
+la primera **0 limpio → 7 corriendo la v1 sobre `cpa63` → 0 al volver**, con
+`ema.dicc_cpa63_antes_19_11` demostrando que la v2 devuelve **exactamente** los
+mismos números (0 de 7 distintas, los 7 significados intactos); la segunda
+**0 → 81 escondiendo lo medido hoy**; las otras dos, **1 → 0** con el defecto
+mío de verdad.
+
+**LA TAREA NOCTURNA PASA DE CINCO PASOS A SEIS.** El paso de las identidades
+quedaba en 98,8 s con 21 s de margen y esa noche le agregué cuatro identidades
+más: **un control que crece solo termina matando a la tarea**, como ya pasó el
+17 y el 18. `ema.remedir_llenado_todo` salió de `api_correr_identidades` y es
+el paso 5, `public.api_remedir_mapa_llenado()`, con su propio reloj. Medido con
+el reloj de la tarea (120 s): **paso 5 = 29,2 s · paso 6 = 69,8 s, o sea 50 s
+de margen en vez de 21**, 99 identidades, 98 en verde. **El orden sigue siendo
+obligatorio:** las dos remediciones van ANTES del 6, o las identidades
+compararían contra una foto vieja y darían un verde falso.
+
+**Y VOLVÍ A LEER UN REPINTADO VIEJO, EL MISMO DÍA QUE ESCRIBÍ LA REGLA.** Esta
+mañana anoté *"esperar a que el VALOR CAMBIE, no a que aparezca un rótulo"*, y
+a la noche mi espera disparó **a los 0 segundos** y me devolvió la respuesta
+anterior de la Ayuda —una sobre stock parado— como si fuera la mía. La regla
+como la escribí no alcanza: esperé a que cambiara **otro elemento**. La versión
+que sirve: **esperar a que cambie una huella PROPIA DE ESA respuesta** —acá el
+encabezado `N filas · X s · tokens`— y recién entonces leer. Y el segundo click
+que di de más **no costó nada**: la memoria contestó en 2,9 s diciendo "ya la
+sabía — sin costo", así que el doble click no se pagó dos veces.
+
+**LA PRUEBA DE QUE EL MAPA NUEVO SIRVE, EN LA PANTALLA PUBLICADA.** Una pregunta
+que media hora antes el sistema **no podía contestar**, porque esas dos tablas
+no tenían una sola fila en el mapa: *"cuántas facturas de compra y cuántos
+comprobantes de venta se borraron en Tango"*. Nueve cifras y las nueve
+idénticas a la base: **681 compras** (FP 656 · FS 14 · CP 8 · DP 3) y
+**105 ventas** (FAC 78 · DMZ 25 · DVM 2), **786** entre las dos. Resolvió el
+tipo por **`clase_operacion` y no por el código** —la regla del 12/11, que está
+cargada en `ayuda.saber`— y cerró sola el cabo suelto del 11/11: *"estos
+borrados explican los 206 comprobantes que nombra la cuenta corriente de
+proveedores y no aparecen en compras. No son datos rotos."*
