@@ -257,7 +257,15 @@ const PANTALLAS = {
      corta sin avisar: el modulo aparece apagado aunque tenga pantalla.
      Lo frena control/alcance.js, que compara estas claves contra `modulos`. */
   SubdiarioVentas:  { archivo: 'subdiario-ventas.html',  rotulo: 'Subdiario de Ventas' },
-  SubdiarioCompras: { archivo: 'subdiario-compras.html', rotulo: 'Subdiario de Compras' }
+  SubdiarioCompras: { archivo: 'subdiario-compras.html', rotulo: 'Subdiario de Compras' },
+  /* 20/11/2026. Me olvide de agregarlo y el menu le dibujo a anibal —que SI
+     tiene permiso— el renglon apagado de «en desarrollo», con el aviso por
+     defecto «No tenes acceso a este modulo», que ademas no es lo que pasaba.
+     El comentario de arriba decia que control/alcance.js frena esto y NO LO
+     FRENABA: comparaba el data-modulo de los .html contra `modulos` y nunca
+     miraba ESTA lista. Un comentario que promete un control que no existe es
+     peor que no tener el control, porque uno deja de mirar. */
+  VentasDetalle:    { archivo: 'ventas-detalle.html',    rotulo: 'Detalle de Ventas' }
 };
 
 let MI_ROL = '', EMAIL_ENTRO = '';

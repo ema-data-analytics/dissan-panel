@@ -91,6 +91,10 @@ const SUELTAS = {
 };
 
 const fallas = [];
+/* los arneses: se declara una sola vez y arriba, porque se usa en varios
+   puntos de main() y un `const` declarado abajo revienta con ReferenceError
+   en el de arriba (zona muerta temporal). */
+const PLANTAR = process.env.CONTROL_PLANTAR || '';
 const medido = { pantallas: 0, declaran: 0, modulos: 0, activos: 0, sueltas: 0, enObra: 0 };
 function falla(clase, que){ fallas.push({ clase, que }); }
 
@@ -236,8 +240,59 @@ async function main(){
     }
   }
 
+  /* ---- 4b. LA LISTA `PANTALLAS` DE core.js TIENE QUE TENERLAS A TODAS ---
+     POR QUE EXISTE. El comentario de esa lista decia, desde el 05/11, que
+     «lo frena control/alcance.js». NO LO FRENABA: este control comparaba el
+     data-modulo de los .html contra `modulos` y nunca miraba ESA lista.
+     El 20/11 me olvide de agregar VentasDetalle y el menu le dibujo al
+     usuario —que SI tiene permiso— el renglon apagado de «en desarrollo»,
+     con el aviso por defecto «No tenes acceso a este modulo», que ademas no
+     era lo que pasaba. `renglon()` mira `PANTALLAS[clave]` ANTES que el
+     permiso, asi que sin esa entrada no hay enlace posible.
+     Un comentario que promete un control que no existe es peor que no tener
+     el control, porque uno deja de mirar. */
+  let coreJs = fs.readFileSync(path.join(RAIZ, 'js', 'core.js'), 'utf8');
+  if (PLANTAR === 'sin_pantalla_en_core'){
+    const antes = coreJs;
+    coreJs = coreJs.replace(/\n\s*VentasDetalle:\s*\{[^}]*\}/, '');
+    if (coreJs === antes)
+      throw new Error('EL ARNES NO ENCONTRO DONDE PLANTAR "sin_pantalla_en_core". '
+                    + 'Un arnes que no planta nada da verde sin haber probado.');
+    console.log('  [arnes] plantado: sin_pantalla_en_core');
+  }
+  const mapa = /const\s+PANTALLAS\s*=\s*\{([\s\S]*?)\n\};/.exec(coreJs);
+  if (!mapa){
+    falla('no_encontre_la_lista_PANTALLAS_de_core',
+          'js/core.js no tiene un `const PANTALLAS = { ... };` reconocible. Sin '
+        + 'poder leerlo este control NO MIDE si el menu puede enlazar cada '
+        + 'pantalla, y no medido no es limpio.');
+  } else {
+    const enCore = new Set();
+    const reC = /(?:^|\n)\s*([A-Za-z_][A-Za-z0-9_]*)\s*:\s*\{\s*archivo\s*:/g;
+    let c;
+    while ((c = reC.exec(mapa[1])) !== null) enCore.add(c[1]);
+    medido.enCore = enCore.size;
+    for (const clave of Object.keys(declarados)){
+      if (SUELTAS[declarados[clave][0]]) continue;        /* la suelta no se enlaza */
+      if (!enCore.has(clave))
+        falla('modulo_con_pantalla_que_core_no_sabe_enlazar',
+              'el modulo "' + clave + '" tiene pantalla ('
+            + declarados[clave].join(', ') + ') y NO esta en PANTALLAS de '
+            + 'js/core.js. El menu lo dibuja apagado como «en desarrollo» '
+            + 'aunque el usuario tenga permiso, y con el aviso generico «no '
+            + 'tenes acceso», que ni siquiera es el motivo. Es lo que paso el '
+            + '20/11 con VentasDetalle.');
+    }
+    for (const clave of enCore){
+      if (!porClave[clave])
+        falla('core_enlaza_un_modulo_que_no_existe',
+              'js/core.js tiene en PANTALLAS el modulo "' + clave + '" y en '
+            + '`modulos` no esta. Es una pantalla que invente yo (el 21/10).');
+    }
+  }
+
   /* ---- 4. el menu se arma con el portero, no con una lista a mano ------ */
-  const core = fs.readFileSync(path.join(RAIZ, 'js', 'core.js'), 'utf8');
+  const core = coreJs;
   if (!/api_mis_modulos/.test(core)){
     falla('el_menu_no_pasa_por_el_portero',
           'js/core.js no nombra api_mis_modulos(). El menu tiene que salir de '
@@ -268,7 +323,6 @@ async function main(){
      afuera. Le planta de a uno los dos defectos reales del 20/11, y si el
      ancla no aparece REVIENTA: un arnes que no planta nada da verde sin
      haber probado. */
-  const PLANTAR = process.env.CONTROL_PLANTAR || '';
   if (PLANTAR === 'juguete_distinto' || PLANTAR === 'juguete_de_mas'){
     const antes = jug;
     /* el ancla NO transcribe el renglon entero: el nombre cambia y un ancla
