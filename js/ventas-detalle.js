@@ -142,6 +142,9 @@ async function vdCargar(){
     estado.innerHTML = '';
     cuerpo.innerHTML = vdPintar(d, f, r.ms, res);
     cuerpo.hidden = false;
+    /* los cartelitos de las barras se enganchan DESPUES de pintar: el
+       grafico no existe hasta que el innerHTML esta puesto. */
+    if (typeof dbConectarTips === 'function') dbConectarTips(cuerpo);
     var ly = document.getElementById('vdLeyenda');
     if (ly) ly.textContent = 'medido en ' + vdNum(r.ms) + ' ms';
   } catch (e) {
@@ -153,21 +156,28 @@ async function vdCargar(){
 }
 
 /* ---------- LA HOJA «RESUMEN» DEL EXCEL, REPLICADA.          20/11/2026
-   Dos cuadros, los mismos que tiene el archivo de Tango:
+   Dos cuadros y un grafico, los mismos que tiene el archivo de Tango, pero
+   con la forma del Tablero: barras arriba y la tabla abajo, para que se
+   LEA de un vistazo y despues se pueda mirar el numero exacto.
      1. Neto facturado por ZONA y por AÑO, con su % de participacion.
      2. Neto por CLIENTE, de mayor a menor.
-   Controlados contra el archivo antes de publicarlos: las 12 cifras del
-   cuadro 1 dan EXACTO (0,00) y del 2, los 12 clientes mas grandes y los
-   114 que hay en 2026.
-   Las dos secciones aparecen SIEMPRE y dicen «Ninguno» con el motivo: una
+   Controlados contra el archivo antes de publicarlos: 23 cifras, 0
+   diferencias — las 9 celdas de zona x anio, el total general, los 12
+   clientes mas grandes y los 114 clientes de 2026.
+   Las barras salen de `dbGrafBarras`, que es el MISMO codigo que dibuja
+   las del Tablero: vive en js/graf.js porque dos copias de la misma cosa
+   se separan con el tiempo (el defecto del 30/10 con `listas`).
+   Las secciones aparecen SIEMPRE y dicen «Ninguno» con el motivo: una
    seccion que desaparece se lee como «falta algo» (16/11/2026). */
 function vdResumen(res){
   var h = [];
+  var celdas = (res && res.por_zona) || [];
+
+  /* ---------- cuadro 1: zona x anio ---------- */
   h.push('<div class="db-sec">Resumen por zona y año' +
          '<small>Es el primer cuadro de la hoja RESUMEN del Excel de Tango. ' +
          'Acá sale con los filtros que tengas puestos arriba.</small></div>');
 
-  var celdas = (res && res.por_zona) || [];
   if (!celdas.length){
     h.push('<div class="db-pie"><b>Ninguno.</b> No hay renglones en esos filtros, ' +
            'así que no hay nada que resumir.</div>');
@@ -179,6 +189,7 @@ function vdResumen(res){
     var por = {};
     for (var j = 0; j < celdas.length; j++)
       por[celdas[j].zona + '|' + celdas[j].anio] = Number(celdas[j].neto) || 0;
+
     var totAnio = {}, totZona = {}, total = 0;
     for (var z = 0; z < zonas.length; z++){
       totZona[zonas[z]] = 0;
@@ -190,6 +201,33 @@ function vdResumen(res){
       }
     }
     function pct(v, t){ return t ? (100 * v / t).toFixed(2).replace('.', ',') + '%' : '—'; }
+
+    /* las barras, antes de la tabla: primero se ve, despues se lee */
+    var bZona = zonas.map(function(n){ return { et:n, val:totZona[n] }; })
+                     .sort(function(x,y){ return y.val - x.val; });
+
+    /* EL GRAFICO COMO LO TIENE EL EXCEL: una barra por AÑO adentro de cada
+       zona, no dos graficos sueltos. El usuario mando la captura de su hoja
+       —segmentadores de año y provincia, y el grafico agrupado— y asi lo
+       mira el. Al lado va el total por zona, que es lo que su grafico deja
+       leer de un vistazo.                                    20/11/2026 */
+    var bZA = [];
+    for (var zz = 0; zz < zonas.length; zz++)
+      for (var aa = 0; aa < anios.length; aa++)
+        bZA.push({ et: zonas[zz] + ' · ' + anios[aa], zona: zonas[zz], anio: anios[aa],
+                   val: por[zonas[zz] + '|' + anios[aa]] || 0 });
+
+    h.push('<div class="vi-grafs">');
+    h.push('<div><div class="vi-graf-t">Neto facturado por zona y año</div>' +
+      dbGrafBarras(bZA, 'et', 'val',
+        function(f){ return f.zona + ' ' + f.anio + ': ' + vdExacto(f.val) +
+                            ' · ' + pct(f.val, totAnio[f.anio] || 0) + ' de ese año'; },
+        function(f){ return vdMillones(f.val); }, '', 128, 21) + '</div>');
+    h.push('<div><div class="vi-graf-t">Total por zona</div>' +
+      dbGrafBarras(bZona, 'et', 'val',
+        function(f){ return f.et + ': ' + vdExacto(f.val) + ' · ' + pct(f.val, total); },
+        function(f){ return vdMillones(f.val); }, 'v', 86, 24) + '</div>');
+    h.push('</div>');
 
     h.push('<div class="db-tb-caja"><table class="db-tb"><thead><tr><th>Zona</th>');
     for (var a2 = 0; a2 < anios.length; a2++)
@@ -225,6 +263,21 @@ function vdResumen(res){
   } else {
     var totC = 0;
     for (var c0 = 0; c0 < cli.length; c0++) totC += Number(cli[c0].neto) || 0;
+
+    /* las barras muestran los 15 mas grandes; la tabla de abajo los trae a
+       TODOS, y el pie lo dice para que nadie crea que son 15 y listo. */
+    var top = cli.slice(0, 15).map(function(x){
+      return { et: x.razon_social, val: Number(x.neto) || 0 };
+    });
+    h.push('<div class="vi-grafs uno">');
+    h.push('<div><div class="vi-graf-t">Los ' + top.length + ' más grandes' +
+           (cli.length > top.length ? ' de ' + vdNum(cli.length) : '') + '</div>' +
+      dbGrafBarras(top, 'et', 'val',
+        function(f){ return f.et + ': ' + vdExacto(f.val) + ' · ' +
+                            (totC ? (100*f.val/totC).toFixed(2).replace('.',',') + '%' : '—'); },
+        function(f){ return vdMillones(f.val); }, 'v', 150, 21) + '</div>');
+    h.push('</div>');
+
     h.push('<div class="db-tb-caja"><table class="db-tb"><thead><tr>' +
            '<th>#</th><th>Cliente</th><th>Código</th>' +
            /* SIN `data-total`: no hay partes que sumen a esta columna, y

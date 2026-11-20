@@ -176,3 +176,14 @@
 #vtInforme .vi-tb-caja td.bt-que{ white-space:normal; min-width:260px; max-width:460px }
 #vtInforme .vi-tb-caja td.bt-det{ white-space:normal; min-width:300px; max-width:620px;
                                   color:var(--vi-tinta2) }
+
+/* LAS BARRAS DEL RESUMEN, al lado una de la otra cuando hay lugar.
+   20/11/2026. El `.db-graf` ya lo estila css/tablero-db.css, que esta
+   pantalla ya cargaba: aca va solo como se acomodan. `min-width:0` porque
+   un item de grilla no baja de su contenido sin eso (10/11). */
+#vtInforme .vi-grafs{ display:grid; gap:14px; margin:10px 0 14px;
+  grid-template-columns:repeat(auto-fit, minmax(min(100%, 300px), 1fr)); }
+#vtInforme .vi-grafs.uno{ grid-template-columns:1fr; }
+#vtInforme .vi-grafs > div{ min-width:0; }
+#vtInforme .vi-graf-t{ font-size:11px; letter-spacing:.06em; text-transform:uppercase;
+  color:var(--vi-tinta2); font-weight:600; margin:0 0 5px 2px; }
