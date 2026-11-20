@@ -43,15 +43,22 @@
                     motivo por el que estan los dos subdiarios: sin el, el portero
                     la tapa y la puerta la mide como "abre limpia" sin haber
                     pintado nunca una grilla. */
-                 {clave:'VentasDetalle',nombre:'Detalle de Ventas (en desarrollo)',grupo:'CONSULTAS'},
+                 {clave:'VentasDetalle',nombre:'Detalle de Ventas',grupo:'CONSULTAS'},
                  /* LOS DOS DEL SUBDIARIO, agregados el 10/11/2026.
                     No estaban, asi que el portero tapaba las dos pantallas y la
                     puerta de pantallas las media como "abren limpias" sin haber
                     pintado nunca una grilla. Estan apagadas para dissan y super
                     en la base de verdad -eso lo decide `modulos`, no esto-; aca
                     tienen que estar para poder PROBARLAS. */
-                 {clave:'SubdiarioCompras',nombre:'Subdiario de IVA — Compras',grupo:'IMPUESTOS'},
-                 {clave:'SubdiarioVentas',nombre:'Subdiario de IVA — Ventas',grupo:'IMPUESTOS'},
+                 /* EL GRUPO SALE DE LA BASE, NO DE LO QUE ME PAREZCA.
+                    Hasta el 20/11 los dos decian 'IMPUESTOS' aca y en `modulos`
+                    dicen 'COMPRAS' y 'VENTAS'. core.js arma las cabezas del menu
+                    con comparacion EXACTA de texto, asi que durante diez dias las
+                    18 puertas midieron un menu con una cabeza IMPUESTOS que DISSAN
+                    nunca vio. Lo encontro la puerta del alcance al comparar el
+                    juguete contra la base; antes no lo miraba nadie. */
+                 {clave:'SubdiarioCompras',nombre:'Subdiario de IVA — Compras',grupo:'COMPRAS'},
+                 {clave:'SubdiarioVentas',nombre:'Subdiario de IVA — Ventas',grupo:'VENTAS'},
                  {clave:'Listas',nombre:'Listas de Precios Proveedores',grupo:'COMPRAS'},
                  {clave:'Informe',nombre:'Informe de Base Verificada',grupo:'HERRAMIENTAS DE CONTROL'},
                  {clave:'Hilo',nombre:'Hilo Conductor',grupo:'HERRAMIENTAS DE CONTROL'},
