@@ -581,12 +581,13 @@ function dvGeneral(d){
      $447.500 que SUMAN —el unico cliente que no cerraba con las de credito—.
      Ahora el neto se arma RENGLON POR RENGLON desde ema.mv_ventas_detalle, asi
      que a diferencia de la ruta por cabeceras SI se puede segmentar. */
+  var nc = Math.abs(Number(s.notas_credito) || 0);
+  var nd = Number(s.notas_debito) || 0;
   h.push(dvKpi('Venta neta', dvMillones(s.neto),
-    dvNum(Math.abs(s.notas_credito || 0) > 0 ? -(s.notas_credito||0) : 0) === '0'
-      ? 'sin notas de crédito en el período'
-      : 'facturado ' + dvMillones(s.venta_universo) + ' − N/C ' +
-        dvMillones(Math.abs(s.notas_credito||0)) +
-        ((s.notas_debito||0) ? ' + N/D ' + dvMillones(s.notas_debito) : '')));
+    (nc || nd) ? 'facturado ' + dvMillones(s.venta_universo) +
+                 (nc ? ' − N/C ' + dvMillones(nc) : '') +
+                 (nd ? ' + N/D ' + dvMillones(nd) : '')
+               : 'no hubo notas de crédito ni de débito en el período'));
   h.push(dvKpi('Margen', dvMillones(s.margen), dvPesos(s.margen)));
   h.push(dvKpi('Margen %', dvPct(s.margen_pct), 'sobre lo que tiene costo'));
   h.push('</div>');

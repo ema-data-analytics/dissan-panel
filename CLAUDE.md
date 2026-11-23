@@ -2312,3 +2312,70 @@ $7.356.963.417,69 contra `importe_tango` del detalle $7.356.963.417,09 =
 **$0,60**; contra `total` (cantidad x precio) **$81,13**, que es el redondeo del
 propio Tango entre sus dos cuentas y es lo que la columna **Control** muestra
 dentro de cada renglon.
+
+## 23/11/2026 — SU RESUMEN ES NETO, Y YO PUBLICABA EL BRUTO
+
+**EL DASHBOARD DABA $43.835.634,21 DE MAS CONTRA SU TABLA DINAMICA, Y CADA PESO
+ERA UNA NOTA.** Su hoja RESUMEN descuenta las notas de credito; el dashboard
+salia de `vista_margen_v2_oc`, que es **`t_comp = 'FAC'` y nada mas**. Medido
+cliente por cliente al corte 07/10/2026: **siete de ocho cierran al centavo con
+las notas de credito**, y el octavo —COOP .FARMACEUTICA, $447.500— son **DOS
+NOTAS DE DEBITO, que SUMAN**. Con el neto la peor diferencia es **$0,10** y el
+total **$0,01**. **Y lo que NO estaba mal tambien se midio**: comparando solo
+facturas, las dos fuentes coinciden en los 113 clientes, 0 arriba de $1.
+
+**EL CORTE DE UN EXPORT NO ES LA FECHA DE SU NOMBRE.** `2026.10.08 DETALLE DE
+VENTAS.xlsx` llega hasta el **07/10**, no hasta el 08: el 08 es cuando lo
+exporto. Con el corte en 06 faltaba Drogueria ($1.064 M en 8 facturas del 07);
+con el corte en 08 sobraba Notti ($83,8 M en 4 facturas del 08). **El 07 es el
+unico dia que cierra a los dos a la vez: 14 de 14 en $0,00.** Perdi una hora
+buscando un agujero que era una fecha.
+
+**«CIERRA CONTRA OTRA CONSULTA MIA» NO ES «CIERRA».** Los 14 clientes cerraban
+contra `ema.mv_ventas_detalle`, y el dashboard **no lee esa tabla**: lee
+`ema.margen_medido`. Estuve por darlo por bueno — es el «403 de 403» del 16/11
+otra vez, mi funcion contra mi propia funcion. La comparacion que vale es la que
+se hace contra la fuente que la pantalla usa DE VERDAD.
+
+**UN SEGMENTADOR NO SE FILTRA A SI MISMO**, o no se podria cambiar de eleccion.
+Las opciones de la dimension K se miden sobre las filas que pasan **todos los
+filtros MENOS el de K**, y eso se arma desde el array de dimensiones, sin una
+lista escrita a mano. Medido eligiendo MENDOZA: zona **3 -> 3** (correcto),
+provincia 6->5, proveedor 45->34, linea 50->40, cliente 118->92. **Y el cruce lo
+hace la BASE**: filtrar en el navegador seria filtrar sobre los 12 mas grandes
+que ya vinieron recortados, o sea otra cifra.
+
+**UN `UPDATE` SIN `WHERE` LO FRENA `supautils` PARA `authenticated` —EL ROL DEL
+PANEL— Y COMO DUEÑO NO SALTA NUNCA.** `21000 UPDATE requires a WHERE clause`.
+Es la regla del 07/10 mordiendo en un lugar nuevo. **Y la salida no es ponerle
+`where true` para callar al guardia**: la columna sale del mismo SELECT que la
+crea, y se va el ALTER, se va el UPDATE y se va el modo de falla entero.
+
+**CINCO VARIABLES DE CSS QUE NO EXISTEN CAEN AL RESPALDO Y NADIE LO MIDE.** Use
+`--panel`, `--tinta`, `--linea`, `--acento` y `--fondo-2`: **ninguna esta en
+`app.css`**, asi que las cajas salieron **BLANCAS adentro del panel oscuro**.
+Las veinte puertas pasaron —las cifras estaban todas bien— y **lo vi al MIRAR LA
+FOTO**. Las de la casa son `--fondo #09233A · --contenido #0B2740 ·
+--caja #123252 · --borde · --texto #F2F5F3 · --gris #9FB4C4 · --verde #08A57A`
+y `--navy-card`. De mirar las fotos salieron otras tres: «MENDOZA» cortado en
+**«MEND…»** por 20 px, el desplegable **empujando la pantalla 600 px** en vez de
+flotar, y **«Quitar los 1 filtros»**.
+
+**LO QUE SE MUESTRA COMO FILTRO SALE DE LA BASE, NO DE MI MEMORIA.**
+`api_ventas_dashboard_v2` devuelve `elegido` —por que filtro de verdad— y la
+pantalla lo compara contra lo que mando: si no coinciden **NO PUBLICA** las
+cifras. **Es el control que habria agarrado el defecto del 11/11**, con
+`p_proveedores` y `p_provincias` cambiados de orden filtrando por provincia en
+silencio. Su arnes apaga el espejo del juguete y exige que la pantalla grite.
+
+**EL JUGUETE ESPEJA `elegido`, Y ESA ES LA UNICA COSA QUE SACA DE LOS
+ARGUMENTOS.** Sigue contestando por nombre de funcion (11/11) y no calcula nada
+con ellos; devolver lo que le pidieron no es validar, y sin eso ese control no
+se puede ejercitar. El nombre del argumento se prueba como `p_<clave>`,
+`p_<clave>s` y `p_<clave>es` y tiene que haber **exactamente uno**, o se declara
+en vez de inventarlo.
+
+**Y UN CASO NUEVO DEL JUGUETE NO SE ENCHUFA A MANO: `__CONTROL_CASO`.** Si
+existe `X_<caso>`, se sirve ese — la misma convencion que `_vacia`. Hoy hay
+tres: el lleno (con listas largas **y** cortas, para que se ejerciten los dos
+caminos de la pantalla), el `_filtrado` y el `_vacia`.
