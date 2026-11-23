@@ -76,6 +76,10 @@ que_mira(){
     "el dictado")               echo "js/ayuda|control/voz" ;;
     "la lectura de listas")     echo "js/listas|^edge/listas|control/listas" ;;
     "la pantalla vacia")        echo "[.]html$|^js/|control/vacio|control/supabase-de-juguete" ;;
+    # SIEMPRE a proposito: esta puerta mide la FUNCION de la base, que no vive
+    # en el repositorio. No hay archivo que cambie cuando cambia lo que mide,
+    # asi que declarar un patron seria declarar que no la corre nunca.
+    "que las partes sumen")     echo "SIEMPRE" ;;
     *)                          echo "SIEMPRE" ;;   # una puerta nueva corre hasta que declare que mira
   esac
 }
@@ -225,6 +229,13 @@ correr "la lectura de listas" control/listas.js   node control/listas.js
 # exige que ninguna seccion desaparezca en silencio. Al primer intento encontro
 # el mismo defecto vivo en Margenes, Tablero y Ventas Facturadas.
 correr "la pantalla vacia"  control/vacio.js      node control/vacio.js
+
+# LAS PARTES DE CADA CORTE TIENEN QUE SUMAR EL RESUMEN.         23/11/2026
+# Escrita hoy y al primer intento agarro $83.057,85 que se perdian en el corte
+# por cliente: una nota de credito de un cliente SIN facturas en el periodo no
+# tenia a que engancharse y desaparecia. Los otros cuatro cortes cerraban de
+# casualidad, que es como se ven los defectos que todavia no mordieron.
+correr "que las partes sumen" control/dashboard-suman.js node control/dashboard-suman.js
 
 echo ""
 # UNA PUERTA SALTEADA SE DECLARA. No es verde: es que no se ejercito, y eso
