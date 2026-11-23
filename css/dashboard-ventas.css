@@ -72,3 +72,107 @@
 /* --- el denominador, en una linea --- */
 #dvInforme .dv-nota{ font-size:12.5px; color:#9fc4d4; margin:0 0 14px; }
 #dvInforme .dv-nota b{ color:var(--texto); font-weight:600; }
+
+/* ===================================================================
+   LOS SEGMENTADORES                                      23/11/2026
+   ===================================================================
+   LAS VARIABLES SON LAS DE LA CASA, NO LAS QUE YO ME IMAGINE. La primera
+   version uso `--panel`, `--tinta`, `--linea`, `--acento` y `--fondo-2`:
+   ninguna existe en `app.css`, asi que las CINCO cayeron al valor de respaldo
+   y las cajas salieron BLANCAS adentro de un panel oscuro. No lo vio ninguna
+   medicion —las cifras estaban todas bien— lo vi al MIRAR LA FOTO, que es el
+   paso que me salteo. Las de verdad son:
+     --fondo #09233A · --contenido #0B2740 · --caja #123252
+     --borde rgba(255,255,255,.08) · --texto #F2F5F3 · --gris #9FB4C4
+     --verde #08A57A
+   y `--navy-card`, que es lo que ya usaban `.dv-pest` y `.dv-kpi` acá al lado.
+
+   Todo encerrado en `#dvInforme`, como el resto del archivo: una regla global
+   acá rompe las otras 18 pantallas.
+   `min-width:0` en cada caja: sin eso un nombre de cliente largo estira la
+   grilla, la grilla al `#shell` y el shell a la pagina — los 458 px de scroll
+   horizontal del 10/11.
+   `align-items:start`: sin eso la grilla estira las cinco cajas al alto de la
+   mas alta, y las tres que solo tienen un campo de busqueda quedan con un
+   vacio enorme abajo que se lee como que algo falta. */
+#dvInforme .dv-segs{
+  display:grid; gap:10px; margin:0 0 10px; align-items:start;
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,175px),1fr));
+}
+#dvInforme .dv-seg{
+  position:relative;   /* el ancla del desplegable, abajo */
+  min-width:0; border:1px solid var(--borde,rgba(255,255,255,.08));
+  border-radius:10px; padding:9px 10px; background:var(--navy-card,#0e2e49);
+}
+#dvInforme .dv-seg-t{
+  font-size:10.5px; font-weight:600; letter-spacing:.07em; text-transform:uppercase;
+  color:#9fc4d4; margin-bottom:7px;
+}
+#dvInforme .dv-seg-t small{
+  display:block; font-size:10.5px; font-weight:400; letter-spacing:0;
+  text-transform:none; color:var(--gris,#9FB4C4); margin-top:2px;
+}
+#dvInforme .dv-ops{ display:flex; flex-wrap:wrap; gap:5px; }
+#dvInforme .dv-ops.puestos{ margin-bottom:7px; }
+/* LO ELEGIDO OCUPA EL RENGLON ENTERO. Metido en una fila con otros, «MENDOZA»
+   salia «MEND…» por falta de 20 px — y un rotulo cortado es otro rotulo
+   (el `IVA 2...` del 14/11). Solo, el nombre se queda con todo lo que sobra. */
+#dvInforme .dv-ops.puestos .dv-op{ width:100%; justify-content:space-between; }
+
+#dvInforme .dv-op{
+  min-width:0; max-width:100%; display:inline-flex; align-items:baseline; gap:6px;
+  border:1px solid var(--borde,rgba(255,255,255,.08)); border-radius:999px;
+  background:var(--caja,#123252); color:var(--texto,#F2F5F3);
+  font:inherit; font-size:12px; padding:4px 10px; cursor:pointer; text-align:left;
+}
+#dvInforme .dv-op:hover{ border-color:rgba(255,255,255,.3); }
+#dvInforme .dv-op.elegida{
+  background:var(--verde,#08A57A); border-color:transparent; color:#fff;
+}
+/* el rotulo encoge y corta con puntos; LA PLATA NO SE CORTA NUNCA —un numero
+   cortado se lee como OTRO numero (14/10)— por eso va con `flex:none`. */
+#dvInforme .dv-op-r{
+  min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+#dvInforme .dv-op-v{ flex:none; font-size:11px; color:var(--gris,#9FB4C4);
+  font-variant-numeric:tabular-nums; }
+#dvInforme .dv-op.elegida .dv-op-v{ color:rgba(255,255,255,.85); }
+#dvInforme .dv-op-x{ flex:none; font-size:13px; line-height:1; }
+
+#dvInforme .dv-seg-q{
+  width:100%; box-sizing:border-box; margin:0;
+  border:1px solid var(--borde,rgba(255,255,255,.08)); border-radius:8px;
+  padding:6px 9px; font:inherit; font-size:12px;
+  background:var(--contenido,#0B2740); color:var(--texto,#F2F5F3);
+}
+#dvInforme .dv-seg-q::placeholder{ color:var(--gris,#9FB4C4); opacity:.75; }
+#dvInforme .dv-seg-q:focus{ outline:2px solid var(--verde,#08A57A); outline-offset:-1px; }
+/* EL DESPLEGABLE FLOTA, NO EMPUJA.
+   Al tipear en «Cliente» aparecen hasta 12 resultados, y adentro del flujo eso
+   estiraba la caja 600 px: la grilla entera se iba para abajo, las tarjetas y
+   el grafico saltaban, y al costado quedaba un hueco enorme. Flotando, la
+   pantalla no se mueve mientras se busca.
+   No lleva scroll a proposito: se muestran 12 y se sigue tipeando — «mas de 20
+   opciones se escriben, no se scrollean». */
+#dvInforme .dv-seg-res:not(:empty){
+  position:absolute; z-index:6; left:0; right:0; top:100%; margin-top:4px;
+  padding:8px; border-radius:10px;
+  background:var(--contenido,#0B2740);
+  border:1px solid var(--borde,rgba(255,255,255,.14));
+  box-shadow:0 12px 28px rgba(0,0,0,.45);
+}
+#dvInforme .dv-seg-res .dv-op{ width:100%; justify-content:space-between; }
+#dvInforme .dv-seg-nada{ font-size:11px; color:var(--gris,#9FB4C4); line-height:1.45; }
+
+#dvInforme .dv-puesto{
+  display:flex; flex-wrap:wrap; align-items:center; gap:10px;
+  margin:0 0 12px; padding:8px 11px; border-radius:9px;
+  background:var(--navy-card,#0e2e49); border:1px solid var(--borde,rgba(255,255,255,.08));
+}
+#dvInforme .dv-puesto-t{ min-width:0; font-size:12.5px; color:var(--texto,#F2F5F3); }
+#dvInforme .dv-limpiar{
+  flex:none; border:1px solid var(--borde,rgba(255,255,255,.08)); border-radius:999px;
+  background:var(--caja,#123252); color:var(--texto,#F2F5F3);
+  font:inherit; font-size:12px; padding:4px 11px; cursor:pointer;
+}
+#dvInforme .dv-limpiar:hover{ border-color:var(--verde,#08A57A); color:var(--verde2,#0BC492); }

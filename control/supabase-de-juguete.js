@@ -489,6 +489,137 @@
                  'tiene costo de compra y queda afuera: por eso va la cobertura al lado.'
   };
 
+  /* =====================================================================
+     api_ventas_dashboard_v2 — EL MISMO, CON SEGMENTADORES.   23/11/2026
+     =====================================================================
+     SE DERIVA DE LA v1 YA ARMADA, no se vuelve a tipear: dos copias de la
+     misma cosa se separan con el tiempo (el 30/10 con `listas`, dentro del
+     archivo que lo prohibe). Lo unico propio son las claves nuevas.
+
+     Y TRAE LOS TRES CASOS, no solo el comodo:
+       `_v2`        las listas LARGAS (proveedor 46, cliente 119) para que el
+                    control ejercite el campo que filtra tipeando, y las
+                    CORTAS (zona 3) para que ejercite los botones. Con todas
+                    cortas, la mitad de la pantalla no se mira nunca — el
+                    golpe del 14/11 con la fila de totales.
+       `_v2_filtrado` con un segmentador PUESTO y `netas: null`: es el unico
+                    caso donde la tarjeta «Venta neta» tiene que decir «no se
+                    puede acá» en vez de un numero. Sin el, ese renglon no lo
+                    ve nadie.
+       `_v2_vacia`  las opciones VACIAS: las cinco cajas tienen que seguir
+                    estando y decir «Ninguno» con el motivo (16/11). */
+  RPC['api_ventas_dashboard_v2'] = (function(){
+    var b = RPC['api_ventas_dashboard_v1'];
+
+    /* los AÑOS: tres, con el ultimo en curso. Salen de las mismas anclas que
+       los meses y el ultimo absorbe el redondeo, asi que SUMAN. */
+    var U = b.resumen.venta_universo, VM = b.resumen.venta_medida, CO = b.resumen.costo;
+    var pesoA = [0.52, 0.81, 1], sumaA = pesoA[0] + pesoA[1] + pesoA[2], anios = [];
+    var rU = U * 2.37, rV = VM * 2.37, rC = CO * 2.37, acU = 0, acV = 0, acC = 0;
+    for (var a = 0; a < 3; a++){
+      var ult = (a === 2);
+      var u = ult ? Math.round((rU - acU) * 100) / 100 : Math.round(rU * pesoA[a] / sumaA * 100) / 100;
+      var v = ult ? Math.round((rV - acV) * 100) / 100 : Math.round(rV * pesoA[a] / sumaA * 100) / 100;
+      var c = ult ? Math.round((rC - acC) * 100) / 100 : Math.round(rC * pesoA[a] / sumaA * 100) / 100;
+      acU = Math.round((acU + u) * 100) / 100; acV = Math.round((acV + v) * 100) / 100;
+      acC = Math.round((acC + c) * 100) / 100;
+      anios.push({ anio: 2024 + a, venta_universo: u, venta: v, costo: c,
+                   margen: Math.round((v - c) * 100) / 100,
+                   margen_pct: Math.round(1e4 * (v - c) / v) / 100,
+                   renglones: 3100 + a * 1240 });
+    }
+
+    /* LAS OPCIONES SALEN DE LOS PROPIOS CORTES, para que un nombre que esta
+       en el segmentador este tambien en la tabla de abajo. Y se rellenan
+       hasta pasar las 20 en proveedor y cliente: ese es el umbral con el que
+       la pantalla decide botones o campo de busqueda, asi que un juguete que
+       no lo pase deja ese camino sin probar. */
+    function opsDe(corte, cuantas, prefijo){
+      var o = corte.totales.map(function(t){
+        return { clave: t.clave, venta_universo: t.venta_universo, renglones: t.renglones };
+      });
+      var base = o.length ? o[o.length - 1].venta_universo : 1000;
+      for (var i = o.length; i < cuantas; i++)
+        o.push({ clave: prefijo + ' ' + (i + 1),
+                 venta_universo: Math.round(base / (i + 1) * 100) / 100,
+                 renglones: Math.max(1, 40 - i) });
+      return o;
+    }
+
+    var opciones = {
+      zona:      opsDe(b.zona, 0, ''),                 /* 3  -> botones  */
+      provincia: opsDe(b.provincia, 0, ''),            /* 4  -> botones  */
+      proveedor: opsDe(b.proveedor, 46, 'PROVEEDOR'),  /* 46 -> se escribe */
+      linea:     opsDe(b.linea, 21, 'LINEA'),          /* 21 -> se escribe */
+      cliente:   opsDe(b.cliente, 119, 'CLIENTE')      /* 119 -> se escribe */
+    };
+
+    /* EL NETO, QUE ES LA CIFRA DE SU RESUMEN.                 23/11/2026
+       Se DERIVA del bruto con una proporcion fija de notas de credito y otra
+       de debito, y se escribe en los MISMOS lugares que la funcion de verdad:
+       el resumen, cada mes, cada anio y cada clave de los cinco cortes. Si el
+       juguete no lo trajera, la columna «Venta neta» de las tablas saldria
+       `undefined` y ninguna puerta podria verlo — el golpe del 10/11 con el
+       Tablero, escrito en el CLAUDE.md desde entonces.
+       Lo que las puertas pueden mirar con esto: que neto = facturado + notas
+       en cada renglon, y que las notas de credito sean NEGATIVAS. */
+    var P_NC = -0.01121, P_ND = 0.0000667;
+    function conNotas(o, bruto){
+      var nc = Math.round(bruto * P_NC * 100) / 100;
+      var nd = Math.round(bruto * P_ND * 100) / 100;
+      o.notas_credito = nc; o.notas_debito = nd;
+      o.notas = Math.round((nc + nd) * 100) / 100;
+      o.neto  = Math.round((bruto + nc + nd) * 100) / 100;
+      return o;
+    }
+
+    var r = {}; for (var k in b) if (Object.prototype.hasOwnProperty.call(b, k)) r[k] = b[k];
+    r.anios = anios.map(function(x){ return conNotas(x, x.venta_universo); });
+    r.resumen = conNotas(Object.assign({}, b.resumen), b.resumen.venta_universo);
+    r.meses = b.meses.map(function(m){
+      return conNotas(Object.assign({}, m), m.venta_universo); });
+    for (var dd = 0; dd < 5; dd++){
+      var cl = ['zona','provincia','proveedor','linea','cliente'][dd];
+      r[cl] = { serie: b[cl].serie,
+                totales: b[cl].totales.map(function(t){
+                  return conNotas(Object.assign({}, t), t.venta_universo); }) };
+    }
+    r.opciones = opciones;
+    r.netas_por_que = null;
+    r.elegido = { zona: [], provincia: [], proveedor: [], linea: [], cliente: [] };
+    return r;
+  })();
+
+  RPC['api_ventas_dashboard_v2_filtrado'] = (function(){
+    var b = RPC['api_ventas_dashboard_v2'];
+    var r = {}; for (var k in b) if (Object.prototype.hasOwnProperty.call(b, k)) r[k] = b[k];
+    /* con un segmentador puesto la base NO puede dar la venta neta: una
+       cabecera de comprobante no tiene proveedor ni linea. */
+    r.netas = null;
+    r.netas_por_que = 'Con un segmentador puesto no se puede mostrar la venta neta: ' +
+      'las notas de credito se miden por las cabeceras de los comprobantes, y una ' +
+      'cabecera no tiene proveedor ni linea. Saca los segmentadores para verla.';
+    r.elegido = { zona: [b.opciones.zona[0].clave], provincia: [],
+                  proveedor: [b.opciones.proveedor[0].clave], linea: [], cliente: [] };
+    return r;
+  })();
+
+  RPC['api_ventas_dashboard_v2_vacia'] = (function(){
+    var b = RPC['api_ventas_dashboard_v1_vacia'];
+    var r = {}; for (var k in b) if (Object.prototype.hasOwnProperty.call(b, k)) r[k] = b[k];
+    r.anios = [];
+    /* EN CERO, NO EN `undefined`: la funcion de verdad devuelve estas cuatro
+       SIEMPRE, aunque no haya una sola venta. Dejarlas afuera haria que la
+       tarjeta «Venta neta» pintara «sin costo» en el caso vacio, que es un
+       caso que la base no puede producir. */
+    r.resumen = Object.assign({}, b.resumen,
+      { notas: 0, notas_credito: 0, notas_debito: 0, neto: 0 });
+    r.opciones = { zona: [], provincia: [], proveedor: [], linea: [], cliente: [] };
+    r.netas_por_que = null;
+    r.elegido = { zona: [], provincia: [], proveedor: [], linea: [], cliente: [] };
+    return r;
+  })();
+
   window.__LLAMADAS = [];
 
   /* FIXTURES DEL CONTROL — 29/10/2026.
@@ -903,6 +1034,29 @@
     window.__RPC_VACIADAS = Object.keys(RPC).length;
   }
 
+  /* UN CASO CUALQUIERA, POR LA MISMA CONVENCION QUE `_vacia`.    23/11/2026
+     «Lleno» y «vacio» no son los dos unicos casos que hay que mirar. El
+     dashboard con un segmentador PUESTO es un tercero: ahi la base no puede
+     dar la venta neta -una cabecera de comprobante no tiene proveedor ni
+     linea- y la tarjeta tiene que decir «no se puede acá» en vez de un
+     numero. Ese renglon no lo ve nadie si el juguete contesta siempre el caso
+     comodo, que es el golpe del 16/11 con ICU y del 14/11 con la fila de
+     totales, ya escrito dos veces.
+     Con `window.__CONTROL_CASO = 'filtrado'`, toda respuesta que tenga un
+     hermano `X_filtrado` pasa a servirlo. Es una CONVENCION, no una lista
+     mia: el caso que se agregue maniana no hay que venir a enchufarlo aca. */
+  if (window.__CONTROL_CASO){
+    var suf = '_' + String(window.__CONTROL_CASO), cambiados = 0;
+    for (var cs in RPC) if (Object.prototype.hasOwnProperty.call(RPC, cs)){
+      if (cs.slice(-suf.length) === suf) continue;
+      if (Object.prototype.hasOwnProperty.call(RPC, cs + suf)){
+        RPC[cs] = RPC[cs + suf]; cambiados++;
+      }
+    }
+    window.__RPC_CASO = String(window.__CONTROL_CASO);
+    window.__RPC_CASO_CAMBIADOS = cambiados;
+  }
+
   window.supabase = {
     createClient: function(){
       return {
@@ -930,6 +1084,42 @@
             return Promise.resolve({ data:null, error:{ message:'funcion de juguete sin respuesta: ' + fn } });
           }
           var d = RPC[fn];
+
+          /* EL ESPEJO DE `elegido` — la UNICA cosa que el juguete saca de los
+             argumentos.                                          23/11/2026
+             El juguete contesta POR NOMBRE DE FUNCION y no mira los
+             argumentos (11/11), y eso sigue valiendo para todo lo demas: no
+             calcula nada con ellos. Pero `api_ventas_dashboard_v2` DEVUELVE
+             por que filtro de verdad, y la pantalla compara eso contra lo que
+             pidio: es el control que habria agarrado el defecto del 11/11, con
+             `p_proveedores` y `p_provincias` cambiados de orden, filtrando por
+             provincia en silencio. Para que ese control se pueda ejercitar, el
+             juguete tiene que DEVOLVER lo que le pidieron. Devolver, no
+             validar.
+             Y el nombre del argumento NO esta escrito a mano: se prueba
+             `p_<clave>`, `p_<clave>s` y `p_<clave>es` y tiene que haber
+             EXACTAMENTE UNO. Si no, no se inventa: se deja como estaba y se
+             anota en `window.__JUGUETE_SIN_ESPEJO`, porque un blanco sin
+             explicacion no se distingue de un olvido.
+             `window.__JUGUETE_NO_ESPEJA` lo apaga: es la cara ROTA que el
+             arnes necesita para probar que el control de la pantalla grita. */
+          if (d && !Array.isArray(d) && typeof d === 'object' &&
+              Object.prototype.hasOwnProperty.call(d, 'elegido') &&
+              !window.__JUGUETE_NO_ESPEJA){
+            var copia = {}, kk;
+            for (kk in d) if (Object.prototype.hasOwnProperty.call(d, kk)) copia[kk] = d[kk];
+            var eleg = {}, sinEspejo = [];
+            for (kk in d.elegido) if (Object.prototype.hasOwnProperty.call(d.elegido, kk)){
+              var cand = ['p_' + kk, 'p_' + kk + 's', 'p_' + kk + 'es'].filter(function(c){
+                return args && Object.prototype.hasOwnProperty.call(args, c); });
+              if (cand.length === 1) eleg[kk] = (args[cand[0]] || []).slice();
+              else { eleg[kk] = d.elegido[kk]; sinEspejo.push(kk + ':' + cand.length); }
+            }
+            copia.elegido = eleg;
+            if (sinEspejo.length) window.__JUGUETE_SIN_ESPEJO = sinEspejo;
+            d = copia;
+          }
+
           var pedir = function(desde, hasta){
             if (!Array.isArray(d)) return Promise.resolve({ data:d, error:null });
             var a = desde || 0;
