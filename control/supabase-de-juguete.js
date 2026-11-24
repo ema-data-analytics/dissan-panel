@@ -527,14 +527,19 @@
      Las cifras salen de lo MEDIDO el 24/11 contra ema.indice_precios. */
   RPC['api_ventas_pesos_constantes_v1'] = {
     ok: true, se_puede: true, ms: 184,
-    base: { mes: '2026-08-01', indice: 12276.77 },
-    corte: '2026-08-31',
-    mismo_tramo: 'Todos los años se cortan al día 243 del año, que es el 31/08: se comparan tramos iguales, no un año entero contra uno de ocho meses.',
-    afuera_meses: 3, afuera_plata: 3301943699, afuera_desde: '08/2026',
+    /* LO MEDIDO EL 24/11 DESPUES DE CARGAR SEPTIEMBRE Y OCTUBRE DEL INDEC.
+       Y queda escrito por que importa: con la serie cortada en AGOSTO el
+       mismo cuadro decia 2025 -15,5% y 2026 -16,9%; con octubre adentro dice
+       2025 +2,4% y 2026 -11,4%. La ventana no era una decision: era el
+       indice que faltaba, y cambiaba el veredicto de un año entero. */
+    base: { mes: '2026-10-01', indice: 12785.9321 },
+    corte: '2026-10-31',
+    mismo_tramo: 'Todos los años se cortan al día 304 del año, que es el 31/10: se comparan tramos iguales, no un año entero contra uno de diez meses.',
+    afuera_meses: 1, afuera_plata: 1246561951, afuera_desde: '10/2026',
     anios: [
-      { anio: 2024, nominal: 2959697533, constante: 6309908935, meses: 8, meses_sin_indice: 0, plata_sin_indice: 0 },
-      { anio: 2025, nominal: 3709002915, constante: 5334177630, meses: 8, meses_sin_indice: 0, plata_sin_indice: 0 },
-      { anio: 2026, nominal: 4143610684, constante: 4433284211, meses: 8, meses_sin_indice: 0, plata_sin_indice: 0 }
+      { anio: 2024, nominal: 3660197904, constante: 7808117549, meses: 10, meses_sin_indice: 0, plata_sin_indice: 0 },
+      { anio: 2025, nominal: 5533237336, constante: 7994669033, meses: 10, meses_sin_indice: 0, plata_sin_indice: 0 },
+      { anio: 2026, nominal: 6597873289, constante: 7086266394, meses: 10, meses_sin_indice: 0, plata_sin_indice: 0 }
     ]
   };
   RPC['api_ventas_pesos_constantes_v1_vacia'] = {
