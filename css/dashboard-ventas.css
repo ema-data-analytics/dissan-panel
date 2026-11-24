@@ -118,6 +118,13 @@
    salia «MEND…» por falta de 20 px — y un rotulo cortado es otro rotulo
    (el `IVA 2...` del 14/11). Solo, el nombre se queda con todo lo que sobra. */
 #dvInforme .dv-ops.puestos .dv-op{ width:100%; justify-content:space-between; }
+/* Y TODAS LAS OPCIONES OCUPAN EL RENGLON ENTERO, no solo las elegidas.
+   24/11/2026 — El usuario vio «BUENOS AI…» y «CAPITAL FE…» cortados: en una
+   caja de 175 px, el nombre y el monto peleando por el mismo renglon no
+   entran. Un rotulo cortado es OTRO rotulo (14/11). Con el renglon entero,
+   el nombre va a la izquierda y la plata a la derecha, y de paso las cinco
+   cajas se leen iguales. */
+#dvInforme .dv-ops .dv-op{ width:100%; justify-content:space-between; }
 
 #dvInforme .dv-op{
   min-width:0; max-width:100%; display:inline-flex; align-items:baseline; gap:6px;
@@ -187,8 +194,15 @@
   font-size:12px; letter-spacing:.04em;
 }
 #dvInforme .dv-mx th.dv-mx-tot{ color:var(--verde2,#0BC492); }
+/* EL NOMBRE DE LA FILA NO SE CORTA.                          24/11/2026
+   Tenia `nowrap` + `max-width:290px`, y «INST. DE O.SOCIAL DE LAS FUERZAS
+   ARMADAS (IOSFA)» salia cortado con puntos. Un rotulo cortado es OTRO
+   rotulo (14/11, el `IVA 2...`). Ahora envuelve en dos renglones si hace
+   falta: lo que no se puede es inventar que el cliente se llama distinto.
+   `min-width` para que la columna no se achique contra los numeros. */
 #dvInforme .dv-mx td:first-child{
-  white-space:nowrap; max-width:290px; overflow:hidden; text-overflow:ellipsis;
+  white-space:normal; overflow-wrap:anywhere; min-width:190px; max-width:340px;
+  line-height:1.3;
 }
 /* el % va más apagado que la plata: la plata es el dato, el % es la lectura */
 #dvInforme .dv-mx .dv-mx-pct{ color:var(--gris,#9FB4C4); font-variant-numeric:tabular-nums; }
