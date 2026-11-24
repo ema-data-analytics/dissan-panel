@@ -2510,3 +2510,86 @@ mano, y la base en la misma corrida (606 ms): la banda **«EN PESOS DE OCTUBRE
 2026»** con sus **9 cifras identicas** a `api_ventas_pesos_constantes_v1`, y
 repetido despues de corregir mayo 2024 —esperando a que el **objeto de datos
 sea OTRO**, no a que aparezca un rotulo (19/11, 20/11)—.
+
+## 24/11/2026 (tarde, 2) — MAS CORTES NO ES MEJOR DASHBOARD
+
+**LE PROPUSE VENDEDOR Y ARTICULO COMO DIMENSIONES Y ME FRENO EN SECO:**
+*«QUE TIENEN QUE VER VENDEDOR Y ARTICULO??? ... MOSTRA INFORMACION QUE LES SEA
+IMPACTANTE A LA SIMPLE VISTA, NO SABES LO QUE UN DASHBOARD MUESTRA, INFO PARA
+QUE PUEDAN TOMAR DESICIONES»*. Tenia razon y el diagnostico es exacto: **un
+corte mas es una rebanada mas de la misma torta.** Un corte contesta «cuanto
+vendimos por X»; una decision contesta «donde hay plata que nadie esta
+mirando». Seis meses de pantallas y yo seguia agregando cortes.
+
+**Y DESPUES, LA SEGUNDA CORRECCION:** *«es solo mostrar lo que esta mal, lo que
+me pones, se necesita mostrar todo lo que esta bien»*. **Tres tarjetas rojas se
+leen como una acusacion, no como un tablero.** Van SEIS y las buenas PRIMERO:
+donde empujar antes que donde tapar.
+
+**`api_ventas_alertas_v1` — las seis, medidas sobre 2026:**
+*Donde empujar:* 40 clientes crecieron **+$1.873.681.778** contra el mismo
+tramo de 2025 · 15 de 35 proveedores rinden arriba del margen firme y hacen el
+**55% de la ganancia** ($913.674.627) · **23 articulos de 669 hacen la MITAD de
+toda la ganancia** ($1.191.477.860).
+*Donde se va:* 139 renglones **bajo costo** (−$16.169.518) · 129 casos del mismo
+articulo el **mismo mes** a precios que difieren 50%+ ($64.310.006) · 8 clientes
+grandes con margen flaco ($156.349.653).
+
+**CUATRO COSAS QUE MEDIR FRENO ANTES DE PUBLICARLAS, Y LAS CUATRO SE VEIAN
+BIEN:**
+1. **La dispersion de precio ENTRE meses es INFLACION, no descuento.** Medida
+   sobre el anio daba 121 de 215 articulos; dentro del mes, 124 casos. Se mide
+   dentro del mes.
+2. **«Si todos pagaran como el que mas paga» dio $984 M sobre $852 M
+   facturados** —mas del 100% de mejora— porque el precio maximo suele ser un
+   cliente que compro UNA unidad. Cifra creible y mal. Viaja lo acotado: lo que
+   el cliente mas barato pago de menos que el promedio, por SUS unidades.
+3. **El proveedor salia «1110» y «00211».** `margen_medido.proveedores` y
+   `vista_margen_v2_oc.proveedores` guardan el CODIGO —medido: 39 valores, los
+   39 enganchan con `cpa01`, ninguno parece un nombre—. Es el defecto del
+   14/10. El dashboard no lo usa: resuelve el nombre con `ema.mv_ventas_detalle`
+   (distinct por articulo). Ahora eso vive en **una sola copia**,
+   `ema.articulo_proveedor_linea()`.
+4. **IMATIONTY daba 86,69% de margen sobre 277 renglones con CERO prueba
+   documental** y calidad «B. ultimo costo, SIN CAPA DE COMPRA» —el pendiente
+   del 06/11—. Recomendar «empuja ahi» con ese costo es publicar una cifra sin
+   su denominador. Filtrado por las **cuatro calidades A por nombre**, el
+   ranking pasa a COLOPLAST, BECTON DICKINSON, SILMAG — y el margen general
+   baja de 42,59% a **35,94%**, que es el de verdad.
+
+**«GRANDE» NO ES UN NUMERO TIPEADO POR MI:** es el corte de Pareto del 80% de
+la facturacion, el mismo de la Concentracion.
+
+**Y LAS SEIS NO MIRAN LOS SEGMENTADORES: respetan el rango de fechas y nada
+mas. La pantalla lo escribe**, porque si alguien elige MENDOZA y no se dijera,
+leeria esas cifras como si fueran de Mendoza.
+
+## 24/11/2026 (tarde, 3) — EL ARCHIVO DE PRUEBA ESTABA PUBLICADO CON DATOS REALES
+
+**`control/supabase-de-juguete.js` SE SIRVE PUBLICO EN github.io.** Medido
+desde afuera y sin sesion: **HTTP 200, 123.064 bytes**, y adentro estaban
+HOSPITAL CENTRAL, GOBIERNO DE SAN LUIS, DROGUERIA CENTRAL, IOSFA, O.S.E.P. con
+sus importes —*«GOBIERNO DE SAN LUIS: antes $411.963.110, ahora $97.016.449»*—,
+mas codigos de articulo y numeros de comprobante reales. **Es la regla que yo
+mismo escribi el 15/11 para el fixture de la lista de precios** —*«el fixture
+NO va al repositorio: el repo se sirve PUBLICO»*— y no la aplique acá. No es un
+agujero de la base (eso se cerro el 16/11): es **dato comercial del cliente
+servido en internet**.
+
+**EL REEMPLAZO ES DE IGUAL O MAYOR LARGO, A PROPOSITO.** El caso que la puerta
+22 tiene que poder romper es el ROTULO LARGO: el 24/11 a la mañana corrio
+limpia porque el juguete tenia nombres de 8 letras. Acortar los nombres al
+anonimizarlos habria apagado ese control sin que nadie lo viera. Medido: 0
+reemplazos mas cortos entre los que importan, y el mas largo (48 → 50) crecio.
+
+**Y EL CONTROL QUE VALE NO ES MI LISTA DE NOMBRES** (14/10, 14/11): es sacar
+las cadenas DEL ARCHIVO y preguntarle a la BASE si alguna es un nombre real.
+Al reves —traerme los 1.247 nombres de la base a la conversacion— es lo que
+hice primero, y es justo lo contrario de lo que hay que hacer.
+
+**NO SE TOCA UN ARCHIVO QUE LAS PUERTAS ESTAN LEYENDO.** Limpie el juguete con
+un push corriendo, y las 24 puertas lo leen en cada corrida: las primeras
+midieron el archivo viejo y las ultimas el nuevo. No publica nada malo —lo
+publicado es el arbol commiteado— pero **la medicion queda partida al medio**,
+y es la misma familia que «no se edita un script de bash mientras se ejecuta»
+(02/11). Va en su propio commit y su propio push.
