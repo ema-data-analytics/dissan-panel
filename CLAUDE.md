@@ -2379,3 +2379,72 @@ en vez de inventarlo.
 existe `X_<caso>`, se sirve ese — la misma convencion que `_vacia`. Hoy hay
 tres: el lleno (con listas largas **y** cortas, para que se ejerciten los dos
 caminos de la pantalla), el `_filtrado` y el `_vacia`.
+
+## 24/11/2026 — VER TODO, SIEMPRE, Y LOS DOS UMBRALES QUE TIPEE YO
+
+**UN UMBRAL TIPEADO POR MI ES SOSPECHOSO HASTA MEDIRLO EN LAS DOS
+DIRECCIONES.** Mi detector de rotulos cortados comparaba
+`scrollWidth > clientWidth + 1`, y ese `+1` lo puse yo: en la pantalla
+PUBLICADA «BUENOS AIRES» daba caja 86 contra scrollWidth 87 —«no corta»—
+mientras el ojo leia **«BUENOS AIR…»**. El ancho de verdad del texto lo da un
+**`Range` sobre el contenido**: 87,4. Medido sobre los 7 chips vivos: agarra
+BUENOS AIRES y CAPITAL FEDERAL (86 contra 105,8) y **no** agarra SAN JUAN
+(61,3 en una caja de 61), que se lee entero. El `+0,5` que queda es el
+redondeo de pintura del navegador. **Los dos se ven iguales en el codigo; la
+diferencia la dijo la medicion, no mi criterio.**
+
+**PUERTA 22 — `los rotulos en pantalla` (`control/rotulos-todos.js`).** Las
+veintiuna puertas median numeros, botones, archivos y permisos: **ninguna
+miraba lo que esta ESCRITO**. Recorre las **19 pantallas enumeradas del
+disco** mas las pestañas de quien use la convencion `data-pest`: 20 vistas,
+3.749 textos. Mide texto cortado por CSS, `undefined`/`NaN`/`[object`/`null`
+pintados y scroll de costado. **Declara en cada corrida las 5 pantallas que no
+pintan nada hasta apretar Calcular: no son un pase.**
+
+**SAQUE MI REGLA DE «PARECE UN CODIGO» EL MISMO DIA QUE LA ESCRIBI**, porque
+era una adivinanza disfrazada de medicion. `/^[A-Z]{2,6}$/` marco **3M, PCB,
+BIO, AYEP, SM, PICC, FAVE y LCA** —nombres de linea de verdad—; y la firma de
+«Mza» marco **«Otros»** en las 6 pestañas. **Desde la pantalla no hay forma
+mecanica de distinguir una abreviatura de una palabra castellana.** Una puerta
+que no puede contestar una pregunta **la declara**, no la adivina.
+
+**Y EL MAESTRO NO SIEMPRE ES LA FUENTE INDEPENDIENTE: `gva18` trae «Mza» el
+tambien.** Lo que si es mecanico es que **un valor rompa la convencion de su
+propia columna** —19 de 20 filas del maestro van en MAYUSCULA—. Eso es
+`rotulo_provincia_sin_declarar`: lado A los valores publicados que la rompen
+sin fila en `ema.rotulo_corregido`, lado B cero, **medido sobre el valor CRUDO
+antes del `(sin provincia)` que pone la funcion — un rotulo mio no es un
+dato**. Tres caras corriendo **el texto guardado en la tabla**: 0 → 1 → 0, en
+una sola llamada para que no pueda quedar a medias.
+
+**UN ARNES QUE PLANTA UN DEFECTO QUE EL NAVEGADOR IGNORA DA VERDE.** El
+primero angostaba un `<td>` con `max-width`, y **en una tabla de ancho
+automatico eso se ignora**: no corto un solo rotulo y canto «no lo agarro» sin
+haber plantado nada. **El arnes que vale replica el defecto que DE VERDAD se
+publico** (`CONTROL_PLANTAR=chip_cortado` vuelve a servir el CSS que estuvo
+vivo esa mañana): 7 fallas, `CAPITAL FEDERAL [caja 84 texto 105.8]`, las
+mismas cifras que medi en github.io. Los dos arneses revientan si la puerta no
+encuentra ni un rotulo cortado.
+
+**EL JUGUETE TENIA NOMBRES DE 8 LETRAS Y POR ESO LA PUERTA CORRIO LIMPIA
+MEDIA HORA ANTES.** MENDOZA, SAN LUIS, SAN JUAN; los largos —BUENOS AIRES,
+CAPITAL FEDERAL, SANTA FE— no estaban, asi que **el caso que importa no
+existia para el control**. Tercera vez que muerde (14/11, 16/11, hoy).
+
+**Y MI REGEX DE BASURA GRITO POR UNA PALABRA CASTELLANA:** `/NaN/i` agarraba
+el **«nan» de «ganancia»** y marcaba «ganancia bruta» y «ganancia / facturado»
+del Tablero y del index. Va sin la bandera `i` y con limite de palabra, que es
+como los escribe JavaScript. Medido: **6 de 6 basuras agarradas, 0 de 5
+palabras castellanas**.
+
+**PUERTA 23 — `las variables de css` (`control/css-variables.js`).** Una
+variable que no existe **cae al respaldo en silencio**: las cinco del 23/11
+dejaron las cajas BLANCAS en un panel oscuro y lo vi al MIRAR LA FOTO. Junta
+cada `--x:` declarada y cada `var(--x)` usada y corta si una usada no esta
+declarada **y no trae respaldo** —con respaldo no suena, que es como el panel
+usa 45 de sus 469—. 12 hojas, 56 variables, 0 fallas; el arnes le planta las
+cinco y **agarra 5 de 5**. No necesita navegador: menos de un segundo.
+
+**EL ROTULO ENVUELVE, NO SE CORTA.** Lo que no se puede es inventar que la
+provincia se llama distinto — la misma decision que con «INST. DE O.SOCIAL DE
+LAS FUERZAS ARMADAS (IOSFA)». **La plata sigue sin cortarse nunca (14/10).**
