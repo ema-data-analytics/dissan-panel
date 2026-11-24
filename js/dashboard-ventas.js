@@ -753,7 +753,13 @@ function dvPesosConstantes(){
     var x = a[i], p = i ? a[i-1] : null;
     var vn = p && Number(p.nominal)   ? 100 * (x.nominal   - p.nominal)   / Math.abs(p.nominal)   : null;
     var vc = p && Number(p.constante) ? 100 * (x.constante - p.constante) / Math.abs(p.constante) : null;
-    h.push('<tr><td>' + dvEsc(x.anio) + '</td>' +
+    /* EL AÑO VA COMO CODIGO, NO COMO NUMERO.                  24/11/2026
+       Lo agarro la puerta del archivo bajado y CORTO EL PUSH: sin marcar,
+       `bajar.js` le pone formato #,##0 y Excel lo muestra «2.024». Un año con
+       separador de miles se lee como OTRO numero — la familia del
+       `$3.549.541.33` del 14/10. `db-cod` es la clase que js/bajar.js ya
+       reconoce para esto (20/11). */
+    h.push('<tr><td class="db-cod">' + dvEsc(x.anio) + '</td>' +
            '<td class="der">' + dvEsc(x.meses) +
              (Number(x.meses_sin_indice) ? ' <span class="dv-baja">(' + dvEsc(x.meses_sin_indice) +
                                            ' sin índice)</span>' : '') + '</td>' +
