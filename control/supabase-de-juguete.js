@@ -603,6 +603,18 @@
     }
     r.opciones = opciones;
     r.netas_por_que = null;
+    r.tramo_igual = false;
+    /* COBERTURA DESPAREJA A PROPOSITO: el primer anio corto y los otros dos
+       enteros, que es el caso de SU hoja RESUMEN -4 meses contra 12- y el
+       unico en el que la pantalla tiene que pintar el aviso. Con los tres
+       iguales ese renglon no lo mira nadie: el golpe del 14/11 con la fila de
+       totales, que paso «0 fallas» sin haber mirado una sola. */
+    r.cobertura = anios.map(function(x, i){
+      return { anio: x.anio,
+               desde: (i === 0 ? x.anio + '-09-02' : x.anio + '-01-02'),
+               hasta: x.anio + '-12-31',
+               meses: (i === 0 ? 4.0 : 12.0) };
+    });
     r.elegido = { zona: [], provincia: [], proveedor: [], linea: [], cliente: [] };
     return r;
   })();
@@ -625,6 +637,8 @@
     var b = RPC['api_ventas_dashboard_v1_vacia'];
     var r = {}; for (var k in b) if (Object.prototype.hasOwnProperty.call(b, k)) r[k] = b[k];
     r.anios = [];
+    r.cobertura = [];
+    r.tramo_igual = false;
     /* EN CERO, NO EN `undefined`: la funcion de verdad devuelve estas cuatro
        SIEMPRE, aunque no haya una sola venta. Dejarlas afuera haria que la
        tarjeta «Venta neta» pintara «sin costo» en el caso vacio, que es un

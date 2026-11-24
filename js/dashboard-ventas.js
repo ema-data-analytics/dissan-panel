@@ -41,7 +41,12 @@ var DV = { datos: null, cargando: false, pestania: 'general', tope: 12, abierto:
            elegido: { zona: [], provincia: [], proveedor: [], linea: [], cliente: [] },
            /* el texto tipeado en los segmentadores largos. Vive en el estado y
               no en el input, asi un repintado no se lo lleva. */
-           buscar: {} };
+           buscar: {},
+           /* EL TRAMO COMPARABLE. Su hoja RESUMEN pone 2024 -CUATRO meses-
+              al lado de 2025 -doce- y de ahi sale un «+266%» que en el mismo
+              tramo es +21%. Prendido, cada anio se corta del 1 de enero al
+              dia/mes del «hasta». */
+           tramo: false };
 
 /* LAS DOS «PROVINCIAS» SON DOS COSAS DISTINTAS, Y LA DIFERENCIA ES PLATA.
    El segmentador «Provincia» de su Excel es la ZONA comercial de Tango
@@ -157,7 +162,8 @@ function dvFiltros(){
            p_provincias:  DV.elegido.provincia.slice(),
            p_proveedores: DV.elegido.proveedor.slice(),
            p_lineas:      DV.elegido.linea.slice(),
-           p_clientes:    DV.elegido.cliente.slice() };
+           p_clientes:    DV.elegido.cliente.slice(),
+           p_tramo_igual: !!DV.tramo };
 }
 
 /* las dimensiones de los segmentadores SON las pestanias menos «General»: una
@@ -783,6 +789,30 @@ function dvCorte(d, p){
    son partes que suman el total de la fila —al revés de la grilla del 20/11,
    donde «Precio unitario» no lo era—, así que la puerta del archivo bajado
    controla sola que 2024 + 2025 + 2026 dé el total, renglón por renglón. */
+/* CUANTO CUBRE CADA AÑO, escrito debajo del año.             23/11/2026
+   Sale medido de la base (`cobertura`), no de una cuenta mía. Es el renglón
+   que a su hoja RESUMEN le falta y que hace que «+266%» se lea como
+   crecimiento cuando es 4 meses contra 12. */
+function dvMesesDe(d, anio){
+  var c = (d.cobertura || []);
+  for (var i = 0; i < c.length; i++)
+    if (String(c[i].anio) === String(anio)){
+      var m = Number(c[i].meses) || 0;
+      return m >= 11.8 ? 'el año entero' : dvNum(m) + ' meses';
+    }
+  return '';
+}
+
+/* ¿LOS AÑOS CUBREN LO MISMO? Mecánico: si el más corto y el más largo
+   difieren en más de medio mes, compararlos de frente engaña. */
+function dvTramosDisparejos(d){
+  var c = (d.cobertura || []), ms = [];
+  for (var i = 0; i < c.length; i++) ms.push(Number(c[i].meses) || 0);
+  if (ms.length < 2) return 0;
+  var mn = Math.min.apply(null, ms), mx = Math.max.apply(null, ms);
+  return (mx - mn) > 0.5 ? Math.round((mx - mn) * 10) / 10 : 0;
+}
+
 function dvMatriz(d, p){
   var m = (d[p.id] || {}).matriz || [], h = [];
   if (!m.length){
@@ -824,16 +854,38 @@ function dvMatriz(d, p){
   var unAnio = anios.length === 1;
 
   h.push('<div class="db-sec">' + dvEsc(p.rot) + (unAnio ? '' : ' × año') +
-         '<small>Neto Facturado = facturas − notas de crédito + notas de débito. ' +
-         'Es la tabla de tu hoja RESUMEN, con ' + dvNum(filas.length) + ' ' +
-         dvEsc(p.plural.toLowerCase()) + ' de mayor a menor.</small></div>');
+         '<small>Neto Facturado = facturas − notas de crédito + notas de débito, ' +
+         'con ' + dvNum(filas.length) + ' ' + dvEsc(p.plural.toLowerCase()) +
+         ' de mayor a menor.</small></div>');
+
+  /* EL AVISO QUE SU EXCEL NO TIENE. Aparece sólo cuando los años cubren
+     tramos distintos, así no grita todos los días —una puerta que grita
+     siempre se apaga— y trae el botón que lo arregla al lado. */
+  if (!unAnio){
+    var desp = dvTramosDisparejos(d);
+    h.push('<div class="dv-tramo' + (desp ? ' avisa' : '') + '">');
+    if (desp){
+      h.push('<span class="dv-tramo-t"><b>Ojo:</b> estos años no cubren lo mismo — ' +
+             'hay ' + dvNum(desp) + ' meses de diferencia entre el más corto y el ' +
+             'más largo. Comparados de frente, el crecimiento que muestran no es real.' +
+             '</span>');
+    } else {
+      h.push('<span class="dv-tramo-t">Los años cubren el mismo tramo, así que se ' +
+             'pueden comparar de frente.</span>');
+    }
+    h.push('<button type="button" class="dv-tramo-b' + (DV.tramo ? ' puesto' : '') +
+           '" id="dvTramo">' +
+           (DV.tramo ? 'Viendo el mismo tramo en todos — volver a los años completos'
+                     : 'Comparar el mismo tramo en todos') + '</button></div>');
+  }
 
   h.push('<div class="db-tb-caja"><table class="db-tb dv-mx">');
   /* dos renglones de encabezado, como el suyo: arriba el año, abajo qué trae */
   if (!unAnio){
     h.push('<thead><tr><th rowspan="2">' + dvEsc(p.rot) + '</th>');
     for (var y = 0; y < anios.length; y++)
-      h.push('<th colspan="2" class="der dv-mx-anio">' + dvEsc(anios[y]) + '</th>');
+      h.push('<th colspan="2" class="der dv-mx-anio">' + dvEsc(anios[y]) +
+             '<small>' + dvEsc(dvMesesDe(d, anios[y])) + '</small></th>');
     h.push('<th colspan="2" class="der dv-mx-anio dv-mx-tot">Total</th></tr><tr>');
     for (var y2 = 0; y2 <= anios.length; y2++)
       h.push('<th class="der">% Particip</th><th class="der">Neto Facturado</th>');
@@ -1052,6 +1104,9 @@ function dvEnganchar(){
       });
     })(ops[o]);
   }
+
+  var btr = document.getElementById('dvTramo');
+  if (btr) btr.addEventListener('click', function(){ DV.tramo = !DV.tramo; dvCargar(); });
 
   var lim = document.getElementById('dvLimpiar');
   if (lim) lim.addEventListener('click', function(){

@@ -193,3 +193,24 @@
 /* el % va más apagado que la plata: la plata es el dato, el % es la lectura */
 #dvInforme .dv-mx .dv-mx-pct{ color:var(--gris,#9FB4C4); font-variant-numeric:tabular-nums; }
 #dvInforme .dv-mx tfoot td{ border-top:2px solid var(--borde,rgba(255,255,255,.14)); }
+
+/* EL AVISO DEL TRAMO, Y SU BOTON                              23/11/2026 */
+#dvInforme .dv-tramo{
+  display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin:0 0 10px;
+  padding:8px 11px; border-radius:9px;
+  background:var(--navy-card,#0e2e49); border:1px solid var(--borde,rgba(255,255,255,.08));
+}
+#dvInforme .dv-tramo.avisa{ border-color:rgba(255,176,32,.45); }
+#dvInforme .dv-tramo-t{ min-width:0; font-size:12.5px; color:var(--texto,#F2F5F3); }
+#dvInforme .dv-tramo.avisa .dv-tramo-t b{ color:#FFB020; }
+#dvInforme .dv-tramo-b{
+  flex:none; border:1px solid var(--borde,rgba(255,255,255,.08)); border-radius:999px;
+  background:var(--caja,#123252); color:var(--texto,#F2F5F3);
+  font:inherit; font-size:12px; padding:4px 11px; cursor:pointer;
+}
+#dvInforme .dv-tramo-b:hover{ border-color:var(--verde,#08A57A); }
+#dvInforme .dv-tramo-b.puesto{ background:var(--verde,#08A57A); border-color:transparent; color:#fff; }
+#dvInforme .dv-mx th.dv-mx-anio small{
+  display:block; font-size:10px; font-weight:400; letter-spacing:0;
+  text-transform:none; color:var(--gris,#9FB4C4); margin-top:1px;
+}
