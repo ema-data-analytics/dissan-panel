@@ -60,7 +60,12 @@ var DV = { datos: null, cargando: false, pestania: 'general', tope: 12, abierto:
    fiscals distintos» y «Proveedors distintos». Lo encontro la corrida de
    humo, no el usuario, y eso es lo unico bueno del asunto. */
 var DV_PESTANIAS = [
-  { id:'general',   rot:'General',          plural:'',                   nota:'la foto del período' },
+  /* `esDimension:false` = esta pestania NO es un segmentador que se cruce.
+     Antes «general» se excluia por su NOMBRE (`id !== 'general'`), que es una
+     lista escrita a mano de un solo elemento: al agregar la segunda pestania
+     que no es dimension habria habido que acordarse de sumarla ahi. Se declara
+     en la fila y DV_DIMS la lee sola (14/10, 14/11). */
+  { id:'general',   rot:'General',          plural:'',                   nota:'la foto del período', esDimension:false },
   { id:'zona',      rot:'Provincia',        plural:'Provincias',         nota:'la zona de Tango, la de tu Excel' },
   /* PROVINCIA FISCAL SE RETIRA DE LA PANTALLA.                 24/11/2026
      MEDIDO EN LA HOJA RESUMEN DE SU EXCEL, que es lo que yo dije replicar y
@@ -82,7 +87,12 @@ var DV_PESTANIAS = [
   */
   { id:'proveedor', rot:'Proveedor',        plural:'Proveedores',        nota:'del artículo' },
   { id:'linea',     rot:'Línea',            plural:'Líneas',             nota:'del artículo' },
-  { id:'cliente',   rot:'Cliente',          plural:'Clientes',           nota:'quién compra' }
+  { id:'cliente',   rot:'Cliente',          plural:'Clientes',           nota:'quién compra' },
+  /* LO QUE NINGUNA TABLA DINAMICA PUEDE MOSTRAR.                24/11/2026
+     El que se fue NO APARECE en el periodo: para verlo hay que comparar a
+     cada cliente contra SU PROPIA historia. Por eso esto no es un corte mas
+     —no se cruza con los segmentadores— y va declarado como no-dimension. */
+  { id:'movimiento', rot:'Movimiento de clientes', plural:'',            nota:'quién se fue, quién cayó, quién entró', esDimension:false }
 ];
 
 function dvEsc(s){
@@ -185,7 +195,7 @@ function dvFiltros(){
 
 /* las dimensiones de los segmentadores SON las pestanias menos «General»: una
    sola lista, no dos que se separen (la lista a mano del 14/10 y del 14/11). */
-var DV_DIMS = DV_PESTANIAS.filter(function(p){ return p.id !== 'general'; });
+var DV_DIMS = DV_PESTANIAS.filter(function(p){ return p.esDimension !== false; });
 
 /* LO QUE PEDI CONTRA LO QUE SE APLICO. Devuelve la lista de dimensiones que
    no coinciden, en castellano. El mapeo de nombres NO se escribe a mano: el
@@ -509,7 +519,9 @@ function dvPintar(d){
     if (DV_PESTANIAS[j].id === DV.pestania) p2 = DV_PESTANIAS[j];
   if (!p2) { p2 = DV_PESTANIAS[0]; DV.pestania = p2.id; }
   h.push('<div class="dv-hoja" data-hoja="' + p2.id + '">');
-  h.push(p2.id === 'general' ? dvGeneral(d) : dvCorte(d, p2));
+  h.push(p2.id === 'general'    ? dvGeneral(d)
+       : p2.id === 'movimiento' ? dvMovimiento()
+       : dvCorte(d, p2));
   h.push('</div>');
   return h.join('');
 }
@@ -1300,4 +1312,110 @@ function dvLoQueElExcelNoDice(filas, anios, tG, unAnio, p){
          '<div><span class="dv-insight-r">Concentración</span> ' + conc + '</div>' +
          '<div><span class="dv-insight-r">Los que cayeron</span> ' + caida + '</div>' +
          '</div>';
+}
+
+
+/* ===========================================================================
+   MOVIMIENTO DE CLIENTES — QUIEN SE FUE, QUIEN CAYO, QUIEN ENTRO. 24/11/2026
+   ===========================================================================
+   POR QUE NO ES UN CORTE MAS. Los otros cinco cortan el periodo elegido. Este
+   compara a cada cliente contra SU PROPIA historia, asi que no depende del
+   rango ni de los segmentadores: por eso tiene su propia llamada y su propia
+   pestania, y por eso esta declarado `esDimension:false`.
+
+   LO QUE MIDE, con los umbrales A LA VISTA y no escondidos en el codigo: un
+   cliente «habitual» compro en 3 o mas meses distintos de los ultimos 24;
+   «se fue» si hace mas de 6 meses que no compra; «cayo» si los ultimos 12
+   meses dan 30% o menos que los 12 anteriores. Las tres son decisiones de
+   negocio, no mediciones, y por eso viajan como argumentos y se escriben en
+   la pantalla.
+
+   Y EL CODIGO DE CLIENTE VA AL LADO DEL NOMBRE. Medido el 24/11: LEM MEDICAL
+   SRL aparece en «cayeron» Y en «nuevos», y NO es un defecto: tiene dos
+   cuentas en Tango, SL0017 (San Luis, desde 2023) y SJ0017 (San Juan, desde
+   junio 2026). Sin el codigo eso se lee como un error del sistema.          */
+var DVM = { datos: null, cargando: false, error: '' };
+
+function dvMovimiento(){
+  if (DVM.error)    return '<div class="dv-insight">No se pudo traer el movimiento de clientes: ' +
+                           dvEsc(DVM.error) + '</div>';
+  if (!DVM.datos)   { dvMovimientoPedir(); return '<div class="dv-insight">Midiendo a cada cliente contra su propia historia…</div>'; }
+  var d = DVM.datos, u = d.umbrales || {}, h = [];
+
+  h.push('<div class="db-sec">Movimiento de clientes' +
+         '<small>Al ' + dvEsc(String(d.corte || '').substring(0,10)) + '. ' +
+         'Habitual = compró en <b>' + dvEsc(u.habitual_meses_de_los_ultimos_24) +
+         ' o más meses</b> de los últimos 24 · Se fue = hace más de <b>' +
+         dvEsc(u.meses_sin_comprar) + ' meses</b> que no compra · Cayó = los últimos ' +
+         '12 meses dan <b>' + dvEsc(u.caida_pct) + '% o menos</b> que los 12 anteriores. ' +
+         dvEsc(d.denominador || '') + '</small></div>');
+
+  h.push(dvMovBloque('Se fueron', d.se_fueron, 'cuantos', 'compraban',
+     'clientes habituales que dejaron de comprar', 'compraban por año',
+     ['Cliente', 'Última compra', 'Sin comprar', 'Compraba por año'],
+     function(f){ return ['<td>' + dvEsc(f.codigo) + ' · ' + dvEsc(f.cliente) + '</td>',
+                          '<td class="der">' + dvEsc(String(f.ultima || '').substring(0,10)) + '</td>',
+                          '<td class="der">' + dvEsc(dvNum(f.dias_sin_comprar)) + ' días</td>',
+                          '<td class="der" data-plata="1">' + dvEsc(dvCelda(f.compraba)) + '</td>']; }));
+
+  h.push(dvMovBloque('Cayeron', d.cayeron, 'cuantos', 'perdido',
+     'clientes que compran bastante menos', 'menos que el año anterior',
+     ['Cliente', 'Hace un año', 'Último año', 'Diferencia', 'Variación'],
+     function(f){ return ['<td>' + dvEsc(f.codigo) + ' · ' + dvEsc(f.cliente) + '</td>',
+                          '<td class="der" data-plata="1">' + dvEsc(dvCelda(f.antes)) + '</td>',
+                          '<td class="der" data-plata="1">' + dvEsc(dvCelda(f.ahora)) + '</td>',
+                          '<td class="der dv-baja">' + dvEsc(dvCelda(f.diferencia)) + '</td>',
+                          '<td class="der dv-baja">' + dvEsc(dvPct(f.pct)) + '</td>']; }));
+
+  h.push(dvMovBloque('Nuevos', d.nuevos, 'cuantos', 'trajeron',
+     'clientes que antes no compraban', 'trajeron en el último año',
+     ['Cliente', 'Primera compra', 'Compró en el último año'],
+     function(f){ return ['<td>' + dvEsc(f.codigo) + ' · ' + dvEsc(f.cliente) + '</td>',
+                          '<td class="der">' + dvEsc(String(f.primera || '').substring(0,10)) + '</td>',
+                          '<td class="der" data-plata="1">' + dvEsc(dvCelda(f.compro)) + '</td>']; }));
+  return h.join('');
+}
+
+/* UN BLOQUE. Aparece SIEMPRE, y si no hay nadie lo dice con el motivo: una
+   seccion que desaparece se lee como «falta algo» (16/11). */
+function dvMovBloque(rot, b, kCuantos, kPlata, queSon, quePlata, cols, fila){
+  b = b || {};
+  var n = Number(b[kCuantos]) || 0, plata = Number(b[kPlata]) || 0, h = [];
+  h.push('<div class="db-sec">' + dvEsc(rot) +
+         '<small>' + (n ? '<b>' + dvNum(n) + '</b> ' + dvEsc(queSon) + ', ' +
+                           '<b>' + dvEsc(dvCelda(Math.abs(plata))) + '</b> ' + dvEsc(quePlata) +
+                           (b.filas && b.filas.length < n
+                              ? '. Se muestran los ' + dvNum(b.filas.length) + ' más grandes.' : '.')
+                         : 'Ninguno. Es una buena noticia y por eso está escrita.') +
+         '</small></div>');
+  if (!n || !b.filas || !b.filas.length) return h.join('');
+  h.push('<div class="db-tb-caja"><table class="db-tb"><thead><tr>');
+  for (var c = 0; c < cols.length; c++)
+    h.push('<th' + (c ? ' class="der"' : '') + '>' + dvEsc(cols[c]) + '</th>');
+  h.push('</tr></thead><tbody>');
+  for (var f = 0; f < b.filas.length; f++)
+    h.push('<tr>' + fila(b.filas[f]).join('') + '</tr>');
+  h.push('</tbody></table></div>');
+  return h.join('');
+}
+
+function dvMovimientoPedir(){
+  if (DVM.cargando) return;
+  DVM.cargando = true;
+  /* `rpc()` SIEMPRE devuelve `{data, ms}`, NUNCA la respuesta pelada.
+     La primera version guardaba el envoltorio y la pantalla pintaba los tres
+     bloques diciendo «Ninguno» con los umbrales en blanco: todo bien dibujado
+     y sin un solo dato. 0 errores de consola, porque leer una clave que no
+     existe en JavaScript no es un error. Lo agarre MIRANDO la pantalla, no
+     una medicion. La convencion se copia de la llamada de al lado, que ya la
+     tenia bien (`var d = r && r.data`). */
+  rpc('api_ventas_clientes_movimiento_v1', {}).then(function(r){
+    var d = r && r.data;
+    DVM.cargando = false; DVM.datos = d || null; DVM.error = '';
+    if (!d || d.ok === false) DVM.error = (d && d.error) || 'la base no devolvió nada';
+    if (DV.pestania === 'movimiento') dvRepintar();
+  }).catch(function(e){
+    DVM.cargando = false; DVM.error = String((e && e.message) || e);
+    if (DV.pestania === 'movimiento') dvRepintar();
+  });
 }

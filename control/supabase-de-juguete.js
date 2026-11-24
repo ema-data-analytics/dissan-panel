@@ -513,6 +513,40 @@
                     ve nadie.
        `_v2_vacia`  las opciones VACIAS: las cinco cajas tienen que seguir
                     estando y decir «Ninguno» con el motivo (16/11). */
+  /* MOVIMIENTO DE CLIENTES — y su caso VACIO al lado, que es la regla de la
+     casa desde el 16/11: un caso de prueba que siempre trae datos no prueba
+     la pantalla vacia, y la vacia es la que asusta. Los valores salen de lo
+     MEDIDO en la base el 24/11 (21 se fueron, 30 cayeron, 27 nuevos), con los
+     nombres cambiados: el juguete vive en un repositorio PUBLICO.
+     Y va el caso que importa: UN MISMO CLIENTE con DOS codigos, en «cayeron»
+     y en «nuevos» a la vez —como LEM MEDICAL SRL, SL0017 y SJ0017—, que es lo
+     que se lee como un defecto si el codigo no esta al lado del nombre. */
+  RPC['api_ventas_clientes_movimiento_v1'] = {
+    ok: true, corte: '2026-11-24', ms: 476,
+    umbrales: { meses_sin_comprar: 6, habitual_meses_de_los_ultimos_24: 3, caida_pct: 30 },
+    denominador: 'Facturas (t_comp = FAC): NO netea notas de crédito.',
+    se_fueron: { cuantos: 21, compraban: 321508525.59, filas: [
+      { codigo:'SL0024', cliente:'HOSPITAL DEL ESTE S.E.', ultima:'2025-03-27', dias_sin_comprar:607, compraba:102464107.12, meses_24:7 },
+      { codigo:'SJ0013', cliente:'FARMACIA DEL VALLE S.R.L.', ultima:'2025-12-23', dias_sin_comprar:336, compraba:73522650.40, meses_24:5 },
+      { codigo:'MZ0031', cliente:'INST. DE O.SOCIAL DE LAS FUERZAS ARMADAS (IOSFA)', ultima:'2025-05-28', dias_sin_comprar:545, compraba:65227799.03, meses_24:4 } ] },
+    cayeron: { cuantos: 30, perdido: -801265329.67, filas: [
+      { codigo:'SL0013', cliente:'GOBIERNO DE SAN LUIS', antes:411963110.55, ahora:97016449.22, diferencia:-314946661.33, pct:-76.44 },
+      { codigo:'SL0017', cliente:'LEM MEDICAL SRL', antes:303871204.18, ahora:179438412.07, diferencia:-124432792.11, pct:-40.95 },
+      { codigo:'MZ0004', cliente:'ENTE HOSPITAL RAMON CARRILLO O. P.', antes:132351985.44, ahora:55874350.09, diferencia:-76477635.35, pct:-57.78 } ] },
+    nuevos: { cuantos: 27, trajeron: 166294636.33, filas: [
+      { codigo:'MZ0016', cliente:'CIRCULO MEDICO DEL ESTE', primera:'2026-02-11', compro:87271600.00 },
+      { codigo:'SJ0017', cliente:'LEM MEDICAL SRL', primera:'2026-06-30', compro:26751900.00 },
+      { codigo:'MZ0044', cliente:'OSPELSYM Obra Social del Personal de Empresa de Limpieza ser', primera:'2026-04-02', compro:6909207.45 } ] }
+  };
+  RPC['api_ventas_clientes_movimiento_v1_vacia'] = {
+    ok: true, corte: '2026-11-24', ms: 311,
+    umbrales: { meses_sin_comprar: 6, habitual_meses_de_los_ultimos_24: 3, caida_pct: 30 },
+    denominador: 'Facturas (t_comp = FAC): NO netea notas de crédito.',
+    se_fueron: { cuantos: 0, compraban: 0, filas: [] },
+    cayeron:   { cuantos: 0, perdido: 0,   filas: [] },
+    nuevos:    { cuantos: 0, trajeron: 0,  filas: [] }
+  };
+
   RPC['api_ventas_dashboard_v2'] = (function(){
     var b = RPC['api_ventas_dashboard_v1'];
 
