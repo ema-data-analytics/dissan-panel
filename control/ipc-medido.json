@@ -1,0 +1,12 @@
+{
+  "cuando": "2026-11-24T12:18:01-03:00",
+  "serie": "148.3_INIVELNAL_DICI_M_26",
+  "fuente": "https://apis.datos.gob.ar/series/api/series/?ids=148.3_INIVELNAL_DICI_M_26&start_date=2021-01&format=json&limit=1000",
+  "n": 70,
+  "desde": "2021-01",
+  "hasta": "2026-10",
+  "sha": "06027d5bfc55b8cd1db88a38dfcb36d8270a5894a04fc74b6fcd8cb4a17a7e22",
+  "como": "Bajada la serie entera desde el Chrome del usuario con fetch y el cache apagado. El SHA lo calculo crypto.subtle EN EL NAVEGADOR sobre el texto «YYYY-MM=<valor>» de cada mes, unido por «|» en orden de mes; la base calcula el mismo texto con (indice::float8)::text y encode(sha256(...),'hex'). Ninguno de los dos numeros lo escribi yo: si hubiera tipeado un digito, los SHA no darian.",
+  "que_encontro": "NO COINCIDIO al primer intento. 70 = 70 filas, pero las huellas diferian, y buscando por mitades aparecio UNA sola fila: mayo 2024 estaba 6073,7000 en la base y el INDEC dice 6073,7165. Lo tipee mal el 13/11 —el mismo dia que escribi «transcribir no es copiar» y di por bueno «68 en la base, 68 en la API, 0 diferencias»—. Corregido con UPDATE y vuelto a comparar: los dos SHA iguales. En la pantalla publicada, el facturado 2024 en pesos de octubre paso de $7.808.117.549 a $7.808.115.182: $2.367 de diferencia. Chico, y estaba mal.",
+  "nota": "El contenedor NO llega a apis.datos.gob.ar (medido el 13/11 y otra vez hoy: «fetch failed»), y la base tampoco. Por eso esta bajada se hace desde el Chrome del usuario y queda anotada en los dos lados —aca y en ema.ipc_control— que se miran uno al otro. Hay que rehacerla cada vez que el INDEC publica un mes nuevo: control/ipc.js corta a los 45 dias."
+}

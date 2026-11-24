@@ -78,6 +78,7 @@ que_mira(){
     "la pantalla vacia")        echo "[.]html$|^js/|control/vacio|control/supabase-de-juguete" ;;
     "los rotulos en pantalla")  echo "[.]html$|^js/|^css/|control/rotulos-todos|control/supabase-de-juguete" ;;
     "las variables de css")     echo "^css/|control/css-variables" ;;
+    "el ipc")                   echo "SIEMPRE" ;;
     # SIEMPRE a proposito: esta puerta mide la FUNCION de la base, que no vive
     # en el repositorio. No hay archivo que cambie cuando cambia lo que mide,
     # asi que declarar un patron seria declarar que no la corre nunca.
@@ -262,6 +263,16 @@ correr "los rotulos en pantalla" control/rotulos-todos.js node control/rotulos-t
 # un segundo. Con respaldo -var(--borde, rgba(...))- no suena, que es como el
 # panel las usa a proposito en 45 de sus 469 usos.
 correr "las variables de css" control/css-variables.js node control/css-variables.js
+
+# PUERTA 24 — EL IPC CON EL QUE SE CONVIERTE A PESOS CONSTANTES.
+# El 13/11 cargue 68 indices del INDEC a mano y escribi que los habia
+# controlado fila por fila contra la API viva, "0 diferencias". No quedo
+# rastro de esa medicion. El 24/11 la rehice de verdad -SHA-256 de la serie
+# entera de los dos lados- y mayo 2024 estaba mal: 6073,7000 contra 6073,7165.
+# Un control que no deja rastro no es un control, es una afirmacion mia.
+# Corre SIEMPRE, no segun que archivos cambien: la medicion envejece sola, y
+# el INDEC publica una vez por mes. Tarda un segundo.
+correr "el ipc"             control/ipc.js        node control/ipc.js
 
 echo ""
 # UNA PUERTA SALTEADA SE DECLARA. No es verde: es que no se ejercito, y eso

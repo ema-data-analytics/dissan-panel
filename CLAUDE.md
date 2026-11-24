@@ -2448,3 +2448,65 @@ cinco y **agarra 5 de 5**. No necesita navegador: menos de un segundo.
 **EL ROTULO ENVUELVE, NO SE CORTA.** Lo que no se puede es inventar que la
 provincia se llama distinto — la misma decision que con «INST. DE O.SOCIAL DE
 LAS FUERZAS ARMADAS (IOSFA)». **La plata sigue sin cortarse nunca (14/10).**
+
+## 24/11/2026 (tarde) — EL IPC QUE DIJE HABER CONTROLADO Y NUNCA CONTROLE
+
+**ESCRIBI «68 EN LA BASE, 68 EN LA API, 0 DIFERENCIAS» Y NO QUEDO NI UN RASTRO
+DE ESA MEDICION.** El 13/11 cargue a mano los 68 indices del IPC del INDEC y
+publique que los habia controlado fila por fila contra la API viva. Hoy, al
+cargar septiembre y octubre, la rehice de verdad —**SHA-256 de la serie entera
+de los dos lados**— y **no coincidio**: 70 = 70 filas, huellas distintas, y
+buscando por mitades aparecio **una sola fila**. **Mayo 2024 decia 6073,7000 y
+el INDEC dice 6073,7165.** Lo tipee mal ese dia, en el mismo documento donde
+escribi *«escribir 68 numeros a mano no es copiar, es transcribir»*.
+**La leccion no es tipear con mas cuidado: es que un control que no deja rastro
+no es un control, es una afirmacion mia.** Costo en la pantalla: el facturado
+2024 en pesos de octubre paso de $7.808.117.549 a **$7.808.115.182**, $2.367.
+Chico — y estaba mal, y nadie lo podia ver.
+
+**EL SHA HACE QUE MI TIPEO DEJE DE IMPORTAR.** El valor lo calcula
+`crypto.subtle` en el navegador sobre el texto `YYYY-MM=<valor>` de los 70
+meses, y la base calcula el mismo texto con `(indice::float8)::text` y
+`encode(sha256(...),'hex')`. Si hubiera errado un digito al corregir, las dos
+huellas no darian. Despues del UPDATE: **`06027d5b…` de los dos lados**.
+
+**NINGUNA REGLA INTERNA PODIA AGARRARLO, Y ESO SE MIDIO ANTES DE INVENTAR UNA.**
+La serie sigue creciendo mes a mes con 6073,7 igual que con 6073,7165, y la
+variacion mensual da 4,18% en los dos casos. **Un error de 0,003% solo lo
+puede ver la fuente.** Por eso la puerta no adivina: **exige el rastro**.
+
+**PUERTA 24 — `el ipc` (`control/ipc.js`), Y CORRE SIEMPRE.** No segun que
+archivos cambien: la medicion **envejece sola** y el INDEC publica una vez por
+mes. Compara la huella de `ema.indice_precios` —leida con la sesion de
+CLAUDEBASE por `api_ipc_huella()`— contra `control/ipc-medido.json` **y** contra
+`ema.ipc_control`, que se miran uno al otro (*dos copias de la misma cosa se
+separan con el tiempo*, 30/10). Corta si falta el archivo, si tiene mas de **45
+dias**, si el SHA no da, o si el repositorio y la base no dicen lo mismo.
+**Declara que NO baja la serie**: medido el 13/11 y otra vez hoy, desde el
+contenedor `fetch` a `apis.datos.gob.ar` da **`fetch failed`**; desde el Chrome
+del usuario, si. Tres arneses, **cada uno exigiendo SU clase de falla**:
+`ipc_tipeado_mal` · `ipc_viejo` · `ipc_sin_rastro`, mas la cara limpia que no
+suena.
+
+**Y LA IDENTIDAD `ipc_coincide_con_indec`**, para que el semaforo lo muestre sin
+esperar a un push: lado A = 1 si **no existe** una bajada del INDEC de menos de
+45 dias cuyo `sha_api` sea el que la base tiene **AHORA**; lado B = 0. Asi, si
+alguien toca un indice despues del control, se pone en rojo solo. Su arnes
+—`ema.ipc_identidad_caras()`— ejecuta **el `sql_a` guardado en la tabla**, no
+una copia, y corre las **cuatro caras en una sola llamada** para que no pueda
+quedar a medias: limpio 0 · indice tocado 1 · control de mas de 45 dias 1 ·
+devuelto a su lugar 0. **4 de 4.**
+
+**OCTUBRE CAMBIA LA LECTURA DEL ANIO, Y HAY QUE DECIRLO.** Con el indice solo
+hasta agosto, el dashboard comparaba tramos de 8 meses y daba 2025 **−15,5%** y
+2026 **−16,9%**. Con octubre cargado compara **10 meses** y da 2025 **+2,39%** y
+2026 **−11,36%**. No cambio ninguna venta: cambio el tramo que se podia
+comparar. Queda **1 solo mes afuera** (noviembre, $847.681.094) contra los tres
+de antes.
+
+**PROBADO, CON LA DEFINICION DE LA CASA:** pantalla **publicada**
+(`dashboard-ventas.html`), entrando con usuario y contrasenia, apretando con la
+mano, y la base en la misma corrida (606 ms): la banda **«EN PESOS DE OCTUBRE
+2026»** con sus **9 cifras identicas** a `api_ventas_pesos_constantes_v1`, y
+repetido despues de corregir mayo 2024 —esperando a que el **objeto de datos
+sea OTRO**, no a que aparezca un rotulo (19/11, 20/11)—.
