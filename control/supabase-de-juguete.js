@@ -573,6 +573,121 @@
     nuevos:    { cuantos: 0, trajeron: 0,  filas: [] }
   };
 
+  /* LO QUE HAY QUE MIRAR — las tres alertas.                 24/11/2026
+     NOMBRES INVENTADOS A PROPOSITO. El 24/11 medi que este archivo se sirve
+     PUBLICO en github.io (HTTP 200, 123 KB) con nombres y montos reales de
+     DISSAN adentro. Es la regla del 15/11 —«el fixture NO va al repositorio:
+     el repo se sirve PUBLICO»— que yo mismo escribi y no aplique aca. Las
+     FORMAS son las de verdad (nombres largos con comillas y puntos, precios
+     con muchos decimales, cantidades grandes) porque eso es lo que la puerta
+     22 tiene que poder romper: el 24/11 la puerta corrio limpia porque el
+     juguete tenia nombres de 8 letras y el caso que importa no existia. */
+  RPC['api_ventas_alertas_v1'] = {
+    ok: true, desde: '2026-01-01', hasta: '2026-12-31',
+    facturado: 7445554383.01, cobertura_pct: 74.99, margen_general_pct: 42.59,
+    como_se_mide: 'El margen se mide solo sobre los renglones que tienen costo: 75,0% ' +
+      'de lo facturado en este periodo. La dispersion de precio se mide DENTRO DE CADA ' +
+      'MES, porque entre meses la diferencia seria inflacion y no descuento.',
+    buenas: [
+      { clave:'crecieron', buena:true, cuantos:40, plata:1873681778.83,
+        contra:'01/01/2025 a 31/12/2025', filas:[
+        { orden:' 001', codigo:'MZ0055', cliente:'HOSPITAL DE PRUEBA REGIONAL',
+          antes:439983033.41, ahora:1394022674.81, mas:954039641.40, pct:216.84 },
+        { orden:' 002', codigo:'SL0011', cliente:'DISTRIBUIDORA DE PRUEBA CENTRAL',
+          antes:1057504532.73, ahora:1397185705.17, mas:339681172.44, pct:32.12 },
+        { orden:' 003', codigo:'MZ0012', cliente:'OBRA SOCIAL DE PRUEBA PROVINCIAL',
+          antes:88112044.90, ahora:212440318.55, mas:124328273.65, pct:141.10 } ] },
+      { clave:'mas_deja', buena:true, cuantos:15, de_cuantos:35, plata:913674627.02,
+        facturado:2541828394.11, pct_de_la_ganancia:55.0, margen_general_pct:35.94, filas:[
+        { orden:' 001', proveedor:'PROVEEDOR DE PRUEBA OSTOMIA S.A.', facturado:1203044205.00,
+          gano:441476778.00, margen_pct:36.70, pct_de_la_ganancia:26.6 },
+        { orden:' 002', proveedor:'PROVEEDOR DE PRUEBA VASCULAR S.R.L.', facturado:451957122.00,
+          gano:165256229.00, margen_pct:36.56, pct_de_la_ganancia:9.9 },
+        { orden:' 003', proveedor:'PROVEEDOR DE PRUEBA IMAGENES S.A.', facturado:262996756.00,
+          gano:132764965.00, margen_pct:50.48, pct_de_la_ganancia:8.0 } ] },
+      { clave:'de_donde_sale', buena:true, cuantos:23, de_cuantos:669, plata:1191477859.96,
+        facturado:2374580920.66, ganancia_total:2380552810.34, filas:[
+        { orden:' 001', codigo:'PRUE002', articulo:'Set Primario de prueba 14001-32 blister',
+          facturado:363963971.91, gano:112676443.40, margen_pct:30.96, pct_de_la_ganancia:4.73 },
+        { orden:' 002', codigo:'PRUETR0028', articulo:'Placa de prueba 3,5 Sinfisis Pelvis',
+          facturado:116482811.00, gano:108849951.76, margen_pct:93.45, pct_de_la_ganancia:4.57 },
+        { orden:' 003', codigo:'PRUE0170', articulo:'Sonda de prueba 28412 Masc. Fr:12',
+          facturado:98455120.30, gano:61233880.11, margen_pct:62.19, pct_de_la_ganancia:2.57 } ] }
+    ],
+    alertas: [
+      { clave:'bajo_costo', cuantos:139, plata:-16169518.50, facturado:54879777.27,
+        clientes:30, articulos:47, filas:[
+        { orden:' 001', fecha:'2026-01-06', comprobante:'FAC B0000800005469',
+          cliente:'SANATORIO DE PRUEBA DEL ESTE S.A.', articulo:'Pinza de prueba 36mm  PRU36',
+          codigo:'PRUE0021', cantidad:18, precio:363636.3636364, costo:474804.00,
+          venta:6545454.55, perdio:-2001017.45 },
+        { orden:' 002', fecha:'2026-01-06', comprobante:'FAC B0000800005467',
+          cliente:'SANATORIO DE PRUEBA DEL ESTE S.A.', articulo:'Pinza de prueba 36mm  PRU36',
+          codigo:'PRUE0021', cantidad:13, precio:363636.3636364, costo:474804.00,
+          venta:4727272.73, perdio:-1445179.27 },
+        { orden:' 003', fecha:'2026-06-05', comprobante:'FAC B0000800006111',
+          cliente:'OBRA SOCIAL DE PRUEBA PROVINCIAL', articulo:'Bolsa de prueba 11045 2p/cv Light 70',
+          codigo:'PRUE0063', cantidad:135, precio:3938.8429752, costo:10896.08,
+          venta:531743.80, perdio:-939226.60 } ] },
+      { clave:'precio_disperso', cuantos:129, articulos:47, facturado:852937871.25,
+        plata:64310006.24, filas:[
+        { orden:' 001', mes:'2026-05-01', codigo:'PRUE0170',
+          articulo:'Sonda de prueba 28412 Masc. Fr:12', clientes:5, unidades:4110,
+          facturado:14491601.02, mas_barato:2194.1983459119496855,
+          promedio:3525.9369878345498783, mas_caro:8593.3903333333333333, veces:3.92,
+          quien_barato:'PROGRAMA DE PRUEBA PROVINCIAL',
+          quien_caro:'SINDICATO DE PRUEBA ALIMENTACION "SPA"',
+          pago_de_menos:4234928.88 },
+        { orden:' 002', mes:'2026-07-01', codigo:'PRUE0088',
+          articulo:'Bolsa de prueba 15580 ab/op', clientes:5, unidades:13830,
+          facturado:40915388.43, mas_barato:2643.8016530054644809,
+          promedio:2958.4518026030368764, mas_caro:9595.0413333333333333, veces:3.63,
+          quien_barato:'OBRA SOCIAL DE PRUEBA PROVINCIAL',
+          quien_caro:'DROGUERIA DE PRUEBA DEL NORTE S.A.',
+          pago_de_menos:3454858.64 },
+        { orden:' 003', mes:'2026-10-01', codigo:'PRUE0108',
+          articulo:'Bolsa de prueba 5787 cerr/op 10-70 (P)', clientes:6, unidades:30460,
+          facturado:45922716.38, mas_barato:1404.9586776470588235,
+          promedio:1507.6400650032829941, mas_caro:3822.84, veces:2.72,
+          quien_barato:'DISTRIBUIDORA DE PRUEBA CENTRAL',
+          quien_caro:'COOPERATIVA DE PRUEBA FARMACEUTICA LTDA.',
+          pago_de_menos:2618375.38 } ] },
+      { clave:'grandes_margen_flaco', cuantos:8, facturado:3726494084.15,
+        plata:156349653.26, margen_general_pct:42.59, filas:[
+        { orden:' 001', cliente:'DISTRIBUIDORA DE PRUEBA CENTRAL', facturado:1397185705.17,
+          facturas:29, con_costo:1392241035.75, gano:558063493.92, margen_pct:40.08,
+          falta_para_el_promedio:34937221.60 },
+        { orden:' 002', cliente:'HOSPITAL DE PRUEBA SAN MARTIN DEL SUR', facturado:240945137.78,
+          facturas:189, con_costo:229243526.19, gano:68710996.03, margen_pct:29.97,
+          falta_para_el_promedio:28931273.93 },
+        { orden:' 003', cliente:'HOSPITAL DE PRUEBA PEDIATRICO', facturado:1003223422.71,
+          facturas:149, con_costo:720144301.22, gano:281861751.14, margen_pct:39.14,
+          falta_para_el_promedio:24871116.90 } ] }
+    ]
+  };
+  /* EL CASO VACIO VA SIEMPRE CON SU RESPUESTA (16/11): es el que asusta, y la
+     pantalla tiene que decir «Ninguno. Es una buena noticia» en vez de
+     esfumar la banda entera. */
+  RPC['api_ventas_alertas_v1_vacia'] = {
+    ok: true, desde: '2026-01-01', hasta: '2026-12-31',
+    facturado: 0, cobertura_pct: 0, margen_general_pct: 0,
+    como_se_mide: 'El margen se mide solo sobre los renglones que tienen costo: 0,0% ' +
+      'de lo facturado en este periodo.',
+    buenas: [
+      { clave:'crecieron', buena:true, cuantos:0, plata:0, contra:'01/01/2025 a 31/12/2025', filas:[] },
+      { clave:'mas_deja', buena:true, cuantos:0, de_cuantos:0, plata:0, facturado:0,
+        pct_de_la_ganancia:0, margen_general_pct:0, filas:[] },
+      { clave:'de_donde_sale', buena:true, cuantos:0, de_cuantos:0, plata:0, facturado:0,
+        ganancia_total:0, filas:[] }
+    ],
+    alertas: [
+      { clave:'bajo_costo', cuantos:0, plata:0, facturado:0, clientes:0, articulos:0, filas:[] },
+      { clave:'precio_disperso', cuantos:0, articulos:0, facturado:0, plata:0, filas:[] },
+      { clave:'grandes_margen_flaco', cuantos:0, facturado:0, plata:0,
+        margen_general_pct:0, filas:[] }
+    ]
+  };
+
   RPC['api_ventas_dashboard_v2'] = (function(){
     var b = RPC['api_ventas_dashboard_v1'];
 

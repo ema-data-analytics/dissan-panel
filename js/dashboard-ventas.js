@@ -243,6 +243,11 @@ async function dvCargar(){
   cuerpo.hidden = true;
   try {
     var f = dvFiltros();
+    /* EL RANGO PUEDE HABER CAMBIADO, ASI QUE LAS ALERTAS SE VUELVEN A MEDIR.
+       Si se dejaran, la banda de arriba mostraria las cifras del rango
+       anterior al lado de las tarjetas del nuevo: dos periodos en la misma
+       pantalla, sin ninguna señal. */
+    DVA.datos = null; DVA.error = ''; DVA.cargando = false;
     var r = await rpc('api_ventas_dashboard_v2', f);
     var d = r && r.data;
     if (!d || d.ok === false) throw new Error((d && d.error) || 'la base no devolvió nada');
@@ -602,6 +607,12 @@ function dvGeneral(d){
 
   var n = d.netas || null;
 
+  /* ARRIBA DE TODO VA LO QUE HAY QUE DECIDIR, NO LO QUE SE VENDIO.  24/11
+     Dicho por el usuario: "MOSTRA INFORMACION QUE LES SEA IMPACTANTE A LA
+     SIMPLE VISTA... INFO PARA QUE PUEDAN TOMAR DESICIONES". Cuanto se facturo
+     ya lo sabe; lo que no ve nadie es donde se esta perdiendo plata. */
+  h.push(dvAlertas());
+
   /* CUATRO TARJETAS. Eran seis y la pantalla no se leia. «Con costo medido» y
      «Costo» viven en la tabla del costo, plegada: el que quiere el reparto lo
      abre, y el que mira el dashboard ve lo que vendio y lo que gano. */
@@ -806,6 +817,257 @@ function dvPesosPedir(){
     if (DV.pestania === 'general') dvRepintar();
   }).catch(function(e){
     DVP.cargando = false; DVP.error = String((e && e.message) || e);
+    if (DV.pestania === 'general') dvRepintar();
+  });
+}
+
+/* ===========================================================================
+   LO QUE HAY QUE MIRAR — LA BANDA DE ARRIBA DE TODO.        24/11/2026
+   ===========================================================================
+   Pedido textual: "MOSTRA INFORMACION QUE LES SEA IMPACTANTE A LA SIMPLE
+   VISTA... INFO PARA QUE PUEDAN TOMAR DESICIONES".
+
+   Y tenia razon en el diagnostico: hasta hoy yo le proponia MAS CORTES
+   -vendedor, articulo-, que es mas rebanadas de la misma torta. Un corte
+   contesta "cuanto vendimos por X". Esto contesta "donde hay plata que nadie
+   esta mirando", con nombre y apellido para poder levantar el telefono.
+
+   LAS TRES SALEN DE `api_ventas_alertas_v1` Y RESPETAN EL RANGO ELEGIDO.
+   Cada tarjeta se abre y muestra SUS renglones: una cifra sin los renglones
+   que la forman no es una decision, es un titular.
+
+   LA TARJETA APARECE SIEMPRE, aunque de cero, y entonces lo dice: "Ninguno.
+   Es una buena noticia y por eso esta escrita" (16/11). Una seccion que
+   desaparece se lee como «falta algo».                                      */
+var DVA = { datos: null, cargando: false, error: '' };
+
+/* Cada alerta declara SU rotulo y SUS columnas. No hay una lista de nombres
+   suelta: la clave la manda la base y aca esta lo que se escribe para cada
+   una. Si la base agrega una cuarta y aca no esta, se pinta igual con su
+   clave cruda en vez de desaparecer -declarar antes que esconder-. */
+var DV_AL = {
+  /* --- LAS TRES BUENAS, Y VAN PRIMERO ---                    24/11/2026
+     Dicho por el usuario, textual: "es solo mostrar lo que esta mal, lo que
+     me pones, se necesita mostrar todo lo que esta bien". Tenia razon: tres
+     tarjetas rojas se leen como una acusacion, no como un tablero. Donde
+     empujar va ANTES que donde tapar. */
+  crecieron: {
+    rot: 'Clientes que crecieron',
+    que: 'trajeron de más que el año pasado',
+    mal: false,
+    linea: function(a){
+      return dvNum(a.cuantos) + ' clientes · contra el mismo tramo de ' + dvEsc(a.contra || '');
+    },
+    nada: 'Ningún cliente compró más que en el mismo tramo del año anterior.',
+    cols: ['Cliente', 'El año pasado', 'Ahora', 'Trajo de más', 'Creció'],
+    fila: function(f){
+      return ['<td>' + dvEsc(f.codigo) + ' · ' + dvEsc(f.cliente) + '</td>',
+              '<td class="der">' + dvEsc(dvCelda(f.antes)) + '</td>',
+              '<td class="der">' + dvEsc(dvCelda(f.ahora)) + '</td>',
+              '<td class="der dv-sube">' + dvEsc(dvCelda(f.mas)) + '</td>',
+              '<td class="der dv-sube">+' + dvEsc(dvPct(f.pct)) + '</td>'];
+    }
+  },
+  mas_deja: {
+    rot: 'Los proveedores que más dejan',
+    que: 'de ganancia, rindiendo arriba del promedio',
+    mal: false,
+    linea: function(a){
+      return dvNum(a.cuantos) + ' de ' + dvNum(a.de_cuantos) + ' proveedores · ' +
+             dvMillones(a.facturado) + ' facturados que hacen el ' +
+             dvPct(a.pct_de_la_ganancia) + ' de toda la ganancia';
+    },
+    nada: 'Ningún proveedor rinde por encima del margen general del período.',
+    cols: ['Proveedor', 'Facturado', 'Ganó', 'Margen', '% de toda la ganancia'],
+    fila: function(f){
+      return ['<td>' + dvEsc(f.proveedor) + '</td>',
+              '<td class="der">' + dvEsc(dvCelda(f.facturado)) + '</td>',
+              '<td class="der dv-sube">' + dvEsc(dvCelda(f.gano)) + '</td>',
+              '<td class="der dv-sube">' + dvEsc(dvPct(f.margen_pct)) + '</td>',
+              '<td class="der">' + dvEsc(dvPct(f.pct_de_la_ganancia)) + '</td>'];
+    }
+  },
+  de_donde_sale: {
+    rot: 'De dónde sale la mitad de la ganancia',
+    que: 'de ganancia en esos artículos',
+    mal: false,
+    linea: function(a){
+      return dvNum(a.cuantos) + ' artículos de ' + dvNum(a.de_cuantos) +
+             ' hacen la mitad de todo lo que se ganó (' + dvMillones(a.ganancia_total) + ')';
+    },
+    nada: 'No hay artículos con ganancia en este período.',
+    cols: ['Código', 'Artículo', 'Facturado', 'Ganó', 'Margen', '% de toda la ganancia'],
+    fila: function(f){
+      return ['<td class="db-cod">' + dvEsc(f.codigo) + '</td>',
+              '<td>' + dvEsc(f.articulo) + '</td>',
+              '<td class="der">' + dvEsc(dvCelda(f.facturado)) + '</td>',
+              '<td class="der dv-sube">' + dvEsc(dvCelda(f.gano)) + '</td>',
+              '<td class="der">' + dvEsc(dvPct(f.margen_pct)) + '</td>',
+              '<td class="der">' + dvEsc(dvPct(f.pct_de_la_ganancia)) + '</td>'];
+    }
+  },
+
+  /* --- LAS TRES A CORREGIR --- */
+  bajo_costo: {
+    rot: 'Vendido por debajo del costo',
+    que: 'se perdió',
+    mal: true,
+    linea: function(a){
+      return dvNum(a.cuantos) + ' renglones · ' + dvNum(a.clientes) + ' clientes · ' +
+             dvNum(a.articulos) + ' artículos · ' + dvMillones(a.facturado) + ' facturados';
+    },
+    nada: 'No hubo un solo renglón vendido bajo costo en este período.',
+    cols: ['Fecha', 'Comprobante', 'Cliente', 'Artículo', 'Cant.',
+           'Precio (x unidad)', 'Costo (x unidad)', 'Venta (el renglón)', 'Perdió (el renglón)'],
+    fila: function(f){
+      return ['<td class="der">' + dvEsc(String(f.fecha || '').substring(0,10)) + '</td>',
+              '<td class="db-cod">' + dvEsc(f.comprobante) + '</td>',
+              '<td>' + dvEsc(f.cliente) + '</td>',
+              '<td>' + dvEsc(f.articulo) + '</td>',
+              '<td class="der">' + dvEsc(dvNum(f.cantidad)) + '</td>',
+              '<td class="der">' + dvEsc(dvCelda(f.precio)) + '</td>',
+              '<td class="der">' + dvEsc(dvCelda(f.costo)) + '</td>',
+              '<td class="der">' + dvEsc(dvCelda(f.venta)) + '</td>',
+              '<td class="der dv-baja">' + dvEsc(dvCelda(f.perdio)) + '</td>'];
+    }
+  },
+  precio_disperso: {
+    rot: 'El mismo artículo, el mismo mes, a precios muy distintos',
+    que: 'pagó de menos el más barato',
+    mal: true,
+    linea: function(a){
+      return dvNum(a.cuantos) + ' casos · ' + dvNum(a.articulos) + ' artículos · ' +
+             dvMillones(a.facturado) + ' facturados ahí dentro';
+    },
+    nada: 'Ningún artículo se vendió, dentro de un mismo mes, a precios que difieran 50% o más.',
+    cols: ['Mes', 'Código', 'Artículo', 'Clientes', 'Unidades',
+           'Más barato (x unidad)', 'Promedio (x unidad)', 'Más caro (x unidad)', 'Veces',
+           'Quién pagó menos', 'Quién pagó más', 'Pagó de menos'],
+    fila: function(f){
+      return ['<td class="der">' + dvEsc(dvMes(f.mes)) + '</td>',
+              '<td class="db-cod">' + dvEsc(f.codigo) + '</td>',
+              '<td>' + dvEsc(f.articulo) + '</td>',
+              '<td class="der">' + dvEsc(dvNum(f.clientes)) + '</td>',
+              '<td class="der">' + dvEsc(dvNum(f.unidades)) + '</td>',
+              '<td class="der">' + dvEsc(dvCelda(f.mas_barato)) + '</td>',
+              '<td class="der">' + dvEsc(dvCelda(f.promedio)) + '</td>',
+              '<td class="der">' + dvEsc(dvCelda(f.mas_caro)) + '</td>',
+              '<td class="der dv-baja">' + dvEsc(dvNum(f.veces)) + '×</td>',
+              '<td>' + dvEsc(f.quien_barato) + '</td>',
+              '<td>' + dvEsc(f.quien_caro) + '</td>',
+              '<td class="der dv-baja">' + dvEsc(dvCelda(f.pago_de_menos)) + '</td>'];
+    }
+  },
+  grandes_margen_flaco: {
+    rot: 'Clientes grandes que dejan poco',
+    que: 'falta para llegar al margen general',
+    mal: true,
+    linea: function(a){
+      return dvNum(a.cuantos) + ' clientes · ' + dvMillones(a.facturado) + ' facturados · ' +
+             'margen general ' + dvPct(a.margen_general_pct);
+    },
+    nada: 'Ningún cliente grande rinde por debajo del margen general.',
+    cols: ['Cliente', 'Facturas', 'Facturado', 'Con costo medido', 'Ganó', 'Margen',
+           'Falta para el promedio'],
+    fila: function(f){
+      return ['<td>' + dvEsc(f.cliente) + '</td>',
+              '<td class="der">' + dvEsc(dvNum(f.facturas)) + '</td>',
+              '<td class="der">' + dvEsc(dvCelda(f.facturado)) + '</td>',
+              '<td class="der">' + dvEsc(dvCelda(f.con_costo)) + '</td>',
+              '<td class="der">' + dvEsc(dvCelda(f.gano)) + '</td>',
+              '<td class="der dv-baja">' + dvEsc(dvPct(f.margen_pct)) + '</td>',
+              '<td class="der dv-baja">' + dvEsc(dvCelda(f.falta_para_el_promedio)) + '</td>'];
+    }
+  }
+};
+
+function dvAlertas(){
+  if (DVA.error)  return '<div class="dv-insight"><span class="dv-insight-r">Lo que hay que mirar</span> ' +
+                         'No se pudo medir: ' + dvEsc(DVA.error) + '</div>';
+  if (!DVA.datos) { dvAlertasPedir();
+                    return '<div class="dv-insight"><span class="dv-insight-r">Lo que hay que mirar</span> ' +
+                           'Buscando dónde hay plata que nadie está mirando…</div>'; }
+  var d = DVA.datos, bu = d.buenas || [], al = d.alertas || [], h = [];
+  var todas = bu.concat(al);
+
+  /* SE DECLARA QUE ESTO NO MIRA LOS SEGMENTADORES. Las tres alertas respetan
+     el RANGO DE FECHAS y nada mas: si alguien elige MENDOZA y no lo dijeramos,
+     leeria estas cifras como si fueran de Mendoza. Es la regla de siempre —un
+     numero sin su denominador no se publica— aplicada al alcance. */
+  h.push('<div class="db-sec">Lo que hay que mirar' +
+         '<small>Del ' + dvEsc(String(d.desde || '').substring(0,10)) + ' al ' +
+         dvEsc(String(d.hasta || '').substring(0,10)) + ', <b>sin aplicar los ' +
+         'segmentadores</b>: estas tres miran todo el período elegido. ' +
+         dvEsc(d.como_se_mide || '') + '</small></div>');
+
+  /* LAS BUENAS PRIMERO. Un tablero que arranca en rojo no se usa dos veces. */
+  h.push('<div class="dv-al-sub">Dónde empujar</div>');
+  h.push('<div class="dv-al-grid">');
+  for (var i = 0; i < bu.length; i++) h.push(dvAlertaTarjeta(bu[i]));
+  h.push('</div>');
+
+  h.push('<div class="dv-al-sub">Dónde hay plata que se está yendo</div>');
+  h.push('<div class="dv-al-grid">');
+  for (var i2 = 0; i2 < al.length; i2++) h.push(dvAlertaTarjeta(al[i2]));
+  h.push('</div>');
+
+  /* el detalle de la que este abierta, debajo de las tarjetas */
+  for (var j = 0; j < todas.length; j++){
+    var a = todas[j], k = 'al_' + a.clave;
+    if (!DV.abierto[k]) continue;
+    var cfg = DV_AL[a.clave];
+    var fs = a.filas || [];
+    if (!cfg || !fs.length){
+      h.push('<div class="db-pie"><b>Ninguno.</b> ' +
+             dvEsc((cfg && cfg.nada) || 'No hay renglones para mostrar.') + '</div>');
+      continue;
+    }
+    h.push('<div class="db-pie">' + dvEsc(cfg.rot) + ' — se muestran ' + dvNum(fs.length) +
+           ' de ' + dvNum(a.cuantos) + ', de peor a mejor.</div>');
+    h.push('<div class="db-tb-caja"><table class="db-tb"><thead><tr>');
+    for (var c = 0; c < cfg.cols.length; c++)
+      h.push('<th' + (c ? ' class="der"' : '') + '>' + dvEsc(cfg.cols[c]) + '</th>');
+    h.push('</tr></thead><tbody>');
+    for (var f = 0; f < fs.length; f++) h.push('<tr>' + cfg.fila(fs[f]).join('') + '</tr>');
+    h.push('</tbody></table></div>');
+  }
+  return h.join('');
+}
+
+function dvAlertaTarjeta(a){
+  var cfg = DV_AL[a.clave] || { rot: a.clave, que: '', mal: true,
+                                linea: function(){ return ''; }, nada: 'Sin renglones.' };
+  var k = 'al_' + a.clave, abierta = !!DV.abierto[k];
+  var n = Number(a.cuantos) || 0, plata = Math.abs(Number(a.plata) || 0);
+  return '<button type="button" class="dv-mas-b dv-al' + (cfg.mal ? '' : ' buena') +
+         (abierta ? ' abierta' : '') + '" data-plegar="' + dvEsc(k) + '">' +
+         '<span class="dv-al-rot">' + dvEsc(cfg.rot) + '</span>' +
+         (n ? '<span class="dv-al-plata ' + (cfg.mal ? 'dv-baja' : 'dv-sube') + '">' +
+                dvEsc(dvMillones(plata)) + '</span>' +
+              '<span class="dv-al-que">' + dvEsc(cfg.que) + '</span>' +
+              '<span class="dv-al-det">' + dvEsc(cfg.linea(a)) + '</span>' +
+              '<span class="dv-al-ver">' + (abierta ? 'Cerrar' : 'Ver quiénes son') + '</span>'
+            : '<span class="dv-al-plata">Ninguno</span>' +
+              '<span class="dv-al-det">' + dvEsc(cfg.nada) + '</span>' +
+              '<span class="dv-al-ver">Es una buena noticia</span>') +
+         '</button>';
+}
+
+function dvAlertasPedir(){
+  if (DVA.cargando) return;
+  DVA.cargando = true;
+  /* LAS FECHAS SALEN DE `dvFiltros()`, que es de donde las saca el dashboard:
+     una sola fuente, o las dos se separan con el tiempo (30/10). */
+  var f = (typeof dvFiltros === 'function') ? dvFiltros() : {};
+  /* `rpc()` SIEMPRE devuelve {data, ms} (24/11). */
+  rpc('api_ventas_alertas_v1',
+      { p_desde: f.p_desde || null, p_hasta: f.p_hasta || null, p_tope: 15 }).then(function(r){
+    var d = r && r.data;
+    DVA.cargando = false; DVA.datos = d || null;
+    DVA.error = (!d || d.ok === false) ? ((d && d.error) || 'la base no devolvió nada') : '';
+    if (DV.pestania === 'general') dvRepintar();
+  }).catch(function(e){
+    DVA.cargando = false; DVA.error = String((e && e.message) || e);
     if (DV.pestania === 'general') dvRepintar();
   });
 }

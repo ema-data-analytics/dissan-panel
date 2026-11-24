@@ -255,3 +255,48 @@
   border-radius:999px; background:var(--contenido,#0B2740); color:#E4572E;
   border:1px solid var(--borde,rgba(255,255,255,.08)); font-size:11.5px;
   overflow-wrap:anywhere; }
+
+/* --- LO QUE HAY QUE MIRAR: la banda de arriba de todo ---   24/11/2026
+   Pedido textual: "MOSTRA INFORMACION QUE LES SEA IMPACTANTE A LA SIMPLE
+   VISTA... INFO PARA QUE PUEDAN TOMAR DESICIONES". Son tres tarjetas con la
+   plata adelante y, al tocarlas, los renglones con nombre y apellido.
+   Las variables son TODAS de la casa: el 23/11 use cinco que no existen
+   (--panel, --tinta, --linea, --acento, --fondo-2) y las cajas salieron
+   BLANCAS en un panel oscuro. La puerta 23 ahora lo corta, pero la regla es
+   no inventarlas. */
+#dvInforme .dv-al-grid{ display:grid; gap:10px; margin:0 0 14px;
+  grid-template-columns:repeat(auto-fit, minmax(min(100%, 270px), 1fr)); }
+
+/* hereda de .dv-mas-b el plegado y el cursor; aca pasa a ser una TARJETA */
+#dvInforme .dv-al{ display:flex; flex-direction:column; align-items:flex-start;
+  text-align:left; width:100%; min-width:0; padding:13px 15px;
+  background:var(--caja,#123252); border:1px solid var(--borde,rgba(255,255,255,.08));
+  border-left:3px solid #E4572E; border-radius:9px;
+  color:var(--texto,#F2F5F3); font-weight:400; white-space:normal; }
+#dvInforme .dv-al:hover{ border-color:rgba(255,255,255,.32);
+  border-left-color:#E4572E; }
+#dvInforme .dv-al.abierta{ border-color:rgba(255,255,255,.32);
+  border-left-color:#E4572E; }
+
+#dvInforme .dv-al-rot{ font-size:10.5px; letter-spacing:.07em; text-transform:uppercase;
+  color:var(--gris,#9FB4C4); font-weight:600; line-height:1.5;
+  overflow-wrap:anywhere; }
+/* LA PLATA NUNCA SE CORTA (14/10): envuelve, y el que no entra baja de renglon */
+#dvInforme .dv-al-plata{ font-size:23px; font-weight:700; margin-top:5px;
+  font-variant-numeric:tabular-nums; overflow-wrap:anywhere; line-height:1.2; }
+#dvInforme .dv-al-que{ font-size:11.5px; color:var(--gris,#9FB4C4); margin-top:2px;
+  overflow-wrap:anywhere; }
+#dvInforme .dv-al-det{ font-size:12px; color:var(--texto,#F2F5F3); margin-top:7px;
+  line-height:1.6; overflow-wrap:anywhere; }
+#dvInforme .dv-al-ver{ font-size:11.5px; font-weight:600; margin-top:9px;
+  color:var(--verde,#08A57A); overflow-wrap:anywhere; }
+
+/* LAS BUENAS PRIMERO Y EN VERDE.                             24/11/2026
+   Dicho por el usuario: «es solo mostrar lo que esta mal... se necesita
+   mostrar todo lo que esta bien». Donde empujar va ANTES que donde tapar. */
+#dvInforme .dv-al-sub{ font-size:10.5px; letter-spacing:.08em;
+  text-transform:uppercase; color:var(--gris,#9FB4C4); font-weight:600;
+  margin:4px 0 6px 2px; overflow-wrap:anywhere; }
+#dvInforme .dv-al.buena{ border-left-color:var(--verde,#08A57A); }
+#dvInforme .dv-al.buena:hover{ border-left-color:var(--verde,#08A57A); }
+#dvInforme .dv-al.buena.abierta{ border-left-color:var(--verde,#08A57A); }
