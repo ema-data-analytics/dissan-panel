@@ -62,7 +62,24 @@ var DV = { datos: null, cargando: false, pestania: 'general', tope: 12, abierto:
 var DV_PESTANIAS = [
   { id:'general',   rot:'General',          plural:'',                   nota:'la foto del período' },
   { id:'zona',      rot:'Provincia',        plural:'Provincias',         nota:'la zona de Tango, la de tu Excel' },
+  /* PROVINCIA FISCAL SE RETIRA DE LA PANTALLA.                 24/11/2026
+     MEDIDO EN LA HOJA RESUMEN DE SU EXCEL, que es lo que yo dije replicar y
+     NUNCA HABIA ABIERTO: tiene DOS tablas dinamicas —una con «Razon social»
+     en las filas y otra con «Provincia» en las filas por «año»— y TRES
+     segmentadores: `Provincia`, `Provincia` (el de la otra tabla) y
+     `PROVEEDOR (Adic. Articulo)`. Cero filtros de pagina. O sea que la unica
+     provincia que el mira es la ZONA de Tango (gva05), la que en esta
+     pantalla se llama «Provincia».
+     «Provincia fiscal» —el domicilio del cliente ante AFIP, gva14 -> gva18—
+     la agregue yo. NO ESTA EN SU EXCEL, y las dos no son lo mismo: medido,
+     de 264 clientes 53 caen en una distinta. Dos tarjetas que dicen
+     «provincia» y dan numeros distintos es una confusion que yo invente.
+     NO SE BORRA NADA: la base la sigue devolviendo y `p_provincias` se sigue
+     mandando SIEMPRE con su array vacio —una envoltura pasa todos los
+     argumentos (16/11)—, asi que la firma de la funcion no cambia y volver a
+     mostrarla es descomentar este renglon.
   { id:'provincia', rot:'Provincia fiscal', plural:'Provincias fiscales',nota:'el domicilio del cliente' },
+  */
   { id:'proveedor', rot:'Proveedor',        plural:'Proveedores',        nota:'del artículo' },
   { id:'linea',     rot:'Línea',            plural:'Líneas',             nota:'del artículo' },
   { id:'cliente',   rot:'Cliente',          plural:'Clientes',           nota:'quién compra' }
@@ -159,7 +176,7 @@ function dvFiltros(){
   return { p_desde: v('dvDesde') || null, p_hasta: v('dvHasta') || null,
            p_tope: Number(v('dvTope') || 12),
            p_zonas:       DV.elegido.zona.slice(),
-           p_provincias:  DV.elegido.provincia.slice(),
+           p_provincias:  (DV.elegido.provincia || []).slice(),  /* se manda SIEMPRE aunque la pestania este retirada: una envoltura pasa todos los argumentos (16/11) */
            p_proveedores: DV.elegido.proveedor.slice(),
            p_lineas:      DV.elegido.linea.slice(),
            p_clientes:    DV.elegido.cliente.slice(),
@@ -879,10 +896,25 @@ function dvMatriz(d, p){
                      : 'Comparar el mismo tramo en todos') + '</button></div>');
   }
 
+  /* DOS COSAS QUE SU EXCEL NO PUEDE CONTESTAR, Y SALEN DE ESTOS MISMOS DATOS.
+     No se pide nada nuevo a la base: se calculan sobre las filas que ya estan
+     en pantalla, asi que no cuestan una llamada ni pueden dar otro numero que
+     el de la tabla de abajo. Las dos aparecen SIEMPRE, y si no hay datos
+     dicen por que (16/11): una seccion que desaparece se lee como «falta
+     algo». */
+  h.push(dvLoQueElExcelNoDice(filas, anios, tG, unAnio, p));
+
   h.push('<div class="db-tb-caja"><table class="db-tb dv-mx">');
   /* dos renglones de encabezado, como el suyo: arriba el año, abajo qué trae */
   if (!unAnio){
-    h.push('<thead><tr><th rowspan="2">' + dvEsc(p.rot) + '</th>');
+    /* LA VARIACION VA SEGUNDA, PEGADA AL NOMBRE, Y NO AL FINAL.  24/11/2026
+       Primero la puse ultima y en la foto se veia el defecto: con tres años la
+       tabla se desliza de costado y la columna nueva —la que mas importa—
+       quedaba fuera de la pantalla. Una cifra que hay que ir a buscar
+       deslizando no existe. */
+    h.push('<thead><tr><th rowspan="2">' + dvEsc(p.rot) + '</th>' +
+           '<th rowspan="2" class="der dv-mx-var">' + dvEsc(anios[anios.length-1]) +
+           ' vs ' + dvEsc(anios[anios.length-2]) + '<small>cuánto cambió</small></th>');
     for (var y = 0; y < anios.length; y++)
       h.push('<th colspan="2" class="der dv-mx-anio">' + dvEsc(anios[y]) +
              '<small>' + dvEsc(dvMesesDe(d, anios[y])) + '</small></th>');
@@ -899,7 +931,8 @@ function dvMatriz(d, p){
   h.push('<tbody>');
   for (var f = 0; f < filas.length; f++){
     var x = filas[f];
-    h.push('<tr><td>' + dvEsc(x.clave) + '</td>');
+    h.push('<tr><td>' + dvEsc(x.clave) + '</td>' +
+           (unAnio ? '' : dvCeldaVariacion(x.a[anios[anios.length-2]], x.a[anios[anios.length-1]])));
     if (!unAnio) for (var c = 0; c < anios.length; c++){
       var va = x.a[anios[c]], tot = tA[anios[c]];
       h.push('<td class="der dv-mx-pct">' +
@@ -909,15 +942,40 @@ function dvMatriz(d, p){
     }
     h.push('<td class="der dv-mx-pct">' + (tG ? dvEsc(dvPct(100 * x.total / tG)) : '—') + '</td>' +
            '<td class="der" ' + (unAnio ? 'data-plata="1"' : 'data-total="1"') + '>' +
-           dvEsc(dvCelda(x.total)) + '</td></tr>');
+           dvEsc(dvCelda(x.total)) + '</td>');
+    h.push('</tr>');
   }
-  h.push('</tbody><tfoot><tr><td><b>Total general</b></td>');
+  h.push('</tbody><tfoot><tr><td><b>Total general</b></td>' +
+         (unAnio ? '' : dvCeldaVariacion(tA[anios[anios.length-2]], tA[anios[anios.length-1]], true)));
   if (!unAnio) for (var t2 = 0; t2 < anios.length; t2++)
     h.push('<td class="der dv-mx-pct"><b>100,0%</b></td>' +
            '<td class="der"><b>' + dvEsc(dvCelda(tA[anios[t2]])) + '</b></td>');
   h.push('<td class="der dv-mx-pct"><b>100,0%</b></td>' +
-         '<td class="der"><b>' + dvEsc(dvCelda(tG)) + '</b></td></tr></tfoot></table></div>');
+         '<td class="der"><b>' + dvEsc(dvCelda(tG)) + '</b></td>');
+  h.push('</tr></tfoot></table></div>');
   return h.join('');
+}
+
+/* LA VARIACION CONTRA EL AÑO ANTERIOR — lo que su Excel no tiene. 24/11/2026
+   Su hoja RESUMEN pone los años uno al lado del otro y hay que restarlos a
+   ojo; aca sale la cuenta hecha. UNA SOLA FUNCION para el cuerpo Y para el
+   pie: dos copias de la misma cuenta se separan con el tiempo (30/10).
+   SIN `data-plata` ni `data-total`: es un PORCENTAJE, no una parte del total
+   del renglon — la cagada del 20/11 en la grilla de al lado.
+   Y si el año anterior no tiene nada NO se divide por cero: se declara
+   «nuevo», en vez de inventar un infinito. */
+function dvCeldaVariacion(antes, ahora, negrita){
+  var a = Number(antes) || 0, b = Number(ahora) || 0, txt, cls = '';
+  if (!antes && !ahora)      txt = '—';
+  else if (!antes)           { txt = 'nuevo';   cls = ' dv-sube'; }
+  else if (!ahora)           { txt = 'sin venta'; cls = ' dv-baja'; }
+  else {
+    var v = 100 * (b - a) / Math.abs(a);
+    txt = (v > 0 ? '+' : '') + dvPct(v);
+    cls = v > 0 ? ' dv-sube' : (v < 0 ? ' dv-baja' : '');
+  }
+  return '<td class="der dv-mx-var' + cls + '" data-no-baja-plata="1">' +
+         (negrita ? '<b>' + dvEsc(txt) + '</b>' : dvEsc(txt)) + '</td>';
 }
 
 /* la tabla completa del corte, que solo se pinta si se la pide */
@@ -1181,3 +1239,65 @@ document.addEventListener('DOMContentLoaded', function(){
     dvCargar();
   });
 });
+
+
+/* LO QUE EL EXCEL NO DICE: la concentracion y los que se cayeron.  24/11/2026
+   ===========================================================================
+   Su hoja RESUMEN contesta «cuanto vendimos y a quien». Estas dos contestan
+   «cuanto dependemos de pocos» y «por donde se nos fue la plata», que son las
+   dos preguntas que un Excel con dos tablas dinamicas no puede responder sin
+   que alguien se siente a restar a mano.
+
+   LAS DOS SE CALCULAN SOBRE `filas`, que es lo que la tabla de abajo pinta:
+   no pueden dar un numero distinto del que se ve. */
+function dvLoQueElExcelNoDice(filas, anios, tG, unAnio, p){
+  if (!filas || !filas.length)
+    return '<div class="dv-insight">Sin renglones en este corte, así que no hay ' +
+           'concentración ni caídas para medir.</div>';
+
+  /* 1) CONCENTRACION: cuantos hacen el 80%. `filas` ya viene de mayor a menor. */
+  var acum = 0, cuantos = 0;
+  for (var i = 0; i < filas.length && tG > 0; i++){
+    acum += Number(filas[i].total) || 0; cuantos++;
+    if (acum >= tG * 0.8) break;
+  }
+  var conc = tG > 0
+    ? '<b>' + dvNum(cuantos) + ' de ' + dvNum(filas.length) + '</b> hacen el <b>80%</b>' +
+      ' (' + dvPct(100 * cuantos / filas.length) + ' de los ' + dvEsc(p.plural.toLowerCase()) + ')'
+    : 'sin ventas en el período, no se puede medir la concentración';
+
+  /* 2) LOS QUE MAS CAYERON, en PESOS y no en porcentaje: una caida del 90%
+        sobre $1.000 no es noticia y una del 12% sobre $800 M si. Se declara
+        cuando no se puede medir, en vez de no mostrar nada. */
+  var caida = '';
+  if (unAnio || anios.length < 2){
+    caida = 'Con un solo año a la vista no hay contra qué comparar: ampliá el ' +
+            'rango o apretá «Comparar el mismo tramo».';
+  } else {
+    var ant = anios[anios.length-2], ult = anios[anios.length-1], bajas = [];
+    for (var f = 0; f < filas.length; f++){
+      var a0 = Number(filas[f].a[ant]) || 0, a1 = Number(filas[f].a[ult]) || 0;
+      if (a0 > 0 && a1 < a0) bajas.push({ k: filas[f].clave, dif: a1 - a0,
+                                          pct: 100 * (a1 - a0) / a0 });
+    }
+    bajas.sort(function(x, y){ return x.dif - y.dif; });
+    if (!bajas.length){
+      caida = '<b>Ninguno</b> vendió menos en ' + dvEsc(ult) + ' que en ' +
+              dvEsc(ant) + '. Es una buena noticia y por eso está escrita.';
+    } else {
+      var tot = 0; for (var b2 = 0; b2 < bajas.length; b2++) tot += bajas[b2].dif;
+      var top = bajas.slice(0, 3).map(function(z){
+        return '<span class="dv-chip-baja">' + dvEsc(z.k) + ' ' +
+               dvEsc(dvCelda(Math.round(z.dif))) + ' (' + dvEsc(dvPct(z.pct)) + ')</span>';
+      }).join(' ');
+      caida = '<b>' + dvNum(bajas.length) + '</b> vendieron menos que en ' + dvEsc(ant) +
+              ', por <b>' + dvEsc(dvCelda(Math.round(tot))) + '</b> entre todos. ' +
+              'Los tres más grandes: ' + top;
+    }
+  }
+
+  return '<div class="dv-insight">' +
+         '<div><span class="dv-insight-r">Concentración</span> ' + conc + '</div>' +
+         '<div><span class="dv-insight-r">Los que cayeron</span> ' + caida + '</div>' +
+         '</div>';
+}

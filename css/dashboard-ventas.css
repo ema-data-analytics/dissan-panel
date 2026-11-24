@@ -236,3 +236,22 @@
   display:block; font-size:10px; font-weight:400; letter-spacing:0;
   text-transform:none; color:var(--gris,#9FB4C4); margin-top:1px;
 }
+
+/* LA VARIACION CONTRA EL AÑO ANTERIOR.                           24/11/2026
+   Lo que su Excel no tiene: su hoja RESUMEN pone los años uno al lado del otro
+   y hay que restarlos a ojo. Los colores salen de las variables de la casa
+   -ninguna inventada, que es la cagada del 23/11- y el rojo del tema. */
+#dvInforme .dv-mx-var{ white-space:nowrap; font-variant-numeric:tabular-nums; }
+#dvInforme .dv-mx-var small{ display:block; font-weight:400; font-size:10px;
+  color:var(--gris,#9FB4C4); }
+#dvInforme .dv-sube{ color:var(--verde,#08A57A); }
+#dvInforme .dv-baja{ color:#E4572E; }
+#dvInforme .dv-insight{ margin:10px 0 6px; padding:10px 12px; border-radius:8px;
+  background:var(--caja,#123252); border:1px solid var(--borde,rgba(255,255,255,.08));
+  color:var(--texto,#F2F5F3); font-size:12.5px; line-height:1.7; min-width:0; }
+#dvInforme .dv-insight-r{ display:inline-block; min-width:118px; font-size:11px;
+  letter-spacing:.04em; text-transform:uppercase; color:var(--gris,#9FB4C4); }
+#dvInforme .dv-chip-baja{ display:inline-block; margin:2px 4px 0 0; padding:1px 7px;
+  border-radius:999px; background:var(--contenido,#0B2740); color:#E4572E;
+  border:1px solid var(--borde,rgba(255,255,255,.08)); font-size:11.5px;
+  overflow-wrap:anywhere; }
