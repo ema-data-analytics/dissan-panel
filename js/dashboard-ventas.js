@@ -736,20 +736,135 @@ function dvCorte(d, p){
   h.push(dvKpi(p.plural, dvNum(tot.length), 'en el período'));
   h.push('</div>');
 
-  var top = tot.slice(0, DV.tope);
-  h.push('<div class="dv-grafs uno"><div><div class="dv-graf-t">Facturado · los ' +
-         top.length + (tot.length > top.length ? ' más grandes de ' + dvNum(tot.length) : '') +
-         '</div>' +
-    dbGrafBarras(top, 'clave', 'venta_universo',
-      function(f){ return f.clave + ': ' + dvPesos(f.venta_universo) +
-                          (f.margen_pct === null || f.margen_pct === undefined
-                            ? ' · sin costo medido' : ' · margen ' + dvPct(f.margen_pct)); },
-      function(f){ return dvMillones(f.venta_universo); }, '', 165, 26) + '</div></div>');
+  /* LA TABLA DE SU RESUMEN VA ABIERTA, NO PLEGADA. Es lo que viene a ver:
+     hacerle apretar un botón para llegar a lo que pidió es esconderlo. */
+  h.push(dvMatriz(d, p));
 
-  h.push(dvPlegable('corte-' + id, 'la tabla completa', dvNum(tot.length) + ' ' + p.plural.toLowerCase(),
+  /* EL GRÁFICO DE BARRAS SE FUE DE ACÁ. Decía lo mismo que la columna
+     «% Particip» de la tabla, uno debajo del otro, y era la mitad de lo que
+     hacía que la pantalla se leyera como un volcado. Sigue en General, que
+     es «la foto del período» y ahí sí agrega. */
+
+  h.push(dvPlegable('corte-' + id, 'con el costo y el margen de cada uno',
+                    dvNum(tot.length) + ' ' + p.plural.toLowerCase(),
                     function(){ return dvCorteTabla(p, tot, vU, vM, cO, mA); }));
   h.push(dvPlegable('mes-' + id, 'el mes a mes', '',
                     function(){ return dvCorteMesAMes(d, p, serie); }));
+  return h.join('');
+}
+
+/* =====================================================================
+   LA MATRIZ DE SU HOJA RESUMEN — dimensión × año.          23/11/2026
+   =====================================================================
+   ABRÍ EL EXCEL QUE ME PASÓ, cosa que no había hecho en tres días, y su
+   hoja RESUMEN son DOS tablas, no las doce columnas que yo había puesto:
+
+     1) PROVINCIA × AÑO, cada año con «% Particip» y «Neto Facturado»,
+        más «Total % Particip» y «Total Neto Facturado» al final.
+     2) CLIENTE × neto, la lista ENTERA de 114 de mayor a menor.
+
+   La segunda es la primera con un solo año, así que esta tabla cubre las
+   dos. Medido contra su hoja al corte 07/10/2026: **114 de 114 presentes,
+   0 que falten, 0 de más, la peor diferencia $0,10** y el total $0,19 sobre
+   $5.899 millones. Y la tabla de provincias: las 12 celdas entre −$0,05 y
+   +$0,29, con el total general $0,60 sobre $14.045 millones.
+
+   POR QUÉ ESTA Y NO LA QUE YO TENÍA. Su reclamo, mirando mi captura, fue
+   «TE PARECE QUE VER UNA PANTALLA ASI, ESTA COHERENTE, SENCILLA???». Tenía
+   razón: 12 columnas, la tabla cortada a la derecha, los nombres partidos en
+   tres renglones y una columna de notas llena de guiones. Con tres años son
+   NUEVE columnas y con uno son CINCO. Entra, y es lo que él ya lee.
+
+   EL % NO VIENE DE LA BASE: se calcula acá como el neto de la fila sobre el
+   total de ESE año. Mandarlo sería mandar dos veces el mismo número y dejar
+   que las dos copias se separen con el tiempo (30/10, `listas`).
+
+   `data-plata` EN LOS NETOS DE CADA AÑO Y `data-total` EN EL TOTAL: acá sí
+   son partes que suman el total de la fila —al revés de la grilla del 20/11,
+   donde «Precio unitario» no lo era—, así que la puerta del archivo bajado
+   controla sola que 2024 + 2025 + 2026 dé el total, renglón por renglón. */
+function dvMatriz(d, p){
+  var m = (d[p.id] || {}).matriz || [], h = [];
+  if (!m.length){
+    return '<div class="db-sec">' + dvEsc(p.rot) + ' × año' +
+           '<small>la tabla de tu RESUMEN</small></div>' +
+           '<div class="db-pie"><b>Ninguno.</b> No hay ventas con lo que está ' +
+           'elegido, así que la tabla no tiene filas.</div>';
+  }
+
+  /* pivotar: una fila por clave, una columna por año */
+  var anios = [], porClave = {};
+  for (var i = 0; i < m.length; i++){
+    var r = m[i], a = String(r.anio);
+    if (anios.indexOf(a) < 0) anios.push(a);
+    if (!porClave[r.clave]) porClave[r.clave] = { clave: r.clave, a: {}, total: 0 };
+    porClave[r.clave].a[a] = Number(r.neto) || 0;
+    porClave[r.clave].total += Number(r.neto) || 0;
+  }
+  anios.sort();
+  var filas = [];
+  for (var k in porClave) if (Object.prototype.hasOwnProperty.call(porClave, k)){
+    porClave[k].total = Math.round(porClave[k].total * 100) / 100;
+    filas.push(porClave[k]);
+  }
+  /* DE MAYOR A MENOR POR EL TOTAL, que es como él ordenó la tabla que de
+     verdad usa (la de los 114 clientes). Su tabla de provincias está
+     alfabética, pero son tres filas y el orden no cambia nada. */
+  filas.sort(function(x, y){ return y.total - x.total; });
+
+  var tA = {}, tG = 0;
+  for (var j = 0; j < filas.length; j++){
+    for (var z = 0; z < anios.length; z++){
+      var an = anios[z];
+      tA[an] = Math.round(((tA[an] || 0) + (filas[j].a[an] || 0)) * 100) / 100;
+    }
+    tG += filas[j].total;
+  }
+  tG = Math.round(tG * 100) / 100;
+  var unAnio = anios.length === 1;
+
+  h.push('<div class="db-sec">' + dvEsc(p.rot) + (unAnio ? '' : ' × año') +
+         '<small>Neto Facturado = facturas − notas de crédito + notas de débito. ' +
+         'Es la tabla de tu hoja RESUMEN, con ' + dvNum(filas.length) + ' ' +
+         dvEsc(p.plural.toLowerCase()) + ' de mayor a menor.</small></div>');
+
+  h.push('<div class="db-tb-caja"><table class="db-tb dv-mx">');
+  /* dos renglones de encabezado, como el suyo: arriba el año, abajo qué trae */
+  if (!unAnio){
+    h.push('<thead><tr><th rowspan="2">' + dvEsc(p.rot) + '</th>');
+    for (var y = 0; y < anios.length; y++)
+      h.push('<th colspan="2" class="der dv-mx-anio">' + dvEsc(anios[y]) + '</th>');
+    h.push('<th colspan="2" class="der dv-mx-anio dv-mx-tot">Total</th></tr><tr>');
+    for (var y2 = 0; y2 <= anios.length; y2++)
+      h.push('<th class="der">% Particip</th><th class="der">Neto Facturado</th>');
+    h.push('</tr></thead>');
+  } else {
+    h.push('<thead><tr><th>' + dvEsc(p.rot) + '</th>' +
+           '<th class="der">% Particip</th><th class="der">Neto Facturado</th>' +
+           '</tr></thead>');
+  }
+
+  h.push('<tbody>');
+  for (var f = 0; f < filas.length; f++){
+    var x = filas[f];
+    h.push('<tr><td>' + dvEsc(x.clave) + '</td>');
+    if (!unAnio) for (var c = 0; c < anios.length; c++){
+      var va = x.a[anios[c]], tot = tA[anios[c]];
+      h.push('<td class="der dv-mx-pct">' +
+             (va === undefined || !tot ? '—' : dvEsc(dvPct(100 * va / tot))) + '</td>' +
+             '<td class="der" data-plata="1">' +
+             (va === undefined ? '—' : dvEsc(dvCelda(Math.round(va * 100) / 100))) + '</td>');
+    }
+    h.push('<td class="der dv-mx-pct">' + (tG ? dvEsc(dvPct(100 * x.total / tG)) : '—') + '</td>' +
+           '<td class="der" ' + (unAnio ? 'data-plata="1"' : 'data-total="1"') + '>' +
+           dvEsc(dvCelda(x.total)) + '</td></tr>');
+  }
+  h.push('</tbody><tfoot><tr><td><b>Total general</b></td>');
+  if (!unAnio) for (var t2 = 0; t2 < anios.length; t2++)
+    h.push('<td class="der dv-mx-pct"><b>100,0%</b></td>' +
+           '<td class="der"><b>' + dvEsc(dvCelda(tA[anios[t2]])) + '</b></td>');
+  h.push('<td class="der dv-mx-pct"><b>100,0%</b></td>' +
+         '<td class="der"><b>' + dvEsc(dvCelda(tG)) + '</b></td></tr></tfoot></table></div>');
   return h.join('');
 }
 

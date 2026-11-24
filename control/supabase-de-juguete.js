@@ -578,11 +578,28 @@
     r.resumen = conNotas(Object.assign({}, b.resumen), b.resumen.venta_universo);
     r.meses = b.meses.map(function(m){
       return conNotas(Object.assign({}, m), m.venta_universo); });
+    /* LA MATRIZ clave x anio, que es la tabla de su hoja RESUMEN.  23/11/2026
+       Se reparte el neto de cada clave entre los MISMOS tres anios que ya usa
+       el bloque `anios`, con el ultimo absorbiendo el redondeo para que las
+       filas SUMEN su total. Sin esto la pantalla pintaria «Ninguno» y ninguna
+       puerta podria verlo — el golpe del 10/11 con el Tablero, textual. */
     for (var dd = 0; dd < 5; dd++){
       var cl = ['zona','provincia','proveedor','linea','cliente'][dd];
-      r[cl] = { serie: b[cl].serie,
-                totales: b[cl].totales.map(function(t){
-                  return conNotas(Object.assign({}, t), t.venta_universo); }) };
+      var tt = b[cl].totales.map(function(t){
+                 return conNotas(Object.assign({}, t), t.venta_universo); });
+      var mx = [];
+      tt.forEach(function(t){
+        var ac = 0;
+        anios.forEach(function(x, i){
+          var ult = (i === anios.length - 1);
+          var v = ult ? Math.round((t.neto - ac) * 100) / 100
+                      : Math.round(t.neto * pesoA[i] / sumaA * 100) / 100;
+          ac = Math.round((ac + v) * 100) / 100;
+          mx.push({ clave: t.clave, anio: x.anio,
+                    facturado: v, notas: 0, neto: v });
+        });
+      });
+      r[cl] = { serie: b[cl].serie, totales: tt, matriz: mx };
     }
     r.opciones = opciones;
     r.netas_por_que = null;
@@ -614,6 +631,12 @@
        caso que la base no puede producir. */
     r.resumen = Object.assign({}, b.resumen,
       { notas: 0, notas_credito: 0, notas_debito: 0, neto: 0 });
+    /* y los cinco cortes con la matriz VACIA: la tabla tiene que decir
+       «Ninguno» con el motivo, no esfumarse (16/11). */
+    for (var dv = 0; dv < 5; dv++){
+      var cv = ['zona','provincia','proveedor','linea','cliente'][dv];
+      r[cv] = Object.assign({}, b[cv] || {}, { matriz: [] });
+    }
     r.opciones = { zona: [], provincia: [], proveedor: [], linea: [], cliente: [] };
     r.netas_por_que = null;
     r.elegido = { zona: [], provincia: [], proveedor: [], linea: [], cliente: [] };

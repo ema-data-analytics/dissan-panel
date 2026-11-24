@@ -176,3 +176,20 @@
   font:inherit; font-size:12px; padding:4px 11px; cursor:pointer;
 }
 #dvInforme .dv-limpiar:hover{ border-color:var(--verde,#08A57A); color:var(--verde2,#0BC492); }
+
+/* LA MATRIZ DE SU RESUMEN                                     23/11/2026
+   Dos renglones de encabezado, como su hoja: arriba el año, abajo qué trae.
+   El nombre de la fila NO se parte en tres renglones —en la captura que me
+   mandó, «HOSPITAL HUMBERTO J NOTTI» ocupaba tres y 30 clientes eran una
+   página entera de scroll—. */
+#dvInforme .dv-mx th.dv-mx-anio{
+  text-align:center; border-bottom:1px solid var(--borde,rgba(255,255,255,.08));
+  font-size:12px; letter-spacing:.04em;
+}
+#dvInforme .dv-mx th.dv-mx-tot{ color:var(--verde2,#0BC492); }
+#dvInforme .dv-mx td:first-child{
+  white-space:nowrap; max-width:290px; overflow:hidden; text-overflow:ellipsis;
+}
+/* el % va más apagado que la plata: la plata es el dato, el % es la lectura */
+#dvInforme .dv-mx .dv-mx-pct{ color:var(--gris,#9FB4C4); font-variant-numeric:tabular-nums; }
+#dvInforme .dv-mx tfoot td{ border-top:2px solid var(--borde,rgba(255,255,255,.14)); }
