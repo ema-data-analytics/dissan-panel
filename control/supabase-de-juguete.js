@@ -582,6 +582,69 @@
      con muchos decimales, cantidades grandes) porque eso es lo que la puerta
      22 tiene que poder romper: el 24/11 la puerta corrio limpia porque el
      juguete tenia nombres de 8 letras y el caso que importa no existia. */
+  /* EL TIMON: el sello de control de cada cifra.             24/11/2026
+     Las FORMAS son las de verdad -dos fuentes largas, dos valores grandes,
+     una diferencia de centavos- porque eso es lo que la puerta 22 tiene que
+     poder romper. Los nombres de las identidades si son los reales: son
+     nombres de CONTROLES del proyecto, no datos de DISSAN. */
+  RPC['api_ventas_sellos_v1'] = {
+    ok: true,
+    timon: { identidades: 104, verde: 102, ambar: 2, rojo: 0,
+             cuando: '2026-11-24T15:18:59Z', horas: 4.4 },
+    como_se_lee: 'Cada cifra de este tablero se compara contra una fuente que NO es la ' +
+      'que la calcula. El sello dice contra qué, cuánto dio cada lado y cuándo se midió.',
+    cifras: {
+      facturado: [
+        { identidad:'ventas_vs_contabilidad', contra_que:'la contabilidad de DISSAN',
+          nombre:'Lo facturado contra la contabilidad de DISSAN',
+          que_prueba:'Que lo facturado cierra contra la CONTABILIDAD de DISSAN: las cuentas 411001/411002/411003 de los asientos de Tango.',
+          fuente_a:'vista_margen_v2_oc', fuente_b:'asiento_gv, cuentas 411001/411002/411003',
+          valor_a:16786499034.57, valor_b:16786498819.49, diferencia:215.08, unidad:'pesos',
+          semaforo:'verde', horas:7.3 },
+        { identidad:'margen_denominador', contra_que:'la suma de todas sus partes',
+          nombre:'El denominador del margen: las partes dan el todo',
+          que_prueba:'Que el facturado del tablero es EXACTAMENTE la suma de sus partes: lo que tiene costo medido, mas la consignacion, mas el resto.',
+          fuente_a:'facturado total del anio', fuente_b:'medido + consignacion + resto',
+          valor_a:7445554383.01, valor_b:7445554383.01, diferencia:0, unidad:'pesos',
+          semaforo:'verde', horas:7.3 }
+      ],
+      neto: [
+        { identidad:'ventas_netas_anio_dos_rutas', contra_que:'un segundo cálculo independiente',
+          nombre:'La venta neta del anio, por dos caminos distintos',
+          que_prueba:'Que la venta neta da lo mismo por DOS caminos que no comparten una sola linea de codigo.',
+          fuente_a:'ema.ventas_netas (el calculo del subdiario de IVA, que cierra contra la cuenta 214005)',
+          fuente_b:'gva12.importe_gr + gva12.importe_ex, con el signo que da gva15.clase_operacion',
+          valor_a:7362666822.50, valor_b:7362666821.52, diferencia:0.98, unidad:'pesos',
+          semaforo:'verde', horas:7.3 }
+      ],
+      margen: [
+        { identidad:'costo_oc_vs_factura_proveedor', contra_que:'lo que el proveedor facturó de verdad',
+          nombre:'El costo que publica el tablero contra la factura del proveedor',
+          que_prueba:'Que el costo que publica el tablero es el que el PROVEEDOR facturo de verdad, renglon por renglon.',
+          fuente_a:'el costo que PUBLICA el tablero (con la cuarentena aplicada), renglon por renglon',
+          fuente_b:'cpa46 + cpa04: lo que el proveedor facturo de verdad, pasado a pesos',
+          valor_a:0, valor_b:0, diferencia:0, unidad:'renglones',
+          semaforo:'verde', horas:7.3 }
+      ],
+      margen_pct: [
+        { identidad:'margen_denominador', contra_que:'la suma de todas sus partes',
+          nombre:'Sobre que denominador se calcula el porcentaje',
+          que_prueba:'Que el facturado total es igual a lo medido mas la consignacion mas el resto.',
+          fuente_a:'facturado total del anio', fuente_b:'medido + consignacion + resto',
+          valor_a:7445554383.01, valor_b:7445554383.01, diferencia:0, unidad:'pesos',
+          semaforo:'verde', horas:7.3 }
+      ]
+    }
+  };
+  /* EL CASO VACIO: ninguna cifra tiene control. La pantalla NO se calla: cada
+     tarjeta dice «sin control independiente todavia» (16/11). */
+  RPC['api_ventas_sellos_v1_vacia'] = {
+    ok: true,
+    timon: { identidades: 0, verde: 0, ambar: 0, rojo: 0, cuando: null, horas: 0 },
+    como_se_lee: 'Ninguna cifra tiene control independiente todavia.',
+    cifras: {}
+  };
+
   RPC['api_ventas_alertas_v1'] = {
     ok: true, desde: '2026-01-01', hasta: '2026-12-31',
     facturado: 7445554383.01, cobertura_pct: 74.99, margen_general_pct: 42.59,

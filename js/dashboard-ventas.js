@@ -143,10 +143,138 @@ function dvMes(s){
   var M = ['','ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
   return M[Number(p[1])] + ' ' + p[0];
 }
-function dvKpi(rot, val, nota){
+function dvKpi(rot, val, nota, cifra){
   return '<div class="dv-kpi"><div class="dv-kpi-t">' + dvEsc(rot) + '</div>' +
          '<div class="dv-kpi-v">' + dvEsc(val) + '</div>' +
-         (nota ? '<div class="dv-kpi-n">' + dvEsc(nota) + '</div>' : '') + '</div>';
+         (nota ? '<div class="dv-kpi-n">' + dvEsc(nota) + '</div>' : '') +
+         (cifra ? dvSello(cifra) : '') + '</div>';
+}
+
+/* ===========================================================================
+   EL TIMON ADENTRO DE CADA NUMERO.                           24/11/2026
+   ===========================================================================
+   Pedido textual: «que use la innovacion que hicimos, el timon. de ver el
+   numero final, y saber que lo controlamos bien».
+
+   Todos los tableros del mercado muestran un numero. Este muestra el numero Y
+   CONTRA QUE LO CONTROLAMOS. El proyecto tiene 104 identidades que comparan
+   cada cifra publicada contra una fuente que NO es la que la calcula, corren
+   solas todas las noches, y hasta hoy el dashboard no las mostraba.
+
+   EL SELLO NO LO ESCRIBO YO: sale de `ema.identidad_corrida`, que escribe el
+   refresco nocturno. Si una identidad se pone en rojo esta noche, maniana la
+   cifra sale en rojo sola, sin que nadie toque una linea.
+
+   Y UNA CIFRA SIN IDENTIDAD NO SE ESCONDE: sale en gris diciendo que todavia
+   no tiene control independiente. Es la regla del 16/11 —una seccion que
+   desaparece se lee como «falta algo»— aplicada al control mismo.          */
+var DVS = { datos: null, cargando: false, error: '' };
+
+function dvSello(cifra){
+  if (DVS.error)  return '';
+  if (!DVS.datos) { dvSellosPedir(); return ''; }
+  var ss = (DVS.datos.cifras || {})[cifra];
+  if (!ss || !ss.length)
+    return '<div class="dv-sello sin"><span class="dv-sello-p"></span>' +
+           'sin control independiente todavía</div>';
+
+  /* EL PEOR MANDA: si una de las identidades que controlan esta cifra esta en
+     rojo, la cifra esta en rojo. Un verde promediado taparia el unico rojo. */
+  var peor = 'verde', i;
+  for (i = 0; i < ss.length; i++){
+    if (ss[i].semaforo === 'rojo')  { peor = 'rojo';  break; }
+    if (ss[i].semaforo === 'ambar') { peor = 'ambar'; }
+  }
+  var s = ss[0];
+  var dif = Math.abs(Number(s.diferencia) || 0);
+  var frase = (s.unidad === 'pesos')
+    ? (dif < 0.005 ? 'sin un centavo de diferencia' : 'difiere ' + dvCelda(dif))
+    : (dif < 0.5   ? 'exacto'                        : 'difiere ' + dvNum(dif) + ' ' + dvEsc(s.unidad));
+
+  return '<button type="button" class="dv-sello ' + peor + ' dv-mas-b" ' +
+         'data-plegar="sello_' + dvEsc(cifra) + '">' +
+         '<span class="dv-sello-p"></span>' +
+         'controlado contra ' + dvEsc(s.contra_que || dvFuenteCorta(s.fuente_b)) + ' · ' + dvEsc(frase) +
+         (ss.length > 1 ? ' · +' + (ss.length - 1) : '') +
+         '</button>';
+  /* EL DETALLE NO VA ADENTRO DE LA TARJETA: son 190 px y parte las palabras
+     al medio -«vista_mar / gen_v2_oc»-, que es un rotulo cortado con otro
+     nombre (14/11). Va a lo ancho, debajo de la fila, y lo pinta
+     dvSelloAbierto() desde dvGeneral. */
+}
+
+/* el nombre de la fuente, corto para que entre en la tarjeta. NO se recorta
+   con puntos suspensivos: un rotulo cortado es otro rotulo (14/11). Se queda
+   con la parte antes del primer parentesis o coma, que es el nombre. */
+function dvFuenteCorta(f){
+  var t = String(f || '').split(/\s*[(,:]/)[0].trim();
+  return t.length > 46 ? String(f || '').split(/\s+/).slice(0,6).join(' ') : t;
+}
+
+/* el detalle de la cifra que este abierta, a lo ancho de la pantalla */
+function dvSelloAbierto(){
+  if (!DVS.datos) return '';
+  var cs = DVS.datos.cifras || {}, k;
+  for (k in cs){
+    if (!Object.prototype.hasOwnProperty.call(cs, k)) continue;
+    if (DV.abierto['sello_' + k]) return dvSelloDetalle(cs[k]);
+  }
+  return '';
+}
+
+function dvSelloDetalle(ss){
+  var h = ['<div class="dv-sello-det">'];
+  for (var i = 0; i < ss.length; i++){
+    var s = ss[i];
+    h.push('<div class="dv-sello-uno ' + dvEsc(s.semaforo) + '">');
+    h.push('<div class="dv-sello-q">' + dvEsc(s.que_prueba) + '</div>');
+    h.push('<div class="dv-sello-par"><span>' + dvEsc(s.fuente_a) + '</span>' +
+           '<b>' + dvEsc(s.unidad === 'pesos' ? dvCelda(s.valor_a) : dvNum(s.valor_a)) + '</b></div>');
+    h.push('<div class="dv-sello-par"><span>' + dvEsc(s.fuente_b) + '</span>' +
+           '<b>' + dvEsc(s.unidad === 'pesos' ? dvCelda(s.valor_b) : dvNum(s.valor_b)) + '</b></div>');
+    h.push('<div class="dv-sello-par"><span>diferencia</span><b>' +
+           dvEsc(s.unidad === 'pesos' ? dvCelda(s.diferencia)
+                                      : dvNum(s.diferencia) + ' ' + s.unidad) + '</b></div>');
+    h.push('<div class="dv-sello-c">Medido hace ' + dvEsc(dvNum(s.horas)) + ' h · se vuelve a medir ' +
+           'solo todas las noches.</div>');
+    h.push('</div>');
+  }
+  h.push('</div>');
+  return h.join('');
+}
+
+/* LA BANDA DE ARRIBA DE TODO: el estado del timon entero. */
+function dvTimon(){
+  if (DVS.error)  return '';
+  if (!DVS.datos) { dvSellosPedir(); return ''; }
+  var t = (DVS.datos.timon) || {};
+  var n = Number(t.identidades) || 0;
+  if (!n) return '';
+  var color = Number(t.rojo) ? 'rojo' : (Number(t.ambar) ? 'ambar' : 'verde');
+  return '<div class="dv-timon ' + color + '">' +
+         '<span class="dv-timon-r">Ningún número viaja solo</span> ' +
+         '<b>' + dvNum(n) + '</b> controles comparan las cifras de este tablero contra ' +
+         'fuentes que no son las que las calculan — la contabilidad de DISSAN, las cuentas ' +
+         'de IVA de Tango, el maestro de clientes, lo que el proveedor facturó. ' +
+         '<b class="dv-sube">' + dvNum(t.verde) + ' en verde</b>' +
+         (Number(t.ambar) ? ' · <b>' + dvNum(t.ambar) + ' en ámbar</b>' : '') +
+         (Number(t.rojo)  ? ' · <b class="dv-baja">' + dvNum(t.rojo) + ' EN ROJO</b>' : ' · <b>0 en rojo</b>') +
+         '. Medidos hace ' + dvEsc(dvNum(t.horas)) + ' h.' +
+         '</div>';
+}
+
+function dvSellosPedir(){
+  if (DVS.cargando) return;
+  DVS.cargando = true;
+  rpc('api_ventas_sellos_v1', {}).then(function(r){
+    var d = r && r.data;                       /* `rpc` devuelve {data, ms} */
+    DVS.cargando = false; DVS.datos = d || null;
+    DVS.error = (!d || d.ok === false) ? ((d && d.error) || 'la base no devolvió nada') : '';
+    dvRepintar();
+  }).catch(function(e){
+    DVS.cargando = false; DVS.error = String((e && e.message) || e);
+    dvRepintar();
+  });
 }
 
 /* ---------- LO QUE NO SE MIRA, NO SE PINTA ----------        20/11/2026
@@ -611,13 +739,16 @@ function dvGeneral(d){
      Dicho por el usuario: "MOSTRA INFORMACION QUE LES SEA IMPACTANTE A LA
      SIMPLE VISTA... INFO PARA QUE PUEDAN TOMAR DESICIONES". Cuanto se facturo
      ya lo sabe; lo que no ve nadie es donde se esta perdiendo plata. */
+  /* EL TIMON ARRIBA DE TODO: antes de las cifras va contra que se controlan. */
+  h.push(dvTimon());
+
   h.push(dvAlertas());
 
   /* CUATRO TARJETAS. Eran seis y la pantalla no se leia. «Con costo medido» y
      «Costo» viven en la tabla del costo, plegada: el que quiere el reparto lo
      abre, y el que mira el dashboard ve lo que vendio y lo que gano. */
   h.push('<div class="dv-kpis">');
-  h.push(dvKpi('Facturado', dvMillones(s.venta_universo), dvPesos(s.venta_universo)));
+  h.push(dvKpi('Facturado', dvMillones(s.venta_universo), dvPesos(s.venta_universo), 'facturado'));
   /* LA VENTA NETA, QUE ES LA CIFRA DE SU RESUMEN.            23/11/2026
      Medido contra su tabla dinamica al corte 07/10/2026: con el facturado
      BRUTO el dashboard daba $43.835.634,21 de mas en 14 clientes; con el neto
@@ -633,10 +764,11 @@ function dvGeneral(d){
     (nc || nd) ? 'facturado ' + dvMillones(s.venta_universo) +
                  (nc ? ' − N/C ' + dvMillones(nc) : '') +
                  (nd ? ' + N/D ' + dvMillones(nd) : '')
-               : 'no hubo notas de crédito ni de débito en el período'));
-  h.push(dvKpi('Margen', dvMillones(s.margen), dvPesos(s.margen)));
-  h.push(dvKpi('Margen %', dvPct(s.margen_pct), 'sobre lo que tiene costo'));
+               : 'no hubo notas de crédito ni de débito en el período', 'neto'));
+  h.push(dvKpi('Margen', dvMillones(s.margen), dvPesos(s.margen), 'margen'));
+  h.push(dvKpi('Margen %', dvPct(s.margen_pct), 'sobre lo que tiene costo', 'margen_pct'));
   h.push('</div>');
+  h.push(dvSelloAbierto());
 
   /* EL TITULAR VA PEGADO A LAS TARJETAS, NO ADENTRO DEL MES A MES.
      Lo puse ahi primero y no se cargaba nunca: ese bloque esta PLEGADO

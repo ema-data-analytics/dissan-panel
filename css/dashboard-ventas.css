@@ -300,3 +300,55 @@
 #dvInforme .dv-al.buena{ border-left-color:var(--verde,#08A57A); }
 #dvInforme .dv-al.buena:hover{ border-left-color:var(--verde,#08A57A); }
 #dvInforme .dv-al.buena.abierta{ border-left-color:var(--verde,#08A57A); }
+
+/* --- EL TIMON ADENTRO DE CADA NUMERO ---                    24/11/2026
+   «Ningun numero viaja solo». Todos los tableros muestran un numero; este
+   muestra el numero y contra que lo controlamos. El color no lo elijo yo: lo
+   manda el semaforo de la identidad que corrio anoche. */
+#dvInforme .dv-timon{ margin:0 0 14px; padding:11px 14px; border-radius:9px;
+  background:var(--caja,#123252); border:1px solid var(--borde,rgba(255,255,255,.08));
+  border-left:3px solid var(--verde,#08A57A);
+  color:var(--texto,#F2F5F3); font-size:12.5px; line-height:1.7;
+  min-width:0; overflow-wrap:anywhere; }
+#dvInforme .dv-timon.ambar{ border-left-color:#E3B341; }
+#dvInforme .dv-timon.rojo { border-left-color:#E4572E; }
+#dvInforme .dv-timon-r{ display:inline-block; font-size:11px; letter-spacing:.06em;
+  text-transform:uppercase; color:var(--verde,#08A57A); font-weight:700;
+  margin-right:6px; }
+
+/* el sello, abajo de cada tarjeta */
+#dvInforme .dv-sello{ display:flex; align-items:center; gap:6px; width:100%;
+  margin-top:9px; padding:5px 0 0; border:0; border-top:1px solid var(--borde,rgba(255,255,255,.08));
+  background:transparent; color:var(--gris,#9FB4C4); font-size:11px; font-weight:400;
+  text-align:left; cursor:pointer; min-width:0; overflow-wrap:anywhere;
+  white-space:normal; line-height:1.5; }
+#dvInforme .dv-sello:hover{ color:var(--texto,#F2F5F3); }
+#dvInforme .dv-sello.sin{ cursor:default; font-style:italic; }
+#dvInforme .dv-sello-p{ flex:0 0 auto; width:7px; height:7px; border-radius:50%;
+  background:var(--gris,#9FB4C4); }
+#dvInforme .dv-sello.verde .dv-sello-p{ background:var(--verde,#08A57A); }
+#dvInforme .dv-sello.ambar .dv-sello-p{ background:#E3B341; }
+#dvInforme .dv-sello.rojo  .dv-sello-p{ background:#E4572E; }
+
+/* el detalle, cuando se abre: las DOS fuentes y los DOS valores */
+#dvInforme .dv-sello-det{ margin-top:8px; }
+#dvInforme .dv-sello-uno{ padding:9px 11px; margin-top:6px; border-radius:7px;
+  background:var(--contenido,#0B2740); border-left:3px solid var(--verde,#08A57A);
+  min-width:0; }
+#dvInforme .dv-sello-uno.ambar{ border-left-color:#E3B341; }
+#dvInforme .dv-sello-uno.rojo { border-left-color:#E4572E; }
+#dvInforme .dv-sello-q{ font-size:11.5px; color:var(--texto,#F2F5F3); line-height:1.6;
+  margin-bottom:6px; overflow-wrap:anywhere; }
+#dvInforme .dv-sello-par{ display:flex; gap:8px; align-items:baseline;
+  justify-content:space-between; font-size:11px; color:var(--gris,#9FB4C4);
+  padding:2px 0; min-width:0; }
+#dvInforme .dv-sello-par span{ min-width:0; overflow-wrap:anywhere; }
+#dvInforme .dv-sello-par b{ flex:0 0 auto; color:var(--texto,#F2F5F3);
+  font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+#dvInforme .dv-sello-c{ margin-top:6px; font-size:10.5px; color:var(--gris,#9FB4C4);
+  overflow-wrap:anywhere; }
+/* el detalle del sello va a lo ancho, NO adentro de la tarjeta de 190 px:
+   ahi parte las palabras al medio y un rotulo cortado es otro rotulo (14/11) */
+#dvInforme .dv-sello-det{ margin:0 0 14px; display:grid; gap:8px;
+  grid-template-columns:repeat(auto-fit, minmax(min(100%, 420px), 1fr)); }
+#dvInforme .dv-sello-par span{ flex:1 1 auto; }
