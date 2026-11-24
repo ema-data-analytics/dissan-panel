@@ -450,7 +450,7 @@
                  cobertura_renglones_pct: 79.17, cobertura_plata_pct: 60.61 },
       meses: meses,
       zona:      corte(['MENDOZA','SAN LUIS','SAN JUAN'],            [0.71, 0.27]),
-      provincia: corte(['Mza','SAN LUIS','SAN JUAN','Otros'],        [0.63, 0.33, 0.02]),
+      provincia: corte(['MENDOZA','SAN LUIS','SAN JUAN','Otros'],        [0.63, 0.33, 0.02]),
       proveedor: corte(['PROVEEDOR A','PROVEEDOR B','Otros'],        [0.45, 0.30]),
       linea:     corte(['LINEA UNO','LINEA DOS','Otros'],            [0.52, 0.28]),
       cliente:   corte(['CLIENTE UNO','CLIENTE DOS','Otros'],        [0.40, 0.25]),

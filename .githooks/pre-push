@@ -76,6 +76,7 @@ que_mira(){
     "el dictado")               echo "js/ayuda|control/voz" ;;
     "la lectura de listas")     echo "js/listas|^edge/listas|control/listas" ;;
     "la pantalla vacia")        echo "[.]html$|^js/|control/vacio|control/supabase-de-juguete" ;;
+    "los rotulos en pantalla")  echo "[.]html$|^js/|^css/|control/rotulos-todos|control/supabase-de-juguete" ;;
     # SIEMPRE a proposito: esta puerta mide la FUNCION de la base, que no vive
     # en el repositorio. No hay archivo que cambie cuando cambia lo que mide,
     # asi que declarar un patron seria declarar que no la corre nunca.
@@ -236,6 +237,20 @@ correr "la pantalla vacia"  control/vacio.js      node control/vacio.js
 # tenia a que engancharse y desaparecia. Los otros cuatro cortes cerraban de
 # casualidad, que es como se ven los defectos que todavia no mordieron.
 correr "que las partes sumen" control/dashboard-suman.js node control/dashboard-suman.js
+
+# PUERTA 22 — MIRAR LA PANTALLA ENTERA, NO SOLO LAS CIFRAS.      24/11/2026
+# El usuario abrio el dashboard, vio «Mza» en un segmentador y me freno con
+# «cuando te diga PROBAR, SIGNIFICA QUE VEAS TODO». La noche anterior yo habia
+# entregado «0 diferencias, 0 errores» -sobre las CIFRAS-, y las veintiuna
+# puertas miden numeros, botones, archivos y permisos: NINGUNA miraba lo que
+# esta ESCRITO. Lo hice a ojo ese dia, que es lo mismo que no hacerlo, porque a
+# ojo se hace cuando me acuerdo. Recorre las 19 pantallas y las 6 pestanias del
+# dashboard -enumeradas del disco, sin lista escrita a mano-, saca todo el
+# texto visible y corta si algo esta cortado por CSS, si hay undefined/NaN/
+# [object/null pintados o si la pagina scrollea de costado. Declara en cada
+# corrida las pantallas que no pintan nada hasta apretar Calcular: no son un
+# pase, es que no se ejercitaron.
+correr "los rotulos en pantalla" control/rotulos-todos.js node control/rotulos-todos.js
 
 echo ""
 # UNA PUERTA SALTEADA SE DECLARA. No es verde: es que no se ejercito, y eso
