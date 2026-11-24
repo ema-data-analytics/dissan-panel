@@ -627,6 +627,12 @@ function dvGeneral(d){
   h.push(dvKpi('Margen %', dvPct(s.margen_pct), 'sobre lo que tiene costo'));
   h.push('</div>');
 
+  /* EL TITULAR VA PEGADO A LAS TARJETAS, NO ADENTRO DEL MES A MES.
+     Lo puse ahi primero y no se cargaba nunca: ese bloque esta PLEGADO
+     detras de «Ver el mes a mes». Una cifra que cambia la lectura de todo
+     el dashboard no puede estar a dos clics. */
+  h.push(dvPesosConstantes());
+
   /* LAS DOS PANTALLAS DE VENTAS TIENEN QUE PODER PONERSE AL LADO.
      Este dashboard corta sobre el facturado BRUTO —asi es como estan armados
      los cortes por provincia, proveedor, linea y cliente— y ventas.html
@@ -702,6 +708,100 @@ function dvGeneral(d){
                     dvNum((d.anios || []).length) + ' años',
                     function(){ return dvAnioContraAnio(d); }));
   return h.join('');
+}
+
+/* ===========================================================================
+   EL CRECIMIENTO EN PESOS NO ES CRECIMIENTO.                     24/11/2026
+   ===========================================================================
+   MEDIDO: con el mismo tramo del año en los tres años, 2026 crece +11,7%
+   sobre 2025 EN PESOS y CAE -16,9% en pesos de agosto 2026; 2025 crecio
+   +25,3% y cayo -15,5%. DOS AÑOS SEGUIDOS DE CAIDA REAL, y el panel mostraba
+   crecimiento los dos. Es la cifra que mas cambia la lectura de todo el
+   dashboard, y por eso va arriba de todo en la foto del periodo.
+
+   NO SE MEZCLA LO AJUSTADO CON LO QUE NO SE PUEDE AJUSTAR. El IPC del INDEC
+   llega a agosto 2026 y las ventas al 20/11: esos 3 meses y $3.301.943.699
+   NO entran, y la pantalla lo escribe. Mezclarlos mostraria un derrumbe
+   inventado, y con un join comun desapareceran en silencio (13/11).         */
+var DVP = { datos: null, cargando: false, error: '' };
+
+function dvPesosConstantes(){
+  if (DVP.error)  return '<div class="dv-insight">No se pudo medir en pesos constantes: ' +
+                         dvEsc(DVP.error) + '</div>';
+  if (!DVP.datos) { dvPesosPedir(); return ''; }
+  var d = DVP.datos;
+  if (d.se_puede === false)
+    return '<div class="dv-insight"><span class="dv-insight-r">Pesos constantes</span> ' +
+           dvEsc(d.por_que || 'no se puede medir') + '</div>';
+
+  var a = d.anios || [];
+  if (a.length < 2)
+    return '<div class="dv-insight"><span class="dv-insight-r">Pesos constantes</span> ' +
+           'Hace falta más de un año con índice para comparar. ' + dvEsc(d.lo_que_queda_afuera || '') +
+           '</div>';
+
+  var h = [], base = (d.base || {});
+  h.push('<div class="db-sec">En pesos de ' + dvEsc(dvMesLargo(base.mes)) +
+         '<small>' + dvEsc(d.mismo_tramo || '') + ' Índice IPC Nivel General del INDEC. ' +
+         dvPesosAfuera(d) + '</small></div>');
+  h.push('<div class="db-tb-caja"><table class="db-tb"><thead><tr>' +
+         '<th>Año</th><th class="der">Meses</th>' +
+         '<th class="der">Facturado en pesos de cada año</th><th class="der">Creció en pesos</th>' +
+         '<th class="der">En pesos de ' + dvEsc(dvMesLargo(base.mes)) + '</th>' +
+         '<th class="der">Creció de verdad</th></tr></thead><tbody>');
+  for (var i = 0; i < a.length; i++){
+    var x = a[i], p = i ? a[i-1] : null;
+    var vn = p && Number(p.nominal)   ? 100 * (x.nominal   - p.nominal)   / Math.abs(p.nominal)   : null;
+    var vc = p && Number(p.constante) ? 100 * (x.constante - p.constante) / Math.abs(p.constante) : null;
+    h.push('<tr><td>' + dvEsc(x.anio) + '</td>' +
+           '<td class="der">' + dvEsc(x.meses) +
+             (Number(x.meses_sin_indice) ? ' <span class="dv-baja">(' + dvEsc(x.meses_sin_indice) +
+                                           ' sin índice)</span>' : '') + '</td>' +
+           '<td class="der">' + dvEsc(dvCelda(x.nominal)) + '</td>' +
+           '<td class="der' + (vn === null ? '' : (vn >= 0 ? ' dv-sube' : ' dv-baja')) + '">' +
+             (vn === null ? '—' : (vn > 0 ? '+' : '') + dvEsc(dvPct(vn))) + '</td>' +
+           '<td class="der">' + dvEsc(dvCelda(x.constante)) + '</td>' +
+           '<td class="der' + (vc === null ? '' : (vc >= 0 ? ' dv-sube' : ' dv-baja')) + '">' +
+             (vc === null ? '—' : (vc > 0 ? '+' : '') + dvEsc(dvPct(vc))) + '</td></tr>');
+  }
+  h.push('</tbody></table></div>');
+  return h.join('');
+}
+
+/* LO QUE QUEDA AFUERA, CON EL NUMERO ESCRITO POR LA PANTALLA.
+   La base manda los meses y la plata como NUMEROS; la frase la arma aca con
+   el mismo formateador que todas las demas cifras del panel. La primera
+   version traia la frase hecha desde la base y el monto salia
+   «3301943699 pesos», sin separadores, como un codigo. */
+function dvPesosAfuera(d){
+  var m = Number(d.afuera_meses) || 0;
+  if (!m) return 'Todos los meses del rango tienen índice.';
+  return 'Quedan afuera ' + dvNum(m) + (m === 1 ? ' mes' : ' meses') + ' de venta ' +
+         'posteriores a ' + dvEsc(d.afuera_desde || '') + ' por ' +
+         dvEsc(dvCelda(d.afuera_plata)) + ', porque el INDEC todavía no publicó ' +
+         'su índice. No se mezclan con los ajustados: eso mostraría una caída inventada.';
+}
+
+/* el mes de la base, escrito como lo lee una persona */
+function dvMesLargo(iso){
+  var M = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto',
+           'septiembre','octubre','noviembre','diciembre'];
+  var t = String(iso || '').substring(0,10).split('-');
+  return (t.length === 3 && M[Number(t[1]) - 1]) ? M[Number(t[1]) - 1] + ' ' + t[0] : String(iso || '');
+}
+
+function dvPesosPedir(){
+  if (DVP.cargando) return;
+  DVP.cargando = true;
+  rpc('api_ventas_pesos_constantes_v1', { p_desde: '2024-01-01' }).then(function(r){
+    var d = r && r.data;                       /* `rpc` devuelve {data, ms} (24/11) */
+    DVP.cargando = false; DVP.datos = d || null;
+    DVP.error = (!d || d.ok === false) ? ((d && d.por_que) || 'la base no devolvió nada') : '';
+    if (DV.pestania === 'general') dvRepintar();
+  }).catch(function(e){
+    DVP.cargando = false; DVP.error = String((e && e.message) || e);
+    if (DV.pestania === 'general') dvRepintar();
+  });
 }
 
 function dvGeneralTabla(meses){

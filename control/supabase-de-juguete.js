@@ -521,6 +521,27 @@
      Y va el caso que importa: UN MISMO CLIENTE con DOS codigos, en «cayeron»
      y en «nuevos» a la vez —como LEM MEDICAL SRL, SL0017 y SJ0017—, que es lo
      que se lee como un defecto si el codigo no esta al lado del nombre. */
+  /* PESOS CONSTANTES — y su caso «no se puede», que es el que importa:
+     el INDEC publica con atraso y el dia que falte el indice la pantalla
+     tiene que DECLARARLO, no mostrar un derrumbe inventado (13/11).
+     Las cifras salen de lo MEDIDO el 24/11 contra ema.indice_precios. */
+  RPC['api_ventas_pesos_constantes_v1'] = {
+    ok: true, se_puede: true, ms: 184,
+    base: { mes: '2026-08-01', indice: 12276.77 },
+    corte: '2026-08-31',
+    mismo_tramo: 'Todos los años se cortan al día 243 del año, que es el 31/08: se comparan tramos iguales, no un año entero contra uno de ocho meses.',
+    afuera_meses: 3, afuera_plata: 3301943699, afuera_desde: '08/2026',
+    anios: [
+      { anio: 2024, nominal: 2959697533, constante: 6309908935, meses: 8, meses_sin_indice: 0, plata_sin_indice: 0 },
+      { anio: 2025, nominal: 3709002915, constante: 5334177630, meses: 8, meses_sin_indice: 0, plata_sin_indice: 0 },
+      { anio: 2026, nominal: 4143610684, constante: 4433284211, meses: 8, meses_sin_indice: 0, plata_sin_indice: 0 }
+    ]
+  };
+  RPC['api_ventas_pesos_constantes_v1_vacia'] = {
+    ok: true, se_puede: false,
+    por_que: 'No hay ni un índice de precios cargado en ema.indice_precios.'
+  };
+
   RPC['api_ventas_clientes_movimiento_v1'] = {
     ok: true, corte: '2026-11-24', ms: 476,
     umbrales: { meses_sin_comprar: 6, habitual_meses_de_los_ultimos_24: 3, caida_pct: 30 },
