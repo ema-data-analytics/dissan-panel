@@ -127,7 +127,7 @@
 #dvInforme .dv-ops .dv-op{ width:100%; justify-content:space-between; }
 
 #dvInforme .dv-op{
-  min-width:0; max-width:100%; display:inline-flex; align-items:baseline; gap:6px;
+  min-width:0; max-width:100%; display:inline-flex; align-items:center; gap:6px;
   border:1px solid var(--borde,rgba(255,255,255,.08)); border-radius:999px;
   background:var(--caja,#123252); color:var(--texto,#F2F5F3);
   font:inherit; font-size:12px; padding:4px 10px; cursor:pointer; text-align:left;
@@ -136,10 +136,18 @@
 #dvInforme .dv-op.elegida{
   background:var(--verde,#08A57A); border-color:transparent; color:#fff;
 }
-/* el rotulo encoge y corta con puntos; LA PLATA NO SE CORTA NUNCA —un numero
-   cortado se lee como OTRO numero (14/10)— por eso va con `flex:none`. */
+/* EL ROTULO ENVUELVE, NO SE CORTA.                             24/11/2026
+   Hasta hoy decia `text-overflow:ellipsis`, y en la pantalla PUBLICADA eso
+   dejaba «CAPITAL FED…» (caja 86, texto 105,8) y «BUENOS AIR…» (86 contra
+   87,4). Un rotulo cortado es OTRO rotulo —el `IVA 2...` del 14/11—, y al
+   lado de «CAPITAL FEDERAL» no hay forma de saber que decia. Lo que no se
+   puede es inventar que la provincia se llama distinto, asi que la pastilla
+   crece a dos renglones: es la misma decision que tome en la primera columna
+   de la tabla con «INST. DE O.SOCIAL DE LAS FUERZAS ARMADAS (IOSFA)».
+   LA PLATA SIGUE SIN CORTARSE NUNCA —un numero cortado se lee como OTRO
+   numero (14/10)— por eso `.dv-op-v` va con `flex:none`. */
 #dvInforme .dv-op-r{
-  min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  min-width:0; white-space:normal; overflow-wrap:anywhere;
 }
 #dvInforme .dv-op-v{ flex:none; font-size:11px; color:var(--gris,#9FB4C4);
   font-variant-numeric:tabular-nums; }

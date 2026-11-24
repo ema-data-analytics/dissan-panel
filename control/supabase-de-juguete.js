@@ -450,7 +450,12 @@
                  cobertura_renglones_pct: 79.17, cobertura_plata_pct: 60.61 },
       meses: meses,
       zona:      corte(['MENDOZA','SAN LUIS','SAN JUAN'],            [0.71, 0.27]),
-      provincia: corte(['MENDOZA','SAN LUIS','SAN JUAN','Otros'],        [0.63, 0.33, 0.02]),
+      /* LOS NOMBRES LARGOS SON EL CASO QUE IMPORTA: la puerta de rotulos corrio
+         limpia sobre el arbol local y en la pantalla PUBLICADA habia DOS chips
+         cortados, porque aca solo habia nombres de 8 letras. Es el 14/11 y el
+         16/11 otra vez: al agregar una respuesta al juguete va tambien el caso
+         raro, no solo el comodo. Los seis son los que la base publica de verdad. */
+      provincia: corte(['MENDOZA','SAN LUIS','SAN JUAN','BUENOS AIRES','CAPITAL FEDERAL','SANTA FE','Otros'],        [0.63, 0.33, 0.02]),
       proveedor: corte(['PROVEEDOR A','PROVEEDOR B','Otros'],        [0.45, 0.30]),
       linea:     corte(['LINEA UNO','LINEA DOS','Otros'],            [0.52, 0.28]),
       cliente:   corte(['CLIENTE UNO','CLIENTE DOS','Otros'],        [0.40, 0.25]),

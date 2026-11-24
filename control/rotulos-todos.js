@@ -11,8 +11,9 @@
    cuando me acuerdo. Enganchada al pre-push, corre sola en cada publicacion.
 
    QUE MIDE, en las seis pestanias:
-     - texto CORTADO por CSS (el contenido es mas ancho que su caja). Un
-       rotulo cortado es OTRO rotulo: el `IVA 2...` del 14/11.
+     - texto CORTADO por CSS, midiendo el ancho REAL del texto con un `Range`
+       y no con `scrollWidth`. Un rotulo cortado es OTRO rotulo: el
+       `IVA 2...` del 14/11, y «CAPITAL FED…» del 24/11.
      - `undefined`, `NaN`, `[object` o `null` pintados.
      - que la pagina no scrollee de costado.
 
@@ -86,6 +87,26 @@ const esperar=async(pg,ms)=>{const t0=Date.now();for(;;){
     console.log('  ARNES: servi un CSS que angosta el rotulo del chip a 40 px.');
   }
 
+  /* SEGUNDO ARNES, Y ES EL QUE VALE: no es un defecto inventado, es EL QUE SE
+     PUBLICO. Hasta las 09:00 del 24/11 `.dv-op-r` llevaba
+     `text-overflow:ellipsis; white-space:nowrap`, y en github.io se leia
+     «CAPITAL FED…» y «BUENOS AIR…». Se vuelve a servir ese CSS tal cual y la
+     puerta TIENE que gritar: asi queda probado que esta puerta habria frenado
+     ese push, que es lo unico que demuestra que sirve de algo. */
+  if (process.env.CONTROL_PLANTAR === 'chip_cortado'){
+    await pg.route('**/css/dashboard-ventas.css*', async r=>{
+      const crudo = fs.readFileSync(path.join(RAIZ,'css','dashboard-ventas.css'),'utf8');
+      const ANCLA = '#dvInforme .dv-op-r{';
+      if (crudo.split(ANCLA).length - 1 !== 1)
+        throw new Error('ARNES ROTO: el ancla «'+ANCLA+'» no aparece exactamente '+
+                        'una vez. No se planto nada.');
+      await r.fulfill({status:200, contentType:'text/css',
+        body: crudo + '\n#dvInforme .dv-op-r{min-width:0;overflow:hidden;'+
+              'text-overflow:ellipsis;white-space:nowrap;}'});
+    });
+    console.log('  ARNES: volvi a servir el CSS que estuvo publicado hasta hoy.');
+  }
+
   await pg.addInitScript({path:JUGUETE});
 
   /* LAS PANTALLAS SE ENUMERAN DEL DISCO, NO DE UNA LISTA MIA (14/10, 14/11).
@@ -104,8 +125,20 @@ const esperar=async(pg,ms)=>{const t0=Date.now();for(;;){
       if(e.children.length) return; if(!vis(e)) return;
       const t=(e.textContent||'').trim(); if(!t) return;
       out.n++;
-      if(e.scrollWidth > e.clientWidth + 1 && getComputedStyle(e).overflow!=='visible')
-        out.cortados.push(t.substring(0,48)+'  [caja '+e.clientWidth+' contenido '+e.scrollWidth+']');
+      /* EL ANCHO DE VERDAD DEL TEXTO LO DA UN `Range`, NO `scrollWidth`.
+         Mi primera version comparaba `scrollWidth > clientWidth + 1`, y ese
+         `+1` lo tipee yo: en la pantalla PUBLICADA «BUENOS AIRES» daba
+         caja 86 contra scrollWidth 87 y la puerta decia «no corta», mientras
+         el ojo leia «BUENOS AIR…». Con el rango da 87,4 y corta. Medido en
+         las dos direcciones sobre los 7 chips vivos: agarra BUENOS AIRES y
+         CAPITAL FEDERAL, y NO agarra SAN JUAN (61,3 en una caja de 61), que
+         se lee entero. El 0,5 que queda es el redondeo de pintura del
+         navegador, no un criterio mio. */
+      const rg=document.createRange(); rg.selectNodeContents(e);
+      const real=rg.getBoundingClientRect().width;
+      if(real > e.clientWidth + 0.5 && getComputedStyle(e).overflow!=='visible')
+        out.cortados.push(t.substring(0,48)+'  [caja '+e.clientWidth+
+                          ' texto '+(Math.round(real*10)/10)+']');
       /* SIN la bandera `i` y con limite de palabra, porque asi los escribe
          JavaScript y porque con `i` esto grito 2 veces en su primera corrida
          sobre las 19 pantallas: «ganancia» lleva «nan» adentro, y marcaba
@@ -150,7 +183,7 @@ const esperar=async(pg,ms)=>{const t0=Date.now();for(;;){
 
   /* UN ARNES QUE NO REPRODUCE EL DEFECTO DA VERDE SIN HABER PROBADO (14/11).
      El primer intento de este mismo arnes paso por aca con 0 fallas. */
-  if (process.env.CONTROL_PLANTAR === 'rotulo_cortado' && !fallas.length)
+  if ((process.env.CONTROL_PLANTAR||'').match(/^(rotulo_cortado|chip_cortado)$/) && !fallas.length)
     throw new Error('ARNES ROTO: planto el CSS que angosta el chip y la puerta '+
       'no encontro NI UN rotulo cortado en las 6 pestanias. O el defecto no se '+
       'reprodujo, o la puerta esta ciega: las dos cosas se ven igual desde '+
