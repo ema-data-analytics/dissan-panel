@@ -77,6 +77,7 @@ que_mira(){
     "la lectura de listas")     echo "js/listas|^edge/listas|control/listas" ;;
     "la pantalla vacia")        echo "[.]html$|^js/|control/vacio|control/supabase-de-juguete" ;;
     "los rotulos en pantalla")  echo "[.]html$|^js/|^css/|control/rotulos-todos|control/supabase-de-juguete" ;;
+    "las variables de css")     echo "^css/|control/css-variables" ;;
     # SIEMPRE a proposito: esta puerta mide la FUNCION de la base, que no vive
     # en el repositorio. No hay archivo que cambie cuando cambia lo que mide,
     # asi que declarar un patron seria declarar que no la corre nunca.
@@ -251,6 +252,16 @@ correr "que las partes sumen" control/dashboard-suman.js node control/dashboard-
 # corrida las pantallas que no pintan nada hasta apretar Calcular: no son un
 # pase, es que no se ejercitaron.
 correr "los rotulos en pantalla" control/rotulos-todos.js node control/rotulos-todos.js
+
+# PUERTA 23 — UNA VARIABLE DE CSS QUE NO EXISTE CAE AL RESPALDO EN SILENCIO.
+# El 23/11 escribi var(--panel), var(--tinta), var(--linea), var(--acento) y
+# var(--fondo-2): ninguna de las cinco existe, y las cajas del dashboard
+# salieron BLANCAS adentro de un panel oscuro. Las 21 puertas pasaron -las
+# cifras estaban bien- y lo vi al MIRAR LA FOTO, o sea cuando me acorde de
+# mirarla. No necesita navegador: son dos lecturas de texto, corre en menos de
+# un segundo. Con respaldo -var(--borde, rgba(...))- no suena, que es como el
+# panel las usa a proposito en 45 de sus 469 usos.
+correr "las variables de css" control/css-variables.js node control/css-variables.js
 
 echo ""
 # UNA PUERTA SALTEADA SE DECLARA. No es verde: es que no se ejercito, y eso
